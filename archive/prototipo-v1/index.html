@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#241c30">
+  <title>Ilha do Conhecimento — Protótipo</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="shell">
+    <div class="game" aria-label="Menu principal de Ilha do Conhecimento">
+      <img class="scene" src="assets/quarto.png" alt="Quarto em pixel art: uma criança estuda enquanto seu gato dorme. Ilha do Conhecimento.">
+      <button class="hotspot start" data-action="start" aria-label="Iniciar aventura"></button>
+      <button class="hotspot tutorial" data-action="tutorial" aria-label="Tutorial"></button>
+      <button class="hotspot settings" data-action="settings" aria-label="Abrir configurações" title="Configurações"></button>
+      <button class="hotspot exit" data-action="exit" aria-label="Sair do jogo" title="Sair"></button>
+    </div>
+    <footer><span class="badge">PROTÓTIPO</span><p>Uma pequena janela para nossa aventura.</p><span class="hint">Use o mouse ou Tab + Enter</span></footer>
+  </main>
+
+  <dialog id="settings-dialog" class="book-dialog" aria-label="Configurações">
+    <div class="book">
+      <img src="assets/livro.png" alt="Livro aberto com configurações de som e música.">
+      <button class="close" data-close aria-label="Fechar configurações">×</button>
+      <label class="sr-only" for="sound">Volume dos efeitos sonoros</label>
+      <input id="sound" class="volume sound" type="range" min="0" max="100" value="70">
+      <output class="value sound-value" for="sound">70%</output>
+      <label class="sr-only" for="music">Volume da música</label>
+      <input id="music" class="volume music" type="range" min="0" max="100" value="60">
+      <output class="value music-value" for="music">60%</output>
+      <button class="hotspot continue" data-close aria-label="Continuar e voltar ao menu"></button>
+      <button class="hotspot book-exit" data-action="exit" aria-label="Sair do jogo"></button>
+    </div>
+    <p class="book-note">Ajustes de demonstração. As trilhas e os efeitos serão adicionados depois.</p>
+  </dialog>
+
+  <dialog id="message-dialog" class="message-dialog" aria-labelledby="message-title">
+    <button class="close" data-close aria-label="Fechar mensagem">×</button>
+    <span class="eyebrow" id="message-label">DEMONSTRAÇÃO</span>
+    <h1 id="message-title"></h1>
+    <img id="island-preview" src="assets/ilha.png" alt="A ilha com quatro regiões e a montanha onde o gato está preso." hidden>
+    <p id="message-text"></p>
+    <div id="tutorial-controls" hidden><span>W A S D / ↑ ↓ ← → <small>Explorar a ilha</small></span><span>E <small>Interagir</small></span><span>4 chaves <small>Libertar o gato</small></span></div>
+    <button id="message-button" class="paper-button">Voltar ao menu</button>
+  </dialog>
+  <script src="script.js"></script>
+</body>
+</html>

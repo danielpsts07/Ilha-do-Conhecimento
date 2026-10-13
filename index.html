@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#20172a">
+  <title>Ilha do Conhecimento</title>
+  <link rel="icon" href="assets/ui/icones/gato-rosto.png">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/island.css">
+</head>
+<body>
+  <main id="home-screen" class="game-shell">
+    <section class="home" aria-label="Tela inicial de Ilha do Conhecimento">
+      <img class="room" src="assets/fundos/quarto-sem-interface.png" alt="Uma criança estuda em seu quarto enquanto o gato dorme na cama.">
+      <div class="room-shade" aria-hidden="true"></div>
+      <button class="corner-button exit-button" data-open="exit" aria-label="Sair" title="Sair"><img src="assets/ui/icones/sair-menu.png" alt=""></button>
+      <button class="corner-button settings-button" data-open="settings" aria-label="Configurações" title="Configurações"><img src="assets/ui/icones/configuracoes-menu.png" alt=""></button>
+      <div class="home-menu">
+        <img class="logo" src="assets/ui/logo/logo-ilha-do-conhecimento.png" alt="Ilha do Conhecimento" fetchpriority="high">
+        <nav aria-label="Menu principal">
+          <button class="image-button" data-open="start" aria-label="Iniciar"><img src="assets/ui/botoes/iniciar.png" alt="" draggable="false"></button>
+          <button class="image-button" data-open="tutorial" aria-label="Tutorial"><img src="assets/ui/botoes/tutorial.png" alt="" draggable="false"></button>
+        </nav>
+      </div>
+      <span class="sleep-mark" aria-hidden="true">z<span>z</span></span>
+    </section>
+    <footer class="home-footer"><span>EXPLORAR · APRENDER · CONQUISTAR</span><span class="version">EXPLORAÇÃO · VERSÃO 03</span></footer>
+  </main>
+
+  <section id="island-screen" class="island-screen" aria-label="Exploração da Ilha do Conhecimento" hidden>
+    <header class="island-header">
+      <div class="island-brand"><img src="assets/ui/icones/gato-rosto.png" alt=""><div><strong>Ilha do Conhecimento</strong><span>A caminho do seu amigo</span></div></div>
+      <nav class="island-nav" aria-label="Opções da aventura">
+        <button id="island-map-button" class="island-ui-button" aria-label="Abrir mapa da ilha, atalho M">Mapa <kbd>M</kbd></button>
+        <button class="island-ui-button" data-open="tutorial" aria-label="Abrir tutorial"><img src="assets/ui/icones/livro.png" alt=""><span>Ajuda</span></button>
+        <button class="island-ui-button" data-open="settings" aria-label="Abrir configurações"><img src="assets/ui/icones/configuracoes.png" alt=""><span>Som</span></button>
+        <button id="island-pause-button" class="island-ui-button" aria-label="Pausar aventura, atalho Escape">Pausa <span class="pause-symbol" aria-hidden="true">Ⅱ</span></button>
+      </nav>
+    </header>
+    <div class="island-viewport">
+      <canvas id="island-canvas" tabindex="0" aria-label="Ilha explorável. Mova-se com WASD ou setas, interaja com E e abra o mapa com M." aria-describedby="island-instructions">Seu navegador precisa permitir Canvas 2D para desenhar a ilha.</canvas>
+      <div class="island-location"><span class="location-eyebrow">VOCÊ ESTÁ EM</span><h1 id="island-region">Praça do Portal</h1><p id="island-objective">Encontre seu gato na montanha ao norte.</p><span id="island-discovery" aria-live="polite">1 de 6 lugares descobertos</span></div>
+      <button id="island-minimap-button" class="island-minimap" aria-label="Abrir mapa completo da ilha"><span>ILHA DO CONHECIMENTO <span aria-hidden="true">↗</span></span><canvas id="island-minimap" width="192" height="144" aria-hidden="true"></canvas><span class="minimap-caption"><i aria-hidden="true"></i> Você está aqui</span></button>
+      <p id="island-loading" class="island-loading" role="status">Preparando sua ilha…</p>
+    </div>
+    <footer class="island-controls">
+      <div class="island-direction-pad" role="group" aria-label="Movimento. Segure uma direção para caminhar."><button data-walk="up" aria-label="Caminhar para cima">↑</button><button data-walk="left" aria-label="Caminhar para a esquerda">←</button><button data-walk="down" aria-label="Caminhar para baixo">↓</button><button data-walk="right" aria-label="Caminhar para a direita">→</button></div>
+      <p id="island-instructions"><strong>Uma ilha, muitos caminhos.</strong><span><kbd>WASD</kbd> ou <kbd>↑ ← ↓ →</kbd> caminhar <b>·</b> <kbd>E</kbd> interagir <b>·</b> <kbd>Esc</kbd> pausa</span><small>Etapa de exploração · desafios e chaves em desenvolvimento</small></p>
+      <button id="island-interact" class="island-interact" disabled><kbd>E</kbd><span id="island-interact-label">Aproxime-se de uma placa</span></button>
+    </footer>
+    <p id="island-announcement" class="visually-hidden" aria-live="polite"></p>
+  </section>
+
+  <dialog id="island-info-dialog" class="island-dialog" aria-labelledby="island-info-title">
+    <button class="panel-close" data-close aria-label="Fechar placa"><img src="assets/ui/icones/fechar.png" alt=""></button>
+    <span id="island-info-chapter" class="chapter"></span><h1 id="island-info-title"></h1>
+    <p id="island-info-copy"></p><p id="island-info-note" class="island-note"></p>
+    <button class="asset-button green" data-close>Continuar explorando</button>
+  </dialog>
+  <dialog id="island-pause-dialog" class="island-dialog island-pause" aria-labelledby="island-pause-title">
+    <span class="chapter">UMA PAUSA NA AVENTURA</span><h1 id="island-pause-title">A ilha espera por você.</h1><p>Respire um pouquinho. Há muito para descobrir!</p>
+    <button class="asset-button green" data-close>Continuar explorando</button><button id="island-return-menu" class="asset-button parchment">Voltar ao menu</button>
+    <p class="island-note">Ao voltar ao menu, sua posição fica guardada nesta sessão. Recarregar a página reinicia a exploração.</p>
+  </dialog>
+  <dialog id="island-map-dialog" class="island-dialog island-map-dialog" aria-labelledby="island-map-title">
+    <button class="panel-close" data-close aria-label="Fechar mapa"><img src="assets/ui/icones/fechar.png" alt=""></button>
+    <span class="chapter">SEU GUIA DE EXPLORAÇÃO</span><h1 id="island-map-title">Uma ilha conectada</h1>
+    <canvas id="island-map" width="576" height="432" role="img" aria-label="Mapa da ilha com a posição atual. Montanha ao norte, floresta a noroeste, vila a sudoeste, ruínas a nordeste e fazenda a sudeste."></canvas>
+    <p class="island-map-legend"><i aria-hidden="true"></i> Você está aqui. As pontes ligam os dois lados do rio.</p><p>Ao norte: montanha. À esquerda: floresta e vila. À direita: ruínas e fazenda.</p>
+    <button class="asset-button green" data-close>Voltar à aventura</button>
+  </dialog>
+
+  <dialog id="book-dialog" class="book-dialog" aria-labelledby="settings-title">
+    <div class="book-scene">
+      <img class="book-background" src="assets/fundos/livro-cenario.png" alt="">
+      <button class="book-close" data-close aria-label="Fechar livro"><img src="assets/ui/icones/fechar.png" alt=""></button>
+      <div id="settings-view" class="book-content" hidden>
+        <section class="page left-page">
+          <span class="chapter">SEU LIVRO DE AVENTURAS</span>
+          <h1 id="settings-title">Configurações</h1>
+          <p class="subtitle">Pequenos ajustes,<br>grandes aventuras.</p>
+          <img class="settings-cat" src="assets/ui/ilustracoes/gato-tutorial.png" alt="Um gato sorridente.">
+          <p class="cat-caption">Do seu jeito fica melhor!</p>
+        </section>
+        <section class="page right-page" aria-label="Controles de áudio">
+          <div class="volume-group">
+            <label for="sound-volume"><img src="assets/ui/icones/som.png" alt="">Efeitos sonoros <output id="sound-value" for="sound-volume">70%</output></label>
+            <input id="sound-volume" type="range" min="0" max="100" value="70">
+            <button class="text-link" id="test-sound">Ouvir um efeito</button>
+          </div>
+          <div class="volume-group music-group">
+            <label for="music-volume"><img src="assets/ui/icones/musica.png" alt="">Música <output id="music-value" for="music-volume">35%</output></label>
+            <input id="music-volume" type="range" min="0" max="100" value="35">
+            <button class="music-toggle" id="music-toggle" aria-pressed="false"><span class="status-dot"></span><span id="music-status">Ouvir música de teste</span></button>
+          </div>
+          <p class="audio-note">Um som suave para testar.<br>A trilha da aventura virá depois.</p>
+        </section>
+        <div class="book-actions"><button class="asset-button green" data-close>Continuar</button><button class="asset-button red" id="settings-exit">Sair do jogo</button></div>
+      </div>
+
+      <div id="tutorial-view" class="book-content" hidden>
+        <section class="page left-page">
+          <span class="chapter">COMO JOGAR <span id="step-count">01 / 03</span></span>
+          <h1 id="tutorial-title">Explore a ilha</h1>
+          <p class="tutorial-copy" id="tutorial-copy"></p>
+          <div class="key-guide" id="key-guide"><div><kbd>W</kbd></div><div><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div><span>ou as setas do teclado</span></div>
+          <p class="tutorial-tip" id="tutorial-tip"></p>
+        </section>
+        <section class="page right-page tutorial-practice" aria-label="Demonstração dos controles">
+          <div id="movement-practice">
+            <div class="practice-board" id="practice-board" aria-label="Área de prática de movimento"><img class="practice-tree" src="assets/ambiente/arvore.png" alt="Árvore"><img id="practice-player" src="assets/personagens/personagem-frente.png" alt="Personagem"></div>
+            <div class="direction-pad" aria-label="Controles de movimento"><button data-move="up" aria-label="Mover para cima">↑</button><button data-move="left" aria-label="Mover para a esquerda">←</button><button data-move="down" aria-label="Mover para baixo">↓</button><button data-move="right" aria-label="Mover para a direita">→</button></div>
+            <p class="practice-caption">Experimente aqui!</p>
+          </div>
+          <div id="interaction-practice" hidden>
+            <div class="interaction-scene"><img src="assets/personagens/personagem-lado.png" alt="Personagem"><div class="key-pedestal"><img id="practice-key" src="assets/objetos/chave-amarela.png" alt="Chave de demonstração"><span></span></div></div>
+            <button id="interact-button" class="asset-button parchment">Interagir <kbd>E</kbd></button>
+            <p class="practice-caption" id="interaction-result" aria-live="polite">Uma chave espera por você.</p>
+          </div>
+          <div id="regions-practice" hidden>
+            <div class="region-grid" aria-label="Quatro regiões"><button data-region="0"><img src="assets/objetos/chave-verde.png" alt="">Lógica</button><button data-region="1"><img src="assets/objetos/chave-azul.png" alt="">Álgebra</button><button data-region="2"><img src="assets/objetos/chave-vermelha.png" alt="">Geometria</button><button data-region="3"><img src="assets/objetos/chave-amarela.png" alt="">Operações</button></div>
+            <p id="region-description" class="practice-caption" aria-live="polite">Toque em uma chave para descobrir o desafio.</p>
+            <img class="rescue-cat" src="assets/personagens/gato-frente.png" alt="O gato que vamos resgatar.">
+          </div>
+        </section>
+        <div class="book-actions"><button id="previous-step" class="asset-button parchment">Voltar</button><div class="page-dots" aria-label="Páginas do tutorial"><button data-step="0" aria-label="Página 1" aria-current="step"></button><button data-step="1" aria-label="Página 2"></button><button data-step="2" aria-label="Página 3"></button></div><button id="next-step" class="asset-button green">Próxima</button></div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="message-dialog" class="message-dialog" aria-labelledby="message-title">
+    <button class="panel-close" data-close aria-label="Fechar"><img src="assets/ui/icones/fechar.png" alt=""></button>
+    <span class="chapter" id="message-chapter">UM PRIMEIRO OLHAR</span>
+    <h1 id="message-title">A aventura está chegando!</h1>
+    <img id="island-preview" class="island-preview" src="assets/mapa/ilha-referencia.png" alt="A ilha com suas quatro regiões e a montanha do gato.">
+    <p id="message-copy"></p>
+    <div class="message-actions"><button id="message-back" class="asset-button parchment">Voltar ao menu</button><button id="message-confirm" class="asset-button green" hidden>Ver tutorial</button></div>
+  </dialog>
+  <noscript><p class="noscript">Ative o JavaScript para usar os botões do jogo.</p></noscript>
+  <script src="js/audio.js"></script>
+  <script src="js/island-world.js"></script>
+  <script src="js/island-renderer.js"></script>
+  <script src="js/island-game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
