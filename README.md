@@ -1,5 +1,6 @@
 # Ilha do Conhecimento
 
+<<<<<<< HEAD
 Versão 3 — primeira etapa de exploração jogável. HTML, CSS e JavaScript puros, com assets locais, sem framework, dependências de execução, JSON, instalação ou build.
 
 **Abra `index.html` no navegador e selecione Iniciar.** O jogo funciona diretamente do arquivo; não usa `fetch` nem precisa de servidor.
@@ -63,3 +64,5 @@ O [catálogo de assets](assets/catalogo.html) mostra o kit existente. A composi�
 Execute `node --check` para os scripts alterados, `node tools/verificar-menu.cjs` e `node tools/verificar-ilha.cjs` quando Node estiver disponível. Node é necessário apenas para esses utilitários, não para jogar.
 
 As verificações cobrem sintaxe, referências locais, fluxos de menu e controles em DOM simulado, além de acessibilidade das regiões e colisões usando a geometria real do mundo. **Não substituem uma inspeção visual, um teste de áudio ou um teste real de toque.** Nesta entrega, a prévia no navegador não foi executada porque a autorização para iniciar o servidor local foi recusada.
+=======
+>>>>>>> eff34dfa7bc9fa686b3e5b76746f4e26c2c5921e
