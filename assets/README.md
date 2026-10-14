@@ -13,7 +13,7 @@ Abra `catalogo.html` para conferir as imagens em fundos quadriculado, escuro e c
 
 ## Limites desta versão
 
-- Não é um pacote de gameplay completo: mapas de colisão, tiles conectáveis, peças de puzzles, cela separada e ciclos de caminhada ainda precisam de produção.
+- Não é um pacote de animação completo: tiles conectáveis, uma cela ilustrada separada e ciclos de caminhada ainda precisam de produção. A exploração usa colisões em JavaScript; as fases usam os assets existentes e elementos de HTML/CSS.
 - As duas poses frontais dos personagens foram mantidas como alternativas, não rotuladas como direções ausentes.
 - O mapa é uma referência visual composta, não um tilemap.
 - O quarto teve as regiões cobertas por interface reconstruídas por IA; não é um recorte idêntico nesses pontos.
@@ -82,3 +82,17 @@ Abra `catalogo.html` para conferir as imagens em fundos quadriculado, escuro e c
 ## Segunda versão
 
 Quatro recortes adicionais do último anexo foram integrados à tela inicial. Veja `docs/assets-v2.md` na raiz do projeto. O catálogo inclui os novos arquivos.
+
+## Ambientação da ilha — versão 4
+
+30 imagens novas estão em `ambiente/ilha-v4/`: 24 sprites com alpha real e seis texturas. Abra [o catálogo da ambientação](ambiente/ilha-v4/catalogo.html) ou `conferencia.jpg` para conferir. Três atlas gerados com ImageGen estão preservados em `fontes/`, com prompts em `prompts.md`. Os recortes preservam a proporção e alinham as bases; os assets anteriores não foram modificados.
+
+A exploração já tem colisões definidas em JavaScript; o mapa de referência continua sendo uma ilustração. A composição, preparação e validação visual em Canvas nativo estão documentadas em `docs/ambientacao-v4.md` na raiz do projeto.
+
+## Fases de puzzle e resgate — versão 5
+
+As quatro telas de puzzle e a tela de resgate reutilizam imagens locais do kit e da ambientação da ilha: personagens, árvores, construções, chaves e cadeados. Textos e símbolos ficam em HTML/CSS; a peça assimétrica em L e o encaixe das ruínas são SVG criados pelo JavaScript para permitir identificar cada quarto de volta. As peças geométricas do kit continuam disponíveis na ilha e no catálogo. Não foi criado um novo atlas ou reconstruído um PNG nesta etapa.
+
+As chaves mantêm a associação existente: verde para lógica na floresta, azul para álgebra na vila, vermelha para geometria nas ruínas e amarela para operações na fazenda. Os cadeados usam nomes junto às cores. As regras e o uso de cada fase estão em `docs/puzzles.md` na raiz do projeto.
+
+Os ciclos completos de personagem e gato continuam pendentes. O resgate usa as poses existentes, abertura dos cadeados pela interface e remoção da cerca no renderer da ilha.

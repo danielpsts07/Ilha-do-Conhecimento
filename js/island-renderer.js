@@ -1,11 +1,11 @@
-/* Desenho em Canvas 2D: terreno, cenário, profundidade e mapa de orientação. */
+/* Desenho em Canvas 2D: imagens locais, terreno, profundidade e orientação. */
 window.IslandRenderer = (() => {
   'use strict';
   const T=48, types=IslandWorld.terrain, noise=IslandWorld.noise;
-  const sources={tree:'ambiente/arvore.png',front:'personagens/personagem-frente.png',back:'personagens/personagem-costas.png',side:'personagens/personagem-lado.png',cat:'personagens/gato-frente.png'};
+  const sources=IslandArt.sources;
   function create(canvas,miniCanvas,mapCanvas,world) {
     const ctx=canvas.getContext('2d'),mini=miniCanvas.getContext('2d'),map=mapCanvas.getContext('2d');
-    const images={},failed=[];
+    const images={},failed=[],patterns={};
     const ready=Promise.all(Object.entries(sources).map(([name,path])=>new Promise(resolve=>{
       const img=new Image();images[name]=img;
       img.onload=resolve;img.onerror=()=>{failed.push(path);resolve();};img.src=`assets/${path}`;
@@ -13,7 +13,7 @@ window.IslandRenderer = (() => {
     let width=960,height=600,dpr=1;
     const overview=document.createElement('canvas');overview.width=world.cols*3;overview.height=world.rows*3;
     const overviewCtx=overview.getContext('2d');
-    const miniColors=['#5aabba','#7b9d58','#e2cb92','#c4ab77','#9aa9a5','#9c7651'];
+    const miniColors=['#58adbb','#87a15b','#dfc58f','#c5a570','#9da68f','#9c7651'];
     for(let y=0;y<world.rows;y++)for(let x=0;x<world.cols;x++) {
       overviewCtx.fillStyle=miniColors[world.at(x,y)];overviewCtx.fillRect(x*3,y*3,3,3);
     }
@@ -33,10 +33,13 @@ window.IslandRenderer = (() => {
     }
     function ellipse(x,y,rx,ry,color) {ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill();}
     function sprite(name,x,y,w,h,flip=false) {
-      const img=images[name];if(!img?.complete||!img.naturalWidth)return;
-      ctx.save();ctx.translate(Math.round(x),Math.round(y));if(flip)ctx.scale(-1,1);ctx.drawImage(img,-w/2,-h,w,h);ctx.restore();
+      const img=images[name];if(!img?.complete||!img.naturalWidth)return false;
+      const ratio=Math.min(w/img.naturalWidth,h/img.naturalHeight);
+      const sw=Math.round(img.naturalWidth*ratio),sh=Math.round(img.naturalHeight*ratio);
+      ctx.save();ctx.translate(Math.round(x),Math.round(y));if(flip)ctx.scale(-1,1);ctx.drawImage(img,-sw/2,-sh,sw,sh);ctx.restore();
+      return true;
     }
-    function tile(x,y,time,reducedMotion) {
+    function fallbackTile(x,y,time,reducedMotion) {
       const type=world.at(x,y),px=x*T,py=y*T,n=noise(x,y);
       if(type===types.water) {
         rect(px,py,T,T,'#55acbc');
@@ -99,9 +102,9 @@ window.IslandRenderer = (() => {
       rect(x-28,y-3,56,10,'#b8b096');rect(x-32,y+7,64,5,'#93977d');
       if(o.library){rect(x-43,y-100,86,23,'#5c7057');ctx.fillStyle='#f8e3ac';ctx.font='bold 13px Georgia';ctx.textAlign='center';ctx.fillText('BIBLIOTECA',x,y-84);}
     }
-    function object(o,time,reducedMotion) {
+    function fallbackObject(o,time,reducedMotion) {
       const {x,y,width:w,height:h}=o;
-      if(o.kind==='tree'){ellipse(x,y,43,12,'#415b3933');sprite('tree',x,y,w,h);return;}
+      if(o.kind==='tree'){ellipse(x,y,43,12,'#415b3933');sprite('treeOriginal',x,y,w,h);return;}
       if(o.kind==='cat'){sprite('cat',x,y,w,h);return;}
       if(o.kind==='house'||o.kind==='barn'){house(o,o.kind==='barn');return;}
       if(o.kind==='portal') {
@@ -152,6 +155,115 @@ window.IslandRenderer = (() => {
         for(let i=0;i<4;i++){const lx=x-33+i*22;rect(lx-6,y-12,12,17,'#676d65');rect(lx-4,y-16,8,7,'#c5b895');rect(lx-2,y-9,4,5,'#d9c38b');}
       }
     }
+    function ground(name,x,y) {
+      const img=images[`ground-${name}`];
+      if(!img?.complete||!img.naturalWidth)return false;
+      const sx=((x%96)+96)%96,sy=((y%96)+96)%96;
+      ctx.drawImage(img,sx,sy,T,T,x,y,T,T);return true;
+    }
+    function tile(x,y,time,reducedMotion) {
+      const type=world.at(x,y),px=x*T,py=y*T;
+      if(type===types.bridge){fallbackTile(x,y,time,reducedMotion);return;}
+      const region=IslandWorld.regionAt(px,py).id;
+      const name=type===types.path?(region==='ruins'?'sand':region==='mountain'?'paving':'grass'):
+        type===types.stone&&y>25?'grass':{0:'water',1:'grass',2:'sand',4:'paving'}[type];
+      if(!ground(name,px,py)){fallbackTile(x,y,time,reducedMotion);return;}
+      if(name==='grass') {
+        // A sombra da floresta se mistura à campina em uma faixa de transição.
+        const shade=Math.max(0,Math.min(1,(37-x)/6))*Math.max(0,Math.min(1,(39-y)/6));
+        if(shade){ctx.globalAlpha=shade;ground('forest',px,py);ctx.globalAlpha=1;}
+      }
+      if(type===types.sand) {
+        const grassAt=(dx,dy)=>world.at(x+dx,y+dy)===types.grass;
+        // Cantos recortados suavizam as trilhas sem alterar a área caminhável.
+        for(const [cx,cy,dx,dy] of [[0,0,-1,-1],[T,0,1,-1],[0,T,-1,1],[T,T,1,1]]) {
+          if(!grassAt(dx,0)||!grassAt(0,dy))continue;
+          ctx.save();ctx.beginPath();
+          for(let row=0;row<3;row++) {
+            const size=12-row*4;
+            ctx.rect(px+cx+(dx<0?0:-size),py+cy+(dy<0?row*4:-row*4-4),size,4);
+          }
+          ctx.clip();ground(x<34&&y<35?'forest':'grass',px,py);ctx.restore();
+        }
+      }
+      if(type===types.water) {
+        const drift=reducedMotion?0:Math.sin(time/950+x*.7+y*.4)*2;
+        for(const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1]])if(world.at(x+dx,y+dy)!==types.water) {
+          const tint='#c4e4ca';
+          if(dx){rect(px+(dx<0?2:43),py+3+drift,3,20,tint);rect(px+(dx<0?4:41),py+27-drift,2,16,'#96d4c6');}
+          else {rect(px+3+drift,py+(dy<0?2:43),20,3,tint);rect(px+27-drift,py+(dy<0?4:41),16,2,'#96d4c6');}
+        }
+        if(!reducedMotion&&noise(x,y,31)>.8) {
+          const shimmer=(Math.sin(time/1400+x+y)+1)/2;
+          ctx.globalAlpha=shimmer*.28;rect(px+12,py+20,16,2,'#d6f1de');ctx.globalAlpha=1;
+        }
+      }
+    }
+    function roads(minX,minY,maxX,maxY) {
+      for(const name of ['dirt','paving']) {
+        const img=images[`ground-${name}`];
+        if(!img?.complete||!img.naturalWidth)return;
+        if(!patterns[name])patterns[name]=ctx.createPattern(img,'repeat');
+      }
+      ctx.save();ctx.beginPath();
+      // Água mantém seu contorno físico. A trilha pode curvar sobre a grama.
+      for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++)if(world.at(x,y)!==types.water)ctx.rect(x*T,y*T,T,T);
+      ctx.clip();ctx.strokeStyle=patterns.dirt;ctx.lineWidth=126;ctx.lineCap='round';ctx.lineJoin='round';
+      for(const route of world.routes) {
+        const points=route.map(([x,y])=>[(x+.5)*T,(y+.5)*T]);
+        ctx.beginPath();ctx.moveTo(...points[0]);
+        for(let i=1;i<points.length-1;i++) {
+          const next=points[i+1],current=points[i];
+          ctx.quadraticCurveTo(...current,(current[0]+next[0])/2,(current[1]+next[1])/2);
+        }
+        ctx.lineTo(...points[points.length-1]);ctx.stroke();
+      }
+      ctx.fillStyle=patterns.dirt;ctx.beginPath();ctx.ellipse(48.5*T,38.5*T,262,244,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=patterns.paving;ctx.beginPath();ctx.ellipse(48.5*T,35.5*T,146,132,0,0,Math.PI*2);ctx.fill();ctx.restore();
+      // O piso e os corrimãos ficam por cima da trilha, atravessando o rio.
+      for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++)if(world.at(x,y)===types.bridge)fallbackTile(x,y,0,true);
+    }
+    function object(o,time,reducedMotion) {
+      let name=o.art||o.kind;
+      if(o.kind==='house')name=o.library?'library':'cottage';
+      if(o.kind==='tree')name=o.art||'treeOriginal';
+      if(o.kind==='tablet')name=`${o.shape}Tile`;
+      if(o.kind==='rescue') {
+        sprite('arch',o.x,o.y,134,122);
+        if(!world.catRescued)sprite('fence',o.x,o.y+5,112,30);
+        const regions=['forest','village','ruins','farm'];
+        for(let i=0;i<4;i++)if(!(world.unlockedLocks||[]).includes(regions[i]))sprite('lock',o.x-33+i*22,o.y+6,15,20);
+        return;
+      }
+      const organic=['tree','fern','flowers','flowerBush','berryBush'].includes(o.kind);
+      const sway=!reducedMotion&&organic?Math.sin(time/1900+o.x*.015)*.7:0;
+      if(!['crops','fern','flowers'].includes(o.kind))ellipse(o.x,o.y+1,Math.min(48,o.width*.35),Math.min(10,o.width*.09),'#3d56342a');
+      const mirror=o.kind==='house'&&!o.library&&Math.floor(o.x/T)%2===0;
+      if(!sprite(name,o.x+sway,o.y,o.width,o.height,mirror)){fallbackObject(o,time,reducedMotion);return;}
+      if(o.kind==='portal'&&!reducedMotion) {
+        for(let i=0;i<3;i++) {
+          const drift=((time/70+i*19)%64);
+          ctx.globalAlpha=Math.sin(drift/64*Math.PI)*.8;
+          rect(o.x-16+i*15+Math.sin(time/800+i)*5,o.y-25-drift,2,2,'#fff0bd');
+        }
+        ctx.globalAlpha=1;
+      }
+      if(o.kind==='fountain'&&!reducedMotion) {
+        const shine=(Math.sin(time/450)+1)/2;
+        ctx.globalAlpha=shine*.6;rect(o.x-23,o.y-29,7,1,'#e1faf0');rect(o.x+16,o.y-37,5,1,'#e1faf0');ctx.globalAlpha=1;
+      }
+    }
+    function pollen(camera,time,reducedMotion) {
+      if(reducedMotion)return;
+      const spots=[[40,40],[54,47],[22,24],[25,54],[78,54]];
+      for(const [tx,ty] of spots)for(let i=0;i<4;i++) {
+        const px=(tx+.5)*T+Math.sin(time/2900+i*2+tx)*120;
+        const py=(ty+.5)*T+Math.cos(time/3300+i*3+ty)*85;
+        if(px<camera.x||px>camera.x+width||py<camera.y||py>camera.y+height)continue;
+        ctx.globalAlpha=.3+Math.sin(time/1800+i)*.15;rect(px,py,2,2,'#fff3b5');
+      }
+      ctx.globalAlpha=1;
+    }
     function marker(context,px,py,r=4) {
       context.fillStyle='#4e493f';context.beginPath();context.arc(px,py,r+2,0,Math.PI*2);context.fill();
       context.fillStyle='#fff4c8';context.beginPath();context.arc(px,py,r,0,Math.PI*2);context.fill();
@@ -172,9 +284,13 @@ window.IslandRenderer = (() => {
       ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);ctx.save();ctx.translate(-Math.round(camera.x),-Math.round(camera.y));
       const minX=Math.floor(camera.x/T),minY=Math.floor(camera.y/T),maxX=Math.ceil((camera.x+width)/T),maxY=Math.ceil((camera.y+height)/T);
       for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++)tile(x,y,time,reducedMotion);
+      roads(minX,minY,maxX,maxY);
       // Objetos e personagem usam a linha dos pés para ordenar a profundidade.
       const visible=world.objects.filter(o=>o.x+o.width/2>camera.x-20&&o.x-o.width/2<camera.x+width+20&&o.y>camera.y-30&&o.y-o.height<camera.y+height+30);
-      const layers=[...visible,{kind:'player',x:player.x,y:player.y}].sort((a,b)=>a.y-b.y||((a.kind==='rescue')?1:-1));
+      // Hortas são planos do chão: seu solo não pode encobrir a personagem.
+      for(const o of visible.filter(o=>o.kind==='crops'))object(o,time,reducedMotion);
+      const rank=o=>o.kind==='rescue'?2:o.kind==='player'?1:0;
+      const layers=[...visible.filter(o=>o.kind!=='crops'),{kind:'player',x:player.x,y:player.y}].sort((a,b)=>a.y-b.y||rank(a)-rank(b));
       for(const o of layers) {
         if(o.kind!=='player'){object(o,time,reducedMotion);continue;}
         ellipse(player.x,player.y-2,14,5,'#3b593a55');
@@ -185,7 +301,7 @@ window.IslandRenderer = (() => {
         const px=near.x,py=near.y-(near.id==='portal'?142:near.id==='mountain'?105:76);
         rect(px-14,py-14,28,28,'#574a38');rect(px-11,py-11,22,22,'#ffefba');ctx.fillStyle='#584634';ctx.font='bold 17px system-ui';ctx.textAlign='center';ctx.fillText('E',px,py+6);
       }
-      ctx.restore();renderOverview(player,camera,visited);
+      pollen(camera,time,reducedMotion);ctx.restore();renderOverview(player,camera,visited);
     }
     return {ready,failed,resize,draw,renderOverview,get width(){return width;},get height(){return height;}};
   }

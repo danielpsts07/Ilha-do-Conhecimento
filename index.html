@@ -8,6 +8,8 @@
   <link rel="icon" href="assets/ui/icones/gato-rosto.png">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/island.css">
+  <link rel="stylesheet" href="css/puzzles.css">
+  <link rel="stylesheet" href="css/rescue.css">
 </head>
 <body>
   <main id="home-screen" class="game-shell">
@@ -25,7 +27,7 @@
       </div>
       <span class="sleep-mark" aria-hidden="true">z<span>z</span></span>
     </section>
-    <footer class="home-footer"><span>EXPLORAR · APRENDER · CONQUISTAR</span><span class="version">EXPLORAÇÃO · VERSÃO 03</span></footer>
+    <footer class="home-footer"><span>EXPLORAR · APRENDER · CONQUISTAR</span><span class="version">AVENTURA · VERSÃO 05</span></footer>
   </main>
 
   <section id="island-screen" class="island-screen" aria-label="Exploração da Ilha do Conhecimento" hidden>
@@ -40,16 +42,55 @@
     </header>
     <div class="island-viewport">
       <canvas id="island-canvas" tabindex="0" aria-label="Ilha explorável. Mova-se com WASD ou setas, interaja com E e abra o mapa com M." aria-describedby="island-instructions">Seu navegador precisa permitir Canvas 2D para desenhar a ilha.</canvas>
-      <div class="island-location"><span class="location-eyebrow">VOCÊ ESTÁ EM</span><h1 id="island-region">Praça do Portal</h1><p id="island-objective">Encontre seu gato na montanha ao norte.</p><span id="island-discovery" aria-live="polite">1 de 6 lugares descobertos</span></div>
+      <div class="island-location"><span class="location-eyebrow">VOCÊ ESTÁ EM</span><h1 id="island-region">Praça do Portal</h1><p id="island-objective">Conquiste as quatro chaves e encontre seu gato na montanha.</p><span id="island-discovery" aria-live="polite">1 de 6 lugares descobertos</span></div>
+      <div class="island-keyring" role="group" aria-label="Chaves da aventura">
+        <span id="island-key-count" aria-live="polite">0 de 4 chaves</span>
+        <div class="island-key-slots">
+          <span id="island-key-forest" class="island-key-slot" data-owned="false" data-key-name="Chave verde" role="img" aria-label="Chave verde: a encontrar"><img src="assets/objetos/chave-verde.png" alt=""><small>Lógica</small></span>
+          <span id="island-key-village" class="island-key-slot" data-owned="false" data-key-name="Chave azul" role="img" aria-label="Chave azul: a encontrar"><img src="assets/objetos/chave-azul.png" alt=""><small>Álgebra</small></span>
+          <span id="island-key-ruins" class="island-key-slot" data-owned="false" data-key-name="Chave vermelha" role="img" aria-label="Chave vermelha: a encontrar"><img src="assets/objetos/chave-vermelha.png" alt=""><small>Formas</small></span>
+          <span id="island-key-farm" class="island-key-slot" data-owned="false" data-key-name="Chave amarela" role="img" aria-label="Chave amarela: a encontrar"><img src="assets/objetos/chave-amarela.png" alt=""><small>Contas</small></span>
+        </div>
+      </div>
       <button id="island-minimap-button" class="island-minimap" aria-label="Abrir mapa completo da ilha"><span>ILHA DO CONHECIMENTO <span aria-hidden="true">↗</span></span><canvas id="island-minimap" width="192" height="144" aria-hidden="true"></canvas><span class="minimap-caption"><i aria-hidden="true"></i> Você está aqui</span></button>
       <p id="island-loading" class="island-loading" role="status">Preparando sua ilha…</p>
     </div>
     <footer class="island-controls">
       <div class="island-direction-pad" role="group" aria-label="Movimento. Segure uma direção para caminhar."><button data-walk="up" aria-label="Caminhar para cima">↑</button><button data-walk="left" aria-label="Caminhar para a esquerda">←</button><button data-walk="down" aria-label="Caminhar para baixo">↓</button><button data-walk="right" aria-label="Caminhar para a direita">→</button></div>
-      <p id="island-instructions"><strong>Uma ilha, muitos caminhos.</strong><span><kbd>WASD</kbd> ou <kbd>↑ ← ↓ →</kbd> caminhar <b>·</b> <kbd>E</kbd> interagir <b>·</b> <kbd>Esc</kbd> pausa</span><small>Etapa de exploração · desafios e chaves em desenvolvimento</small></p>
+      <p id="island-instructions"><strong>Uma ilha, quatro chaves.</strong><span><kbd>WASD</kbd> ou <kbd>↑ ← ↓ →</kbd> caminhar <b>·</b> <kbd>E</kbd> interagir <b>·</b> <kbd>Esc</kbd> pausa</span><small>Aproxime-se das placas para entrar nos desafios.</small></p>
       <button id="island-interact" class="island-interact" disabled><kbd>E</kbd><span id="island-interact-label">Aproxime-se de uma placa</span></button>
     </footer>
     <p id="island-announcement" class="visually-hidden" aria-live="polite"></p>
+  </section>
+
+  <section id="puzzle-screen" class="puzzle-screen" data-region="forest" aria-labelledby="puzzle-title" hidden>
+    <header class="puzzle-header">
+      <div class="puzzle-brand"><img src="assets/ui/icones/livro.png" alt=""><span>Ilha do Conhecimento<small>UM NOVO DESAFIO NA AVENTURA</small></span></div>
+      <button id="puzzle-return" class="puzzle-return" type="button">← Voltar à ilha <kbd>Esc</kbd></button>
+    </header>
+    <div class="puzzle-layout">
+      <aside class="puzzle-stage" aria-label="Ambiente do desafio">
+        <div class="puzzle-stage-heading"><span class="puzzle-eyebrow">VOCÊ CHEGOU À</span><p id="puzzle-region">Floresta dos Padrões</p></div>
+        <div class="puzzle-scenery" aria-hidden="true">
+          <span class="puzzle-prop puzzle-prop-left"></span>
+          <img id="puzzle-scene" class="puzzle-scene-object" src="assets/ambiente/ilha-v4/arvore-copa.png" alt="" draggable="false">
+          <span class="puzzle-prop puzzle-prop-right"></span>
+          <img class="puzzle-character" src="assets/personagens/personagem-lado.png" alt="" draggable="false">
+        </div>
+        <div class="puzzle-stage-note"><p id="puzzle-caption">A floresta guarda um segredo. Observe com atenção!</p><div class="puzzle-key-preview"><img id="puzzle-key" src="assets/objetos/chave-verde.png" alt="Chave verde" draggable="false"><span id="puzzle-key-label">Sua próxima conquista</span></div></div>
+      </aside>
+      <article class="puzzle-activity" aria-labelledby="puzzle-title">
+        <div class="puzzle-page-heading"><span class="puzzle-eyebrow">APRENDER ABRE CAMINHOS</span><span id="puzzle-round" class="puzzle-round">Desafio 1 de 3</span></div>
+        <h1 id="puzzle-title" tabindex="-1">O segredo da sequência</h1>
+        <p id="puzzle-instruction" class="puzzle-instruction">Observe a sequência e repita na mesma ordem.</p>
+        <div id="puzzle-board" class="puzzle-board"></div>
+        <div id="puzzle-controls" class="puzzle-controls"></div>
+        <p id="puzzle-feedback" class="puzzle-feedback" role="status" aria-live="polite" aria-atomic="true"></p>
+        <div class="puzzle-page-actions"><button id="puzzle-help" class="puzzle-help" type="button" aria-controls="puzzle-hint"><img src="assets/ui/icones/livro.png" alt="">Preciso de uma dica</button><button id="puzzle-next" class="puzzle-action puzzle-primary" type="button" hidden>Próximo desafio →</button></div>
+        <p id="puzzle-hint" class="puzzle-hint" hidden></p>
+      </article>
+    </div>
+    <footer class="puzzle-footer"><img src="assets/ui/icones/pata.png" alt=""><p>Cada descoberta deixa você mais perto do seu gato.</p><span id="puzzle-progress">Uma chave, três pequenos desafios</span></footer>
   </section>
 
   <dialog id="island-info-dialog" class="island-dialog" aria-labelledby="island-info-title">
@@ -61,7 +102,7 @@
   <dialog id="island-pause-dialog" class="island-dialog island-pause" aria-labelledby="island-pause-title">
     <span class="chapter">UMA PAUSA NA AVENTURA</span><h1 id="island-pause-title">A ilha espera por você.</h1><p>Respire um pouquinho. Há muito para descobrir!</p>
     <button class="asset-button green" data-close>Continuar explorando</button><button id="island-return-menu" class="asset-button parchment">Voltar ao menu</button>
-    <p class="island-note">Ao voltar ao menu, sua posição fica guardada nesta sessão. Recarregar a página reinicia a exploração.</p>
+    <p class="island-note">Posição, desafios, chaves e cadeados ficam guardados nesta sessão. Recarregar a página reinicia a aventura.</p>
   </dialog>
   <dialog id="island-map-dialog" class="island-dialog island-map-dialog" aria-labelledby="island-map-title">
     <button class="panel-close" data-close aria-label="Fechar mapa"><img src="assets/ui/icones/fechar.png" alt=""></button>
@@ -70,6 +111,32 @@
     <p class="island-map-legend"><i aria-hidden="true"></i> Você está aqui. As pontes ligam os dois lados do rio.</p><p>Ao norte: montanha. À esquerda: floresta e vila. À direita: ruínas e fazenda.</p>
     <button class="asset-button green" data-close>Voltar à aventura</button>
   </dialog>
+
+  <section id="rescue-screen" class="rescue-screen" aria-labelledby="rescue-title" hidden>
+    <header class="rescue-header"><span>ILHA DO CONHECIMENTO · MONTANHA</span><button id="rescue-return" class="island-ui-button">Voltar à ilha <kbd>Esc</kbd></button></header>
+    <div class="rescue-content">
+      <span class="chapter">QUATRO CHAVES, UM GRANDE REENCONTRO</span>
+      <h1 id="rescue-title" tabindex="-1">O gato espera por você</h1>
+      <p id="rescue-copy"></p>
+      <div class="rescue-scene" aria-label="Seu gato no arco da montanha">
+        <img class="rescue-arch" src="assets/ambiente/ilha-v4/arco.png" alt="">
+        <img class="rescue-friend" src="assets/personagens/gato-frente.png" alt="Seu gato alaranjado">
+        <img class="rescue-child" src="assets/personagens/personagem-lado.png" alt="Sua personagem">
+        <img class="rescue-fence" src="assets/ambiente/ilha-v4/cerca.png" alt="">
+        <span class="rescue-heart" aria-hidden="true">♥</span>
+      </div>
+      <p id="rescue-count">0 de 4 cadeados abertos</p>
+      <div class="rescue-locks" role="group" aria-label="Cadeados do gato">
+        <button id="rescue-lock-forest" class="rescue-lock" data-region="forest"><img src="assets/objetos/chave-verde.png" alt=""><img class="lock-icon" src="assets/objetos/cadeado-cinza.png" alt=""><span id="rescue-label-forest">Falta a chave verde</span><small>Floresta dos Padrões</small></button>
+        <button id="rescue-lock-village" class="rescue-lock" data-region="village"><img src="assets/objetos/chave-azul.png" alt=""><img class="lock-icon" src="assets/objetos/cadeado-cinza.png" alt=""><span id="rescue-label-village">Falta a chave azul</span><small>Vila do Conhecimento</small></button>
+        <button id="rescue-lock-ruins" class="rescue-lock" data-region="ruins"><img src="assets/objetos/chave-vermelha.png" alt=""><img class="lock-icon" src="assets/objetos/cadeado-cinza.png" alt=""><span id="rescue-label-ruins">Falta a chave vermelha</span><small>Ruínas das Formas</small></button>
+        <button id="rescue-lock-farm" class="rescue-lock" data-region="farm"><img src="assets/objetos/chave-amarela.png" alt=""><img class="lock-icon" src="assets/objetos/cadeado-cinza.png" alt=""><span id="rescue-label-farm">Falta a chave amarela</span><small>Fazenda dos Números</small></button>
+      </div>
+      <p id="rescue-feedback" class="rescue-feedback" role="status" aria-live="polite"></p>
+      <p id="rescue-missing" class="rescue-note"></p>
+      <button id="rescue-menu" class="asset-button green" hidden>Voltar ao quarto</button>
+    </div>
+  </section>
 
   <dialog id="book-dialog" class="book-dialog" aria-labelledby="settings-title">
     <div class="book-scene">
@@ -140,7 +207,12 @@
   <noscript><p class="noscript">Ative o JavaScript para usar os botões do jogo.</p></noscript>
   <script src="js/audio.js"></script>
   <script src="js/island-world.js"></script>
+  <script src="js/island-art.js"></script>
   <script src="js/island-renderer.js"></script>
+  <script src="js/adventure-progress.js"></script>
+  <script src="js/puzzle-data.js"></script>
+  <script src="js/puzzle-game.js"></script>
+  <script src="js/rescue-game.js"></script>
   <script src="js/island-game.js"></script>
   <script src="js/main.js"></script>
 </body>

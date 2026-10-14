@@ -2,6 +2,7 @@
   const $ = selector => document.querySelector(selector);
   const book = $('#book-dialog'), message = $('#message-dialog');
   const settings = $('#settings-view'), tutorial = $('#tutorial-view');
+  const regionButtons = Array.from(document.querySelectorAll('[data-region]')).filter(button => ['0','1','2','3'].includes(button.dataset.region));
   let trigger, step = 0, collected = false;
   const position = {x:42,y:65};
   const pages = [
@@ -63,7 +64,7 @@
   function interact() {
     if(collected)return;
     collected=true;$('.key-pedestal').classList.add('collected');
-    $('#interaction-result').textContent='Você pegou a chave! Muito bem!';
+    $('#interaction-result').textContent='Você pegou a chave de prática! As chaves da aventura estão nos desafios.';
     $('#interact-button').textContent='Chave conquistada ✓';
     $('#interact-button').disabled=true;
     GameAudio.success();
@@ -73,11 +74,11 @@
     $('#practice-player').style.cssText='left:42%;top:65%';
     $('#practice-player').src='assets/personagens/personagem-frente.png';
     $('.key-pedestal').classList.remove('collected');
-    $('#interaction-result').textContent='Uma chave espera por você.';
+    $('#interaction-result').textContent='Uma chave de prática espera por você.';
     $('#interact-button').innerHTML='Interagir <kbd>E</kbd>';
     $('#interact-button').disabled=false;
     $('#region-description').textContent='Toque em uma chave para descobrir o desafio.';
-    document.querySelectorAll('[data-region]').forEach(button=>button.setAttribute('aria-pressed','false'));
+    regionButtons.forEach(button=>button.setAttribute('aria-pressed','false'));
     renderPage();
   }
   function openBook(kind) {
@@ -93,7 +94,7 @@
     $('#message-confirm').hidden=false;
     $('#message-chapter').textContent='ATÉ A PRÓXIMA AVENTURA';
     $('#message-title').textContent='Quer sair por agora?';
-    $('#message-copy').textContent='Você pode voltar ao menu e continuar a exploração depois, nesta mesma sessão. Seu gato vai estar esperando por você.';
+    $('#message-copy').textContent='Você pode voltar ao menu e continuar depois, nesta mesma sessão. Seus desafios e suas chaves ficam guardados. Recarregar a página reinicia a aventura.';
     $('#message-back').textContent='Continuar aqui';$('#message-confirm').textContent='Voltar ao menu';
     $('#message-confirm').classList.replace('green','red');
     message.showModal();
@@ -125,8 +126,8 @@
   document.querySelectorAll('[data-step]').forEach(button=>button.addEventListener('click',()=>{step=Number(button.dataset.step);renderPage();GameAudio.click();}));
   document.querySelectorAll('[data-move]').forEach(button=>button.addEventListener('click',()=>move(button.dataset.move)));
   $('#interact-button').addEventListener('click',interact);
-  document.querySelectorAll('[data-region]').forEach(button=>button.addEventListener('click',()=>{
-    document.querySelectorAll('[data-region]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+  regionButtons.forEach(button=>button.addEventListener('click',()=>{
+    regionButtons.forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
     $('#region-description').textContent=regionText[Number(button.dataset.region)];GameAudio.click();
   }));
   document.addEventListener('keydown',event=>{

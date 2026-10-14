@@ -12,7 +12,27 @@ window.GameIsland = (() => {
   const directionKeys={w:'up',a:'left',s:'down',d:'right',arrowup:'up',arrowleft:'left',arrowdown:'down',arrowright:'right'};
   const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
   let active=false,loaded=false,frame=0,lastTime=0,near=null,currentRegion='center',dialogTrigger=null,foundCat=false;
-  const blocked=()=>!loaded||document.hidden||dialogs.some(dialog=>dialog.open);
+  const inChallenge=()=>Boolean(window.PuzzleGame?.active||window.GameRescue?.active);
+  const blocked=()=>!loaded||document.hidden||inChallenge()||dialogs.some(dialog=>dialog.open);
+  function updateProgress() {
+    const progress=window.AdventureProgress;
+    if(!progress)return;
+    $('#island-key-count').textContent=`${progress.keyCount} de 4 chaves`;
+    for(const region of progress.regions) {
+      const slot=$(`#island-key-${region}`),owned=progress.hasKey(region);
+      slot.dataset.owned=String(owned);
+      slot.setAttribute('aria-label',`${slot.dataset.keyName}: ${owned?'conquistada':'a encontrar'}`);
+    }
+    world.unlockedLocks=progress.regions.filter(id=>progress.isUnlocked(id));
+    world.catRescued=progress.rescued;
+    $('#island-objective').textContent=progress.rescued?'Você libertou seu gato! A ilha continua aberta para explorar.':progress.keyCount===4?'Você tem as quatro chaves! Volte à montanha para libertar seu gato.':foundCat?`Seu gato espera na montanha. Conquiste as chaves: ${progress.keyCount} de 4.`:'Conquiste as quatro chaves e encontre seu gato na montanha.';
+    near=null;updateNearby();
+  }
+  function returnFromChallenge(trigger) {
+    if(!active)return;
+    clearInput();screen.hidden=false;renderer.resize();updateCamera(true);lastTime=0;
+    updateProgress();(trigger||canvas).focus();
+  }
   function clearInput(){keys.clear();pointers.clear();player.moving=false;}
   function updateCamera(snap,dt=0) {
     const tx=Math.max(0,Math.min(world.width-renderer.width,player.x-renderer.width/2));
@@ -38,6 +58,7 @@ window.GameIsland = (() => {
   }
   function loop(time) {
     if(!active)return;
+    if(inChallenge()) {clearInput();lastTime=0;frame=requestAnimationFrame(loop);return;}
     const dt=lastTime?Math.min((time-lastTime)/1000,.05):0;lastTime=time;
     if(blocked())clearInput();
     else {
@@ -57,10 +78,11 @@ window.GameIsland = (() => {
   function start() {
     if(active)return;
     active=true;$('#home-screen').hidden=true;screen.hidden=false;document.body.classList.add('is-playing');
-    renderer.resize();updateCamera(true);updateNearby();lastTime=0;canvas.focus();frame=requestAnimationFrame(loop);
+    renderer.resize();updateCamera(true);updateNearby();updateProgress();lastTime=0;canvas.focus();frame=requestAnimationFrame(loop);
   }
   function stop() {
     active=false;cancelAnimationFrame(frame);clearInput();lastTime=0;
+    window.PuzzleGame?.stop();window.GameRescue?.stop();
     for(const dialog of [info,pause,map])if(dialog.open)dialog.close();
     screen.hidden=true;$('#home-screen').hidden=false;document.body.classList.remove('is-playing');
     document.querySelector('[data-open="start"]').focus();
@@ -72,12 +94,26 @@ window.GameIsland = (() => {
   }
   function interact(trigger) {
     if(!near||!active||blocked())return;
+    if(window.AdventureProgress?.regions.includes(near.id)&&window.PuzzleGame) {
+      const region=near.id;
+      clearInput();screen.hidden=true;GameAudio.click();
+      window.PuzzleGame.open(region,{
+        onComplete(id){
+          if(AdventureProgress.award(id)) {
+            updateProgress();$('#island-announcement').textContent=`Chave conquistada! Você tem ${AdventureProgress.keyCount} de 4 chaves.`;
+          }
+        },
+        onExit(){returnFromChallenge(trigger);}
+      });
+      return;
+    }
+    if(near.id==='mountain'&&window.GameRescue) {
+      foundCat=true;clearInput();screen.hidden=true;GameAudio.click();
+      window.GameRescue.open({onProgress:updateProgress,onExit(){returnFromChallenge(trigger);},onMenu:stop});
+      return;
+    }
     $('#island-info-title').textContent=near.title;$('#island-info-chapter').textContent=near.chapter;
     $('#island-info-copy').textContent=near.text;$('#island-info-note').textContent=near.note;
-    if(near.id==='mountain'&&!foundCat) {
-      foundCat=true;$('#island-objective').textContent='Você encontrou o gato! Conheça as quatro regiões.';
-      $('#island-announcement').textContent='Você encontrou seu gato na montanha!';
-    }
     showDialog(info,trigger);
   }
   function openMap(trigger) {
@@ -98,7 +134,7 @@ window.GameIsland = (() => {
     });
   }
   document.addEventListener('keydown',event=>{
-    if(!active||event.ctrlKey||event.altKey||event.metaKey)return;
+    if(!active||event.defaultPrevented||event.ctrlKey||event.altKey||event.metaKey)return;
     const key=event.key.toLowerCase();
     if(blocked())return;
     const direction=directionKeys[key];
@@ -126,7 +162,7 @@ window.GameIsland = (() => {
   });
   window.addEventListener('blur',clearInput);
   document.addEventListener('visibilitychange',()=>{clearInput();lastTime=0;});
-  window.addEventListener('resize',()=>{if(active){renderer.resize();updateCamera(true);}});
+  window.addEventListener('resize',()=>{if(active&&!inChallenge()){renderer.resize();updateCamera(true);}});
   renderer.ready.then(()=>{
     loaded=true;$('#island-loading').hidden=renderer.failed.length===0;
     if(renderer.failed.length)$('#island-loading').textContent='Algumas imagens não abriram. Confira se a pasta assets está junto do index.html.';
