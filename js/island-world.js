@@ -158,13 +158,12 @@ window.IslandWorld = (() => {
       if(objects.some(o=>Math.abs(o.x-wx)<(o.width/2+18)&&Math.abs(o.y-wy)<28))continue;
       add(i%3?'fern':'flowers',tx,ty,i%3?32:38,i%3?27:32,{solid:false});
     }
-    return {tile:TILE,cols:COLS,rows:ROWS,width:COLS*TILE,height:ROWS*TILE,tiles,objects,colliders,regions,routes,points:points.map(p=>({...p,x:(p.x+.5)*TILE,y:(p.y+.5)*TILE})),spawn:{x:48.5*TILE,y:43.5*TILE},at};
+    // O carregamento do JPEG define as dimensões reais; pontos antigos aguardam reposicionamento.
+    return {tile:TILE,cols:COLS,rows:ROWS,width:0,height:0,tiles,objects,colliders,regions,routes,points:points.map(p=>({...p,x:(p.x+.5)*TILE,y:(p.y+.5)*TILE})),spawn:{x:1290*WORLD_SCALE,y:945*WORLD_SCALE},at};
   }
-  function isWalkable(world,x,y,radius=11) {
-    for(const [dx,dy] of [[0,0],[-radius,0],[radius,0],[0,-radius*.55],[0,radius*.55],[-radius*.7,-radius*.4],[radius*.7,radius*.4]]) {
-      if(world.at(Math.floor((x+dx)/TILE),Math.floor((y+dy)/TILE))===terrain.water)return false;
-    }
-    return !world.colliders.some(box=>x+radius>box.x&&x-radius<box.x+box.width&&y+6>box.y&&y-6<box.y+box.height);
+  function isWalkable(world,x,y,radius=PLAYER_HEIGHT/2) {
+    // Água e bases de objetos pertencem ao mapa antigo: somente o limite do mundo fica ativo.
+    return x>=radius&&x<=world.width-radius&&y>=PLAYER_HEIGHT+2&&y<=world.height-6;
   }
   function movePlayer(world,position,dx,dy) {
     const steps=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dy))/6));

@@ -39,6 +39,8 @@ window.GameIsland = (() => {
     const ty=Math.max(0,Math.min(world.height-renderer.height,player.y-renderer.height*.58));
     const follow=snap||reducedMotion.matches?1:1-Math.exp(-dt*10);
     camera.x+=(tx-camera.x)*follow;camera.y+=(ty-camera.y)*follow;
+    camera.x=Math.max(0,Math.min(Math.max(0,world.width-renderer.width),camera.x));
+    camera.y=Math.max(0,Math.min(Math.max(0,world.height-renderer.height),camera.y));
   }
   function updateLocation() {
     const region=IslandWorld.regionAt(player.x,player.y);
@@ -141,6 +143,7 @@ window.GameIsland = (() => {
     if(direction){event.preventDefault();keys.add(key);}
     else if(key==='e'){event.preventDefault();if(!event.repeat)interact();}
     else if(key==='m'){event.preventDefault();if(!event.repeat)openMap();}
+    else if(key==='f3'){event.preventDefault();if(!event.repeat)renderer.toggleDebug();}
     else if(key==='escape'){event.preventDefault();if(!event.repeat)showDialog(pause);}
   });
   document.addEventListener('keyup',event=>{
@@ -165,6 +168,7 @@ window.GameIsland = (() => {
   window.addEventListener('resize',()=>{if(active&&!inChallenge()){renderer.resize();updateCamera(true);}});
   renderer.ready.then(()=>{
     loaded=true;$('#island-loading').hidden=renderer.failed.length===0;
+    if(active)updateCamera(true);
     if(renderer.failed.length)$('#island-loading').textContent='Algumas imagens não abriram. Confira se a pasta assets está junto do index.html.';
   });
   return {start,stop,get active(){return active;}};

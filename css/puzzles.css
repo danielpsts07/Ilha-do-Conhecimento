@@ -4,9 +4,9 @@
   --puzzle-deep:#263f33;
   --puzzle-soft:#dbe5c4;
   --puzzle-sky:#c4d3aa;
-  --puzzle-ground:url('../assets/ambiente/ilha-v4/terreno-grama-floresta.png');
-  --puzzle-prop-left:url('../assets/ambiente/ilha-v4/arvore-cipreste.png');
-  --puzzle-prop-right:url('../assets/ambiente/ilha-v4/arbusto-frutas.png');
+  --puzzle-ground:url('../assets/puzzles/ambiente/terreno-grama-floresta.png');
+  --puzzle-prop-left:url('../assets/puzzles/ambiente/arvore-cipreste.png');
+  --puzzle-prop-right:url('../assets/puzzles/ambiente/arbusto-frutas.png');
   width:100%;
   min-height:100svh;
   display:flex;
@@ -15,9 +15,9 @@
   color:#51432f;
   background:var(--puzzle-deep);
 }
-.puzzle-screen[data-region="village"] { --puzzle-accent:#396d80; --puzzle-deep:#243b44; --puzzle-soft:#d9e9e9; --puzzle-sky:#b8d9dc; --puzzle-ground:url('../assets/ambiente/ilha-v4/terreno-grama.png'); --puzzle-prop-left:url('../assets/ambiente/ilha-v4/arvore-copa.png'); --puzzle-prop-right:url('../assets/ambiente/ilha-v4/arbusto-florido.png'); }
-.puzzle-screen[data-region="ruins"] { --puzzle-accent:#90504b; --puzzle-deep:#3e3435; --puzzle-soft:#efe0d7; --puzzle-sky:#cec9b7; --puzzle-ground:url('../assets/ambiente/ilha-v4/terreno-pedra.png'); --puzzle-prop-left:url('../assets/ambiente/ilha-v4/coluna.png'); --puzzle-prop-right:url('../assets/ambiente/ilha-v4/pedra-musgo.png'); }
-.puzzle-screen[data-region="farm"] { --puzzle-accent:#846126; --puzzle-deep:#403c2c; --puzzle-soft:#f0e4bb; --puzzle-sky:#ded8ad; --puzzle-ground:url('../assets/ambiente/ilha-v4/terreno-grama.png'); --puzzle-prop-left:url('../assets/ambiente/ilha-v4/feno.png'); --puzzle-prop-right:url('../assets/ambiente/ilha-v4/horta.png'); }
+.puzzle-screen[data-region="village"] { --puzzle-accent:#396d80; --puzzle-deep:#243b44; --puzzle-soft:#d9e9e9; --puzzle-sky:#b8d9dc; --puzzle-ground:url('../assets/puzzles/ambiente/terreno-grama.png'); --puzzle-prop-left:url('../assets/puzzles/ambiente/arvore-copa.png'); --puzzle-prop-right:url('../assets/puzzles/ambiente/arbusto-florido.png'); }
+.puzzle-screen[data-region="ruins"] { --puzzle-accent:#90504b; --puzzle-deep:#3e3435; --puzzle-soft:#efe0d7; --puzzle-sky:#cec9b7; --puzzle-ground:url('../assets/puzzles/ambiente/terreno-pedra.png'); --puzzle-prop-left:url('../assets/puzzles/ambiente/coluna.png'); --puzzle-prop-right:url('../assets/puzzles/ambiente/pedra-musgo.png'); }
+.puzzle-screen[data-region="farm"] { --puzzle-accent:#846126; --puzzle-deep:#403c2c; --puzzle-soft:#f0e4bb; --puzzle-sky:#ded8ad; --puzzle-ground:url('../assets/puzzles/ambiente/terreno-grama.png'); --puzzle-prop-left:url('../assets/puzzles/ambiente/feno.png'); --puzzle-prop-right:url('../assets/puzzles/ambiente/horta.png'); }
 body.is-puzzling::before { background:#263f33; filter:none; }
 .puzzle-header,.puzzle-layout,.puzzle-footer { width:min(1220px,100%); margin-inline:auto; }
 .puzzle-header { display:flex; justify-content:space-between; align-items:center; gap:18px; padding:0 3px 20px; color:#f5e6bf; }
