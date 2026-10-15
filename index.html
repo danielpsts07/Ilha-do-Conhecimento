@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#20172a">
   <title>Ilha do Conhecimento</title>
-  <link rel="icon" href="assets/ui/icones/gato-rosto.png">
+  <link rel="icon" href="assets/hud/gato-rosto.png">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/island.css">
   <link rel="stylesheet" href="css/puzzles.css">
@@ -14,15 +14,15 @@
 <body>
   <main id="home-screen" class="game-shell">
     <section class="home" aria-label="Tela inicial de Ilha do Conhecimento">
-      <img class="room" src="assets/fundos/quarto-sem-interface.png" alt="Uma criança estuda em seu quarto enquanto o gato dorme na cama.">
+      <img class="room" src="assets/tela-inicial/quarto-sem-interface.png" alt="Uma criança estuda em seu quarto enquanto o gato dorme na cama.">
       <div class="room-shade" aria-hidden="true"></div>
-      <button class="corner-button exit-button" data-open="exit" aria-label="Sair" title="Sair"><img src="assets/ui/icones/sair-menu.png" alt=""></button>
-      <button class="corner-button settings-button" data-open="settings" aria-label="Configurações" title="Configurações"><img src="assets/ui/icones/configuracoes-menu.png" alt=""></button>
+      <button class="corner-button exit-button" data-open="exit" aria-label="Sair" title="Sair"><img src="assets/tela-inicial/sair-menu.png" alt=""></button>
+      <button class="corner-button settings-button" data-open="settings" aria-label="Configurações" title="Configurações"><img src="assets/tela-inicial/configuracoes-menu.png" alt=""></button>
       <div class="home-menu">
-        <img class="logo" src="assets/ui/logo/logo-ilha-do-conhecimento.png" alt="Ilha do Conhecimento" fetchpriority="high">
+        <img class="logo" src="assets/tela-inicial/logo-ilha-do-conhecimento.png" alt="Ilha do Conhecimento" fetchpriority="high">
         <nav aria-label="Menu principal">
-          <button class="image-button" data-open="start" aria-label="Iniciar"><img src="assets/ui/botoes/iniciar.png" alt="" draggable="false"></button>
-          <button class="image-button" data-open="tutorial" aria-label="Tutorial"><img src="assets/ui/botoes/tutorial.png" alt="" draggable="false"></button>
+          <button class="image-button" data-open="start" aria-label="Iniciar"><img src="assets/tela-inicial/iniciar.png" alt="" draggable="false"></button>
+          <button class="image-button" data-open="tutorial" aria-label="Tutorial"><img src="assets/tela-inicial/tutorial.png" alt="" draggable="false"></button>
         </nav>
       </div>
       <span class="sleep-mark" aria-hidden="true">z<span>z</span></span>
@@ -32,11 +32,11 @@
 
   <section id="island-screen" class="island-screen" aria-label="Exploração da Ilha do Conhecimento" hidden>
     <header class="island-header">
-      <div class="island-brand"><img src="assets/ui/icones/gato-rosto.png" alt=""><div><strong>Ilha do Conhecimento</strong><span>A caminho do seu amigo</span></div></div>
+      <div class="island-brand"><img src="assets/hud/gato-rosto.png" alt=""><div><strong>Ilha do Conhecimento</strong><span>A caminho do seu amigo</span></div></div>
       <nav class="island-nav" aria-label="Opções da aventura">
         <button id="island-map-button" class="island-ui-button" aria-label="Abrir mapa da ilha, atalho M">Mapa <kbd>M</kbd></button>
-        <button class="island-ui-button" data-open="tutorial" aria-label="Abrir tutorial"><img src="assets/ui/icones/livro.png" alt=""><span>Ajuda</span></button>
-        <button class="island-ui-button" data-open="settings" aria-label="Abrir configurações"><img src="assets/ui/icones/configuracoes.png" alt=""><span>Som</span></button>
+        <button class="island-ui-button" data-open="tutorial" aria-label="Abrir tutorial"><img src="assets/hud/livro.png" alt=""><span>Ajuda</span></button>
+        <button class="island-ui-button" data-open="settings" aria-label="Abrir configurações"><img src="assets/hud/configuracoes.png" alt=""><span>Som</span></button>
         <button id="island-pause-button" class="island-ui-button" aria-label="Pausar aventura, atalho Escape">Pausa <span class="pause-symbol" aria-hidden="true">Ⅱ</span></button>
       </nav>
     </header>
@@ -46,10 +46,10 @@
       <div class="island-keyring" role="group" aria-label="Chaves da aventura">
         <span id="island-key-count" aria-live="polite">0 de 4 chaves</span>
         <div class="island-key-slots">
-          <span id="island-key-forest" class="island-key-slot" data-owned="false" data-key-name="Chave verde" role="img" aria-label="Chave verde: a encontrar"><img src="assets/objetos/chave-verde.png" alt=""><small>Lógica</small></span>
-          <span id="island-key-village" class="island-key-slot" data-owned="false" data-key-name="Chave azul" role="img" aria-label="Chave azul: a encontrar"><img src="assets/objetos/chave-azul.png" alt=""><small>Álgebra</small></span>
-          <span id="island-key-ruins" class="island-key-slot" data-owned="false" data-key-name="Chave vermelha" role="img" aria-label="Chave vermelha: a encontrar"><img src="assets/objetos/chave-vermelha.png" alt=""><small>Formas</small></span>
-          <span id="island-key-farm" class="island-key-slot" data-owned="false" data-key-name="Chave amarela" role="img" aria-label="Chave amarela: a encontrar"><img src="assets/objetos/chave-amarela.png" alt=""><small>Contas</small></span>
+          <span id="island-key-forest" class="island-key-slot" data-owned="false" data-key-name="Chave verde" role="img" aria-label="Chave verde: a encontrar"><img src="assets/hud/chave-verde.png" alt=""><small>Lógica</small></span>
+          <span id="island-key-village" class="island-key-slot" data-owned="false" data-key-name="Chave azul" role="img" aria-label="Chave azul: a encontrar"><img src="assets/hud/chave-azul.png" alt=""><small>Álgebra</small></span>
+          <span id="island-key-ruins" class="island-key-slot" data-owned="false" data-key-name="Chave vermelha" role="img" aria-label="Chave vermelha: a encontrar"><img src="assets/hud/chave-vermelha.png" alt=""><small>Formas</small></span>
+          <span id="island-key-farm" class="island-key-slot" data-owned="false" data-key-name="Chave amarela" role="img" aria-label="Chave amarela: a encontrar"><img src="assets/hud/chave-amarela.png" alt=""><small>Contas</small></span>
         </div>
       </div>
       <button id="island-minimap-button" class="island-minimap" aria-label="Abrir mapa completo da ilha"><span>ILHA DO CONHECIMENTO <span aria-hidden="true">↗</span></span><canvas id="island-minimap" width="192" height="144" aria-hidden="true"></canvas><span class="minimap-caption"><i aria-hidden="true"></i> Você está aqui</span></button>
@@ -65,7 +65,7 @@
 
   <section id="puzzle-screen" class="puzzle-screen" data-region="forest" aria-labelledby="puzzle-title" hidden>
     <header class="puzzle-header">
-      <div class="puzzle-brand"><img src="assets/ui/icones/livro.png" alt=""><span>Ilha do Conhecimento<small>UM NOVO DESAFIO NA AVENTURA</small></span></div>
+      <div class="puzzle-brand"><img src="assets/hud/livro.png" alt=""><span>Ilha do Conhecimento<small>UM NOVO DESAFIO NA AVENTURA</small></span></div>
       <button id="puzzle-return" class="puzzle-return" type="button">← Voltar à ilha <kbd>Esc</kbd></button>
     </header>
     <div class="puzzle-layout">
@@ -73,11 +73,11 @@
         <div class="puzzle-stage-heading"><span class="puzzle-eyebrow">VOCÊ CHEGOU À</span><p id="puzzle-region">Floresta dos Padrões</p></div>
         <div class="puzzle-scenery" aria-hidden="true">
           <span class="puzzle-prop puzzle-prop-left"></span>
-          <img id="puzzle-scene" class="puzzle-scene-object" src="assets/ambiente/ilha-v4/arvore-copa.png" alt="" draggable="false">
+          <img id="puzzle-scene" class="puzzle-scene-object" src="assets/puzzles/ambiente/arvore-copa.png" alt="" draggable="false">
           <span class="puzzle-prop puzzle-prop-right"></span>
-          <img class="puzzle-character" src="assets/personagens/personagem-lado.png" alt="" draggable="false">
+          <img class="puzzle-character" src="assets/personagem/personagem-lado.png" alt="" draggable="false">
         </div>
-        <div class="puzzle-stage-note"><p id="puzzle-caption">A floresta guarda um segredo. Observe com atenção!</p><div class="puzzle-key-preview"><img id="puzzle-key" src="assets/objetos/chave-verde.png" alt="Chave verde" draggable="false"><span id="puzzle-key-label">Sua próxima conquista</span></div></div>
+        <div class="puzzle-stage-note"><p id="puzzle-caption">A floresta guarda um segredo. Observe com atenção!</p><div class="puzzle-key-preview"><img id="puzzle-key" src="assets/hud/chave-verde.png" alt="Chave verde" draggable="false"><span id="puzzle-key-label">Sua próxima conquista</span></div></div>
       </aside>
       <article class="puzzle-activity" aria-labelledby="puzzle-title">
         <div class="puzzle-page-heading"><span class="puzzle-eyebrow">APRENDER ABRE CAMINHOS</span><span id="puzzle-round" class="puzzle-round">Desafio 1 de 3</span></div>
@@ -86,15 +86,15 @@
         <div id="puzzle-board" class="puzzle-board"></div>
         <div id="puzzle-controls" class="puzzle-controls"></div>
         <p id="puzzle-feedback" class="puzzle-feedback" role="status" aria-live="polite" aria-atomic="true"></p>
-        <div class="puzzle-page-actions"><button id="puzzle-help" class="puzzle-help" type="button" aria-controls="puzzle-hint"><img src="assets/ui/icones/livro.png" alt="">Preciso de uma dica</button><button id="puzzle-next" class="puzzle-action puzzle-primary" type="button" hidden>Próximo desafio →</button></div>
+        <div class="puzzle-page-actions"><button id="puzzle-help" class="puzzle-help" type="button" aria-controls="puzzle-hint"><img src="assets/hud/livro.png" alt="">Preciso de uma dica</button><button id="puzzle-next" class="puzzle-action puzzle-primary" type="button" hidden>Próximo desafio →</button></div>
         <p id="puzzle-hint" class="puzzle-hint" hidden></p>
       </article>
     </div>
-    <footer class="puzzle-footer"><img src="assets/ui/icones/pata.png" alt=""><p>Cada descoberta deixa você mais perto do seu gato.</p><span id="puzzle-progress">Uma chave, três pequenos desafios</span></footer>
+    <footer class="puzzle-footer"><img src="assets/hud/pata.png" alt=""><p>Cada descoberta deixa você mais perto do seu gato.</p><span id="puzzle-progress">Uma chave, três pequenos desafios</span></footer>
   </section>
 
   <dialog id="island-info-dialog" class="island-dialog" aria-labelledby="island-info-title">
-    <button class="panel-close" data-close aria-label="Fechar placa"><img src="assets/ui/icones/fechar.png" alt=""></button>
+    <button class="panel-close" data-close aria-label="Fechar placa"><img src="assets/hud/fechar.png" alt=""></button>
     <span id="island-info-chapter" class="chapter"></span><h1 id="island-info-title"></h1>
     <p id="island-info-copy"></p><p id="island-info-note" class="island-note"></p>
     <button class="asset-button green" data-close>Continuar explorando</button>
@@ -105,7 +105,7 @@
     <p class="island-note">Posição, desafios, chaves e cadeados ficam guardados nesta sessão. Recarregar a página reinicia a aventura.</p>
   </dialog>
   <dialog id="island-map-dialog" class="island-dialog island-map-dialog" aria-labelledby="island-map-title">
-    <button class="panel-close" data-close aria-label="Fechar mapa"><img src="assets/ui/icones/fechar.png" alt=""></button>
+    <button class="panel-close" data-close aria-label="Fechar mapa"><img src="assets/hud/fechar.png" alt=""></button>
     <span class="chapter">SEU GUIA DE EXPLORAÇÃO</span><h1 id="island-map-title">Uma ilha conectada</h1>
     <canvas id="island-map" width="576" height="432" role="img" aria-label="Mapa da ilha com a posição atual. Montanha ao norte, floresta a noroeste, vila a sudoeste, ruínas a nordeste e fazenda a sudeste."></canvas>
     <p class="island-map-legend"><i aria-hidden="true"></i> Você está aqui. As pontes ligam os dois lados do rio.</p><p>Ao norte: montanha. À esquerda: floresta e vila. À direita: ruínas e fazenda.</p>
@@ -119,18 +119,18 @@
       <h1 id="rescue-title" tabindex="-1">O gato espera por você</h1>
       <p id="rescue-copy"></p>
       <div class="rescue-scene" aria-label="Seu gato no arco da montanha">
-        <img class="rescue-arch" src="assets/ambiente/ilha-v4/arco.png" alt="">
-        <img class="rescue-friend" src="assets/personagens/gato-frente.png" alt="Seu gato alaranjado">
-        <img class="rescue-child" src="assets/personagens/personagem-lado.png" alt="Sua personagem">
-        <img class="rescue-fence" src="assets/ambiente/ilha-v4/cerca.png" alt="">
+        <img class="rescue-arch" src="assets/puzzles/ambiente/arco.png" alt="">
+        <img class="rescue-friend" src="assets/personagem/gato-frente.png" alt="Seu gato alaranjado">
+        <img class="rescue-child" src="assets/personagem/personagem-lado.png" alt="Sua personagem">
+        <img class="rescue-fence" src="assets/puzzles/ambiente/cerca.png" alt="">
         <span class="rescue-heart" aria-hidden="true">♥</span>
       </div>
       <p id="rescue-count">0 de 4 cadeados abertos</p>
       <div class="rescue-locks" role="group" aria-label="Cadeados do gato">
-        <button id="rescue-lock-forest" class="rescue-lock" data-region="forest"><img src="assets/objetos/chave-verde.png" alt=""><img class="lock-icon" src="assets/objetos/cadeado-cinza.png" alt=""><span id="rescue-label-forest">Falta a chave verde</span><small>Floresta dos Padrões</small></button>
-        <button id="rescue-lock-village" class="rescue-lock" data-region="village"><img src="assets/objetos/chave-azul.png" alt=""><img class="lock-icon" src="assets/objetos/cadeado-cinza.png" alt=""><span id="rescue-label-village">Falta a chave azul</span><small>Vila do Conhecimento</small></button>
-        <button id="rescue-lock-ruins" class="rescue-lock" data-region="ruins"><img src="assets/objetos/chave-vermelha.png" alt=""><img class="lock-icon" src="assets/objetos/cadeado-cinza.png" alt=""><span id="rescue-label-ruins">Falta a chave vermelha</span><small>Ruínas das Formas</small></button>
-        <button id="rescue-lock-farm" class="rescue-lock" data-region="farm"><img src="assets/objetos/chave-amarela.png" alt=""><img class="lock-icon" src="assets/objetos/cadeado-cinza.png" alt=""><span id="rescue-label-farm">Falta a chave amarela</span><small>Fazenda dos Números</small></button>
+        <button id="rescue-lock-forest" class="rescue-lock" data-region="forest"><img src="assets/hud/chave-verde.png" alt=""><img class="lock-icon" src="assets/final/cadeado-cinza.png" alt=""><span id="rescue-label-forest">Falta a chave verde</span><small>Floresta dos Padrões</small></button>
+        <button id="rescue-lock-village" class="rescue-lock" data-region="village"><img src="assets/hud/chave-azul.png" alt=""><img class="lock-icon" src="assets/final/cadeado-cinza.png" alt=""><span id="rescue-label-village">Falta a chave azul</span><small>Vila do Conhecimento</small></button>
+        <button id="rescue-lock-ruins" class="rescue-lock" data-region="ruins"><img src="assets/hud/chave-vermelha.png" alt=""><img class="lock-icon" src="assets/final/cadeado-cinza.png" alt=""><span id="rescue-label-ruins">Falta a chave vermelha</span><small>Ruínas das Formas</small></button>
+        <button id="rescue-lock-farm" class="rescue-lock" data-region="farm"><img src="assets/hud/chave-amarela.png" alt=""><img class="lock-icon" src="assets/final/cadeado-cinza.png" alt=""><span id="rescue-label-farm">Falta a chave amarela</span><small>Fazenda dos Números</small></button>
       </div>
       <p id="rescue-feedback" class="rescue-feedback" role="status" aria-live="polite"></p>
       <p id="rescue-missing" class="rescue-note"></p>
@@ -140,24 +140,24 @@
 
   <dialog id="book-dialog" class="book-dialog" aria-labelledby="settings-title">
     <div class="book-scene">
-      <img class="book-background" src="assets/fundos/livro-cenario.png" alt="">
-      <button class="book-close" data-close aria-label="Fechar livro"><img src="assets/ui/icones/fechar.png" alt=""></button>
+      <img class="book-background" src="assets/configuracoes/livro-cenario.png" alt="">
+      <button class="book-close" data-close aria-label="Fechar livro"><img src="assets/hud/fechar.png" alt=""></button>
       <div id="settings-view" class="book-content" hidden>
         <section class="page left-page">
           <span class="chapter">SEU LIVRO DE AVENTURAS</span>
           <h1 id="settings-title">Configurações</h1>
           <p class="subtitle">Pequenos ajustes,<br>grandes aventuras.</p>
-          <img class="settings-cat" src="assets/ui/ilustracoes/gato-tutorial.png" alt="Um gato sorridente.">
+          <img class="settings-cat" src="assets/configuracoes/gato-tutorial.png" alt="Um gato sorridente.">
           <p class="cat-caption">Do seu jeito fica melhor!</p>
         </section>
         <section class="page right-page" aria-label="Controles de áudio">
           <div class="volume-group">
-            <label for="sound-volume"><img src="assets/ui/icones/som.png" alt="">Efeitos sonoros <output id="sound-value" for="sound-volume">70%</output></label>
+            <label for="sound-volume"><img src="assets/configuracoes/som.png" alt="">Efeitos sonoros <output id="sound-value" for="sound-volume">70%</output></label>
             <input id="sound-volume" type="range" min="0" max="100" value="70">
             <button class="text-link" id="test-sound">Ouvir um efeito</button>
           </div>
           <div class="volume-group music-group">
-            <label for="music-volume"><img src="assets/ui/icones/musica.png" alt="">Música <output id="music-value" for="music-volume">35%</output></label>
+            <label for="music-volume"><img src="assets/configuracoes/musica.png" alt="">Música <output id="music-value" for="music-volume">35%</output></label>
             <input id="music-volume" type="range" min="0" max="100" value="35">
             <button class="music-toggle" id="music-toggle" aria-pressed="false"><span class="status-dot"></span><span id="music-status">Ouvir música de teste</span></button>
           </div>
@@ -176,19 +176,19 @@
         </section>
         <section class="page right-page tutorial-practice" aria-label="Demonstração dos controles">
           <div id="movement-practice">
-            <div class="practice-board" id="practice-board" aria-label="Área de prática de movimento"><img class="practice-tree" src="assets/ambiente/arvore.png" alt="Árvore"><img id="practice-player" src="assets/personagens/personagem-frente.png" alt="Personagem"></div>
+            <div class="practice-board" id="practice-board" aria-label="Área de prática de movimento"><img class="practice-tree" src="assets/ilha/arvore.png" alt="Árvore"><img id="practice-player" src="assets/personagem/personagem-frente.png" alt="Personagem"></div>
             <div class="direction-pad" aria-label="Controles de movimento"><button data-move="up" aria-label="Mover para cima">↑</button><button data-move="left" aria-label="Mover para a esquerda">←</button><button data-move="down" aria-label="Mover para baixo">↓</button><button data-move="right" aria-label="Mover para a direita">→</button></div>
             <p class="practice-caption">Experimente aqui!</p>
           </div>
           <div id="interaction-practice" hidden>
-            <div class="interaction-scene"><img src="assets/personagens/personagem-lado.png" alt="Personagem"><div class="key-pedestal"><img id="practice-key" src="assets/objetos/chave-amarela.png" alt="Chave de demonstração"><span></span></div></div>
+            <div class="interaction-scene"><img src="assets/personagem/personagem-lado.png" alt="Personagem"><div class="key-pedestal"><img id="practice-key" src="assets/hud/chave-amarela.png" alt="Chave de demonstração"><span></span></div></div>
             <button id="interact-button" class="asset-button parchment">Interagir <kbd>E</kbd></button>
             <p class="practice-caption" id="interaction-result" aria-live="polite">Uma chave espera por você.</p>
           </div>
           <div id="regions-practice" hidden>
-            <div class="region-grid" aria-label="Quatro regiões"><button data-region="0"><img src="assets/objetos/chave-verde.png" alt="">Lógica</button><button data-region="1"><img src="assets/objetos/chave-azul.png" alt="">Álgebra</button><button data-region="2"><img src="assets/objetos/chave-vermelha.png" alt="">Geometria</button><button data-region="3"><img src="assets/objetos/chave-amarela.png" alt="">Operações</button></div>
+            <div class="region-grid" aria-label="Quatro regiões"><button data-region="0"><img src="assets/hud/chave-verde.png" alt="">Lógica</button><button data-region="1"><img src="assets/hud/chave-azul.png" alt="">Álgebra</button><button data-region="2"><img src="assets/hud/chave-vermelha.png" alt="">Geometria</button><button data-region="3"><img src="assets/hud/chave-amarela.png" alt="">Operações</button></div>
             <p id="region-description" class="practice-caption" aria-live="polite">Toque em uma chave para descobrir o desafio.</p>
-            <img class="rescue-cat" src="assets/personagens/gato-frente.png" alt="O gato que vamos resgatar.">
+            <img class="rescue-cat" src="assets/personagem/gato-frente.png" alt="O gato que vamos resgatar.">
           </div>
         </section>
         <div class="book-actions"><button id="previous-step" class="asset-button parchment">Voltar</button><div class="page-dots" aria-label="Páginas do tutorial"><button data-step="0" aria-label="Página 1" aria-current="step"></button><button data-step="1" aria-label="Página 2"></button><button data-step="2" aria-label="Página 3"></button></div><button id="next-step" class="asset-button green">Próxima</button></div>
@@ -197,15 +197,16 @@
   </dialog>
 
   <dialog id="message-dialog" class="message-dialog" aria-labelledby="message-title">
-    <button class="panel-close" data-close aria-label="Fechar"><img src="assets/ui/icones/fechar.png" alt=""></button>
+    <button class="panel-close" data-close aria-label="Fechar"><img src="assets/hud/fechar.png" alt=""></button>
     <span class="chapter" id="message-chapter">UM PRIMEIRO OLHAR</span>
     <h1 id="message-title">A aventura está chegando!</h1>
-    <img id="island-preview" class="island-preview" src="assets/mapa/ilha-referencia.png" alt="A ilha com suas quatro regiões e a montanha do gato.">
+    <img id="island-preview" class="island-preview" src="assets/ilha/ilha-referencia.png" alt="A ilha com suas quatro regiões e a montanha do gato.">
     <p id="message-copy"></p>
     <div class="message-actions"><button id="message-back" class="asset-button parchment">Voltar ao menu</button><button id="message-confirm" class="asset-button green" hidden>Ver tutorial</button></div>
   </dialog>
   <noscript><p class="noscript">Ative o JavaScript para usar os botões do jogo.</p></noscript>
   <script src="js/audio.js"></script>
+  <script src="js/config.js"></script>
   <script src="js/island-world.js"></script>
   <script src="js/island-art.js"></script>
   <script src="js/island-renderer.js"></script>

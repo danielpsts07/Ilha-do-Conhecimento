@@ -58,7 +58,7 @@
     position.y=Math.min(96,Math.max(36,position.y+shift[1]));
     const player=$('#practice-player');
     player.style.left=`${position.x}%`;player.style.top=`${position.y}%`;
-    player.src=`assets/personagens/personagem-${direction==='up'?'costas':direction==='down'?'frente':'lado'}.png`;
+    player.src=`assets/personagem/personagem-${direction==='up'?'costas':direction==='down'?'frente':'lado'}.png`;
     player.style.transform=`translate(-50%,-100%)${direction==='left'?' scaleX(-1)':''}`;
   }
   function interact() {
@@ -72,7 +72,7 @@
   function resetTutorial() {
     step=0;collected=false;position.x=42;position.y=65;
     $('#practice-player').style.cssText='left:42%;top:65%';
-    $('#practice-player').src='assets/personagens/personagem-frente.png';
+    $('#practice-player').src='assets/personagem/personagem-frente.png';
     $('.key-pedestal').classList.remove('collected');
     $('#interaction-result').textContent='Uma chave de prática espera por você.';
     $('#interact-button').innerHTML='Interagir <kbd>E</kbd>';

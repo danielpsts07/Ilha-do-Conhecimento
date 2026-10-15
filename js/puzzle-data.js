@@ -15,8 +15,8 @@ window.PuzzleData = (() => {
       title: 'O caminho dos símbolos',
       kind: 'sequence',
       keyName: 'Chave verde',
-      key: 'assets/objetos/chave-verde.png',
-      scene: 'assets/ambiente/ilha-v4/arvore-copa.png',
+      key: 'assets/hud/chave-verde.png',
+      scene: 'assets/puzzles/ambiente/arvore-copa.png',
       caption: 'O caminho da floresta se abre quando você lembra a ordem dos símbolos.',
       reward: 'Você lembrou os caminhos da floresta! A chave verde abre um dos cadeados do gato.',
       rounds: [
@@ -30,8 +30,8 @@ window.PuzzleData = (() => {
       title: 'O número escondido',
       kind: 'missing',
       keyName: 'Chave azul',
-      key: 'assets/objetos/chave-azul.png',
-      scene: 'assets/ambiente/ilha-v4/biblioteca.png',
+      key: 'assets/hud/chave-azul.png',
+      scene: 'assets/puzzles/ambiente/biblioteca.png',
       caption: 'Ajude a biblioteca a encontrar os números que sumiram de suas páginas.',
       reward: 'As páginas estão completas! A chave azul abre um dos cadeados do gato.',
       rounds: [
@@ -45,8 +45,8 @@ window.PuzzleData = (() => {
       title: 'A peça da porta antiga',
       kind: 'rotation',
       keyName: 'Chave vermelha',
-      key: 'assets/objetos/chave-vermelha.png',
-      scene: 'assets/ambiente/ilha-v4/arco.png',
+      key: 'assets/hud/chave-vermelha.png',
+      scene: 'assets/puzzles/ambiente/arco.png',
       caption: 'Gire a peça de pedra para abrir as três portas das ruínas.',
       reward: 'As portas antigas se abriram! A chave vermelha abre um dos cadeados do gato.',
       rounds: [
@@ -60,8 +60,8 @@ window.PuzzleData = (() => {
       title: 'A conta da colheita',
       kind: 'operation',
       keyName: 'Chave amarela',
-      key: 'assets/objetos/chave-amarela.png',
-      scene: 'assets/ambiente/ilha-v4/moinho.png',
+      key: 'assets/hud/chave-amarela.png',
+      scene: 'assets/puzzles/ambiente/moinho.png',
       caption: 'Conte a colheita e ajude o moinho a descobrir o resultado das contas.',
       reward: 'A colheita está contada! A chave amarela abre um dos cadeados do gato.',
       rounds: [

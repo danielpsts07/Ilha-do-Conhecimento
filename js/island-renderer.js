@@ -2,25 +2,23 @@
 window.IslandRenderer = (() => {
   'use strict';
   const T=48, types=IslandWorld.terrain, noise=IslandWorld.noise;
-  const sources=IslandArt.sources;
+  const sources={island:'ilha/ilha.jpeg',front:IslandArt.sources.front,back:IslandArt.sources.back,side:IslandArt.sources.side};
   function create(canvas,miniCanvas,mapCanvas,world) {
     const ctx=canvas.getContext('2d'),mini=miniCanvas.getContext('2d'),map=mapCanvas.getContext('2d');
     const images={},failed=[],patterns={};
     const ready=Promise.all(Object.entries(sources).map(([name,path])=>new Promise(resolve=>{
       const img=new Image();images[name]=img;
-      img.onload=resolve;img.onerror=()=>{failed.push(path);resolve();};img.src=`assets/${path}`;
+      img.onload=()=>{
+        if(name==='island') {
+          world.width=img.naturalWidth*WORLD_SCALE;world.height=img.naturalHeight*WORLD_SCALE;
+          overviewCtx.drawImage(img,0,0,overview.width,overview.height);
+        }
+        resolve();
+      };img.onerror=()=>{failed.push(path);resolve();};img.src=`assets/${path}`;
     })));
-    let width=960,height=600,dpr=1;
+    let width=960,height=600,dpr=1,debug=false;
     const overview=document.createElement('canvas');overview.width=world.cols*3;overview.height=world.rows*3;
     const overviewCtx=overview.getContext('2d');
-    const miniColors=['#58adbb','#87a15b','#dfc58f','#c5a570','#9da68f','#9c7651'];
-    for(let y=0;y<world.rows;y++)for(let x=0;x<world.cols;x++) {
-      overviewCtx.fillStyle=miniColors[world.at(x,y)];overviewCtx.fillRect(x*3,y*3,3,3);
-    }
-    overviewCtx.fillStyle='#385743';
-    for(const o of world.objects)if(o.kind==='tree')overviewCtx.fillRect(o.x/world.width*overview.width-1,o.y/world.height*overview.height-2,2,3);
-    overviewCtx.fillStyle='#89664d';
-    for(const o of world.objects)if(['house','barn','mill'].includes(o.kind))overviewCtx.fillRect(o.x/world.width*overview.width-3,o.y/world.height*overview.height-3,6,4);
     function resize() {
       const rect=canvas.getBoundingClientRect();
       width=Math.max(320,Math.round(rect.width));height=Math.max(240,Math.round(rect.height));
@@ -271,6 +269,7 @@ window.IslandRenderer = (() => {
     function renderOverview(player,camera,visited,large=false) {
       const target=large?map:mini,c=large?mapCanvas:miniCanvas;
       target.imageSmoothingEnabled=false;target.clearRect(0,0,c.width,c.height);target.drawImage(overview,0,0,c.width,c.height);
+      if(!world.width||!world.height)return;
       const sx=c.width/world.width,sy=c.height/world.height;
       if(!large){target.strokeStyle='#fff1c399';target.lineWidth=1;target.strokeRect(camera.x*sx,camera.y*sy,width*sx,height*sy);}
       for(const region of world.regions) {
@@ -281,29 +280,27 @@ window.IslandRenderer = (() => {
       marker(target,player.x*sx,player.y*sy,large?6:3);
     }
     function draw(player,camera,near,time,reducedMotion,visited) {
-      ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);ctx.save();ctx.translate(-Math.round(camera.x),-Math.round(camera.y));
-      const minX=Math.floor(camera.x/T),minY=Math.floor(camera.y/T),maxX=Math.ceil((camera.x+width)/T),maxY=Math.ceil((camera.y+height)/T);
-      for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++)tile(x,y,time,reducedMotion);
-      roads(minX,minY,maxX,maxY);
-      // Objetos e personagem usam a linha dos pés para ordenar a profundidade.
-      const visible=world.objects.filter(o=>o.x+o.width/2>camera.x-20&&o.x-o.width/2<camera.x+width+20&&o.y>camera.y-30&&o.y-o.height<camera.y+height+30);
-      // Hortas são planos do chão: seu solo não pode encobrir a personagem.
-      for(const o of visible.filter(o=>o.kind==='crops'))object(o,time,reducedMotion);
-      const rank=o=>o.kind==='rescue'?2:o.kind==='player'?1:0;
-      const layers=[...visible.filter(o=>o.kind!=='crops'),{kind:'player',x:player.x,y:player.y}].sort((a,b)=>a.y-b.y||rank(a)-rank(b));
-      for(const o of layers) {
-        if(o.kind!=='player'){object(o,time,reducedMotion);continue;}
-        ellipse(player.x,player.y-2,14,5,'#3b593a55');
-        const bob=!reducedMotion&&player.moving?Math.sin(time/80)*1.5:0;
-        sprite(player.facing==='up'?'back':player.facing==='down'?'front':'side',player.x,player.y+bob,48,60,player.facing==='left');
+      ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);ctx.save();ctx.translate(-camera.x,-camera.y);
+      const background=images.island,vw=Math.min(width,world.width-camera.x),vh=Math.min(height,world.height-camera.y);
+      if(background.naturalWidth&&vw>0&&vh>0) {
+        // Câmera em px do mundo → JPEG: sx = cam.x / WORLD_SCALE (idem y e tamanho).
+        ctx.drawImage(background,camera.x/WORLD_SCALE,camera.y/WORLD_SCALE,vw/WORLD_SCALE,vh/WORLD_SCALE,camera.x,camera.y,vw,vh);
       }
+      ellipse(player.x,player.y-2,9,3,'#3b593a55');
+      const bob=!reducedMotion&&player.moving?Math.sin(time/80)*1.5:0;
+      sprite(player.facing==='up'?'back':player.facing==='down'?'front':'side',player.x,player.y+bob,PLAYER_HEIGHT,PLAYER_HEIGHT,player.facing==='left');
       if(near) {
         const px=near.x,py=near.y-(near.id==='portal'?142:near.id==='mountain'?105:76);
         rect(px-14,py-14,28,28,'#574a38');rect(px-11,py-11,22,22,'#ffefba');ctx.fillStyle='#584634';ctx.font='bold 17px system-ui';ctx.textAlign='center';ctx.fillText('E',px,py+6);
       }
-      pollen(camera,time,reducedMotion);ctx.restore();renderOverview(player,camera,visited);
+      ctx.restore();
+      if(debug) {
+        rect(8,8,310,28,'#172c37e8');ctx.fillStyle='#fff';ctx.font='14px monospace';ctx.textAlign='left';
+        ctx.fillText(`Imagem: x=${(player.x/WORLD_SCALE).toFixed(1)} y=${(player.y/WORLD_SCALE).toFixed(1)} px`,16,27);
+      }
+      renderOverview(player,camera,visited);
     }
-    return {ready,failed,resize,draw,renderOverview,get width(){return width;},get height(){return height;}};
+    return {ready,failed,resize,draw,renderOverview,toggleDebug(){debug=!debug;},get width(){return width;},get height(){return height;}};
   }
   return {create};
 })();

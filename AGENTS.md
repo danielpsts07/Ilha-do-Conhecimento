@@ -49,19 +49,19 @@ O menu já oferece uma direção visual suficiente para avançar. Priorizar o pr
 - A raiz contém a versão 5: tela inicial, ilha conectada, quatro fases de puzzle em telas próprias e resgate do gato, com imagens locais.
 - Configurações têm volumes, persistência local opcional e áudio sintetizado de teste.
 - O tutorial tem três etapas com práticas de movimento e coleta de chave.
-- Iniciar abre uma ilha conectada de 4.608 × 3.456 pixels (96 × 72 células de 48 pixels), com câmera acompanhando a personagem.
-- Exploração tem WASD/setas, botões de direção com toque contínuo, colisões com água e bases de objetos, duas pontes, minimapa, mapa completo, placas com E e pausa com Escape.
-- As quatro regiões, a praça e a montanha são alcançáveis. E nas placas abre os puzzles: sequências na floresta (chave verde), número que falta na vila (azul), giro de peça nas ruínas (vermelha) e contas na fazenda (amarela).
+- Iniciar mostra apenas `assets/ilha/ilha.jpeg` (2752 × 1536), intacto, em escala 0,6: mundo de 1651,2 × 921,6 px. `js/config.js` define escala e personagem de 40 px; nascimento na imagem (1290, 945), mundo (774, 567).
+- Exploração tem WASD/setas, toque, câmera suave com clamp, minimapa, mapa completo e pausa. Colisões antigas de água e objetos estão desativadas; somente as bordas do mundo bloqueiam. F3 mostra coordenadas da imagem.
+- Os sete pontos interativos e as regiões estão preservados nas posições antigas, listadas no README, aguardando reposicionamento. Vários estão fora do novo mundo; ainda não há acesso normal a todos os puzzles e ao resgate por este mapa.
 - Cada puzzle tem três rodadas, dicas e novas tentativas sem punição. Concluir uma fase concede sua chave uma única vez; repetir serve para praticar.
 - Posição, lugares descobertos, progresso parcial dos puzzles, chaves, cadeados abertos e resgate são mantidos ao retornar ao menu nesta sessão; recarregar reinicia a aventura. O progresso da aventura não usa `localStorage`.
-- E na montanha abre a tela dos quatro cadeados. Cada chave permite abrir seu cadeado; abrir todos liberta o gato e apresenta o final. A ilha também mostra os cadeados restantes e deixa de mostrar a cerca após o resgate.
+- A lógica de resgate dos quatro cadeados permanece preservada. Sprites de cadeados, gato e cerca não são mais sobrepostos ao fundo da ilha.
 - Escape nos puzzles e no resgate retorna à ilha e restaura o foco, sem perder o progresso da sessão.
-- `js/adventure-progress.js` centraliza o progresso da sessão; `js/puzzle-data.js` contém as rodadas, `js/puzzle-game.js` controla as fases e `js/rescue-game.js` controla os cadeados e o final. Ver `docs/puzzles.md`.
+- `js/adventure-progress.js` centraliza o progresso da sessão; `js/puzzle-data.js` contém as rodadas, `js/puzzle-game.js` controla as fases e `js/rescue-game.js` controla os cadeados e o final. Ver `referencia/docs/puzzles.md`.
 - As práticas do tutorial não são o sistema definitivo de gameplay e não têm colisões.
 - Personagem muda de pose conforme a direção e usa leve deslocamento visual ao caminhar; não há ciclos completos de animação. O gato usa uma pose estática.
-- O mapa jogável usa Canvas 2D, com estrutura e colisões em JavaScript e imagens locais de cenário em `assets/ambiente/ilha-v4/`. `js/island-art.js` centraliza as referências das imagens.
-- A ambientação tem 24 novos sprites e seis texturas preparados a partir de três atlas gerados com ImageGen. As fontes e os prompts estão preservados no projeto; ver `docs/ambientacao-v4.md`. Personagem, gato, parte das árvores, peças das ruínas e cadeados reutilizam o kit original.
-- Caminhos têm desenho curvo sobre terreno caminhável. Colisões continuam em coordenadas do mundo e bases de objetos. Não ampliar a imagem de referência para usá-la como mapa de colisão.
+- O mapa usa Canvas 2D com um recorte visível do JPEG em `drawImage` de nove argumentos; o fundo carrega uma vez. O minimapa usa uma cópia pequena preparada uma vez. `js/island-art.js` ainda fornece as três poses da personagem.
+- A ambientação tem 24 novos sprites e seis texturas preparados a partir de três atlas gerados com ImageGen. As fontes e os prompts estão preservados no projeto; ver `referencia/docs/ambientacao-v4.md`. Personagem, gato, parte das árvores, peças das ruínas e cadeados reutilizam o kit original.
+- Terreno, objetos e caminhos procedurais antigos não são desenhados. Os assets antigos foram preservados; a lista dos que saíram da exploração está no README. Não há nova máscara de colisão.
 - Atualizar esta seção e o `README.md` quando esses fatos mudarem.
 
 ## Organização dos arquivos
@@ -69,15 +69,14 @@ O menu já oferece uma direção visual suficiente para avançar. Priorizar o pr
 ```text
 index.html              entrada da versão atual
 css/                    estilos
-js/                     lógica do jogo e interface
-assets/                 imagens e futuros arquivos de áudio por categoria
-docs/                   documentação e notas de assets
-tools/                  preparação de assets e verificações auxiliares
-archive/                versões anteriores e referências intermediárias
+js/                     módulos atuais, sem renomear
+assets/                 tela-inicial, configuracoes, ilha, personagem, hud, puzzles e final
+referencia/             documentação e material de consulta
+_lixeira/               ferramentas, histórico, saídas e ambiente Python preservados
 ```
 
 - Integrar o trabalho na versão principal; evitar criar vários projetos paralelos na raiz.
-- Preservar `archive/prototipo-v1/` como histórico. Não alterar arquivos arquivados em uma mudança comum da versão atual.
+- Preservar `_lixeira/archive/prototipo-v1/` como histórico. Não alterar arquivos arquivados em uma mudança comum da versão atual.
 - Não apagar ou mover arquivos do usuário sem necessidade. Antes de movimentos ou exclusões recursivas, verificar os caminhos absolutos e seu escopo.
 - Manter arquivos temporários fora das pastas de execução; não acumular recortes de teste junto aos assets finais.
 - Documentar novos arquivos e seu uso quando isso ajudar a próxima etapa.
@@ -85,8 +84,8 @@ archive/                versões anteriores e referências intermediárias
 ## Assets e identidade visual
 
 - Reutilizar os assets preparados antes de criar novos.
-- Consultar `assets/catalogo.html`, `assets/README.md` e `docs/assets-v2.md`.
-- Para ambientação, consultar também `assets/ambiente/ilha-v4/catalogo.html` e `docs/ambientacao-v4.md`.
+- Consultar `_lixeira/assets/catalogo.html`, `referencia/docs/assets-README.md` e `referencia/docs/assets-v2.md`.
+- Para ambientação, consultar também `_lixeira/assets/ambiente/ilha-v4/catalogo.html` e `referencia/docs/ambientacao-v4.md`.
 - Manter pixel art colorida e acolhedora, quarto de estudo, gato alaranjado e interfaces com livros e pergaminho.
 - Priorizar elementos essenciais: uma árvore e poucos objetos funcionais são suficientes no primeiro cenário.
 - Usar transparência real em sprites e botões. Quadriculado desenhado não é transparência.
@@ -107,11 +106,13 @@ archive/                versões anteriores e referências intermediárias
 
 ## Verificação e entrega
 
+Os utilitários abaixo estão arquivados em _lixeira/tools/. Não os execute diretamente: eles calculam a raiz pela localização antiga; use um wrapper temporário apontando para a raiz real, sem criar arquivos no jogo.
+
 - Executar verificações proporcionais à mudança. Para scripts alterados, usar `node --check caminho/do/arquivo.js` quando Node estiver disponível.
-- Para alterações nos fluxos atuais, executar `node tools/verificar-menu.cjs`. É uma simulação do DOM, não uma validação visual nem um teste de áudio real.
-- Para alterações na exploração, executar `node tools/verificar-ilha.cjs`: verifica acesso às regiões e interações, colisões e controles em DOM simulado. Não substitui a validação visual.
-- Para alterações nos puzzles e no resgate, executar também `node tools/verificar-puzzles.cjs`: verifica rodadas, dicas, tentativas, retomada, conquista única de chaves e abertura dos cadeados em DOM simulado.
-- `tools/renderizar-ilha.cjs` pode gerar prévias usando o renderer real e Canvas nativo quando `@napi-rs/canvas` estiver disponível como ferramenta de desenvolvimento. Não é dependência de execução nem teste de navegador ou CSS.
+- Para alterações nos fluxos atuais, executar `node _lixeira/tools/verificar-menu.cjs`. É uma simulação do DOM, não uma validação visual nem um teste de áudio real.
+- Para alterações na exploração, executar `node _lixeira/tools/verificar-ilha.cjs`: verifica acesso às regiões e interações, colisões e controles em DOM simulado. Não substitui a validação visual.
+- Para alterações nos puzzles e no resgate, executar também `node _lixeira/tools/verificar-puzzles.cjs`: verifica rodadas, dicas, tentativas, retomada, conquista única de chaves e abertura dos cadeados em DOM simulado.
+- `_lixeira/tools/renderizar-ilha.cjs` pode gerar prévias usando o renderer real e Canvas nativo quando `@napi-rs/canvas` estiver disponível como ferramenta de desenvolvimento. Não é dependência de execução nem teste de navegador ou CSS.
 - Conferir referências de imagens, CSS e scripts; verificar dimensões e alpha ao preparar assets.
 - Quando houver acesso autorizado ao navegador, testar os fluxos afetados e o layout em tamanhos representativos. Respeitar permissões recusadas, sem contornar bloqueios.
 - Não afirmar que algo foi testado no navegador quando apenas sintaxe ou simulação foram verificadas.
@@ -119,4 +120,4 @@ archive/                versões anteriores e referências intermediárias
 
 ## Referências do projeto
 
-O guia de desenvolvimento e os PDFs de assets fornecidos anteriormente pelo usuário definem o conceito e a direção visual, mas os originais não estão presentes nos arquivos atuais do projeto. As mecânicas estão registradas neste documento, no tutorial e nas placas; `docs/puzzles.md` identifica o conteúdo preparado para a versão 5. O requerimento de registro de software não contém regras de gameplay. A decisão de usar apenas HTML, CSS, JavaScript e assets, sem JSON nesta etapa, prevalece sobre sugestões técnicas das referências anteriores.
+O guia de desenvolvimento e os PDFs de assets fornecidos anteriormente pelo usuário definem o conceito e a direção visual, mas os originais não estão presentes nos arquivos atuais do projeto. As mecânicas estão registradas neste documento, no tutorial e nas placas; `referencia/docs/puzzles.md` identifica o conteúdo preparado para a versão 5. O requerimento de registro de software não contém regras de gameplay. A decisão de usar apenas HTML, CSS, JavaScript e assets, sem JSON nesta etapa, prevalece sobre sugestões técnicas das referências anteriores.
