@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="css/island.css">
   <link rel="stylesheet" href="css/puzzles.css">
   <link rel="stylesheet" href="css/rescue.css">
+  <link rel="stylesheet" href="css/settings.css">
 </head>
 <body>
   <main id="home-screen" class="game-shell">
@@ -36,7 +37,7 @@
       <nav class="island-nav" aria-label="Opções da aventura">
         <button id="island-map-button" class="island-ui-button" aria-label="Abrir mapa da ilha, atalho M">Mapa <kbd>M</kbd></button>
         <button class="island-ui-button" data-open="tutorial" aria-label="Abrir tutorial"><img src="assets/hud/livro.png" alt=""><span>Ajuda</span></button>
-        <button class="island-ui-button" data-open="settings" aria-label="Abrir configurações"><img src="assets/hud/configuracoes.png" alt=""><span>Som</span></button>
+        <button class="island-ui-button" data-open="settings" data-settings-start="audio" aria-label="Abrir configurações de som"><img src="assets/hud/configuracoes.png" alt=""><span>Som</span></button>
         <button id="island-pause-button" class="island-ui-button" aria-label="Pausar aventura, atalho Escape">Pausa <span class="pause-symbol" aria-hidden="true">Ⅱ</span></button>
       </nav>
     </header>
@@ -57,6 +58,7 @@
     </div>
     <footer class="island-controls">
       <div class="island-direction-pad" role="group" aria-label="Movimento. Segure uma direção para caminhar."><button data-walk="up" aria-label="Caminhar para cima">↑</button><button data-walk="left" aria-label="Caminhar para a esquerda">←</button><button data-walk="down" aria-label="Caminhar para baixo">↓</button><button data-walk="right" aria-label="Caminhar para a direita">→</button></div>
+      <div id="island-joystick" class="island-joystick" role="group" aria-label="Joystick. Arraste para caminhar."><span class="joystick-base"><span id="joystick-stick" class="joystick-stick"></span></span></div>
       <p id="island-instructions"><strong>Uma ilha, quatro chaves.</strong><span><kbd>WASD</kbd> ou <kbd>↑ ← ↓ →</kbd> caminhar <b>·</b> <kbd>E</kbd> interagir <b>·</b> <kbd>Esc</kbd> pausa</span><small>Aproxime-se das placas para entrar nos desafios.</small></p>
       <button id="island-interact" class="island-interact" disabled><kbd>E</kbd><span id="island-interact-label">Aproxime-se de uma placa</span></button>
     </footer>
@@ -142,28 +144,185 @@
     <div class="book-scene">
       <img class="book-background" src="assets/configuracoes/livro-cenario.png" alt="">
       <button class="book-close" data-close aria-label="Fechar livro"><img src="assets/hud/fechar.png" alt=""></button>
-      <div id="settings-view" class="book-content" hidden>
-        <section class="page left-page">
-          <span class="chapter">SEU LIVRO DE AVENTURAS</span>
-          <h1 id="settings-title">Configurações</h1>
-          <p class="subtitle">Pequenos ajustes,<br>grandes aventuras.</p>
-          <img class="settings-cat" src="assets/configuracoes/gato-tutorial.png" alt="Um gato sorridente.">
-          <p class="cat-caption">Do seu jeito fica melhor!</p>
-        </section>
-        <section class="page right-page" aria-label="Controles de áudio">
-          <div class="volume-group">
-            <label for="sound-volume"><img src="assets/configuracoes/som.png" alt="">Efeitos sonoros <output id="sound-value" for="sound-volume">70%</output></label>
-            <input id="sound-volume" type="range" min="0" max="100" value="70">
-            <button class="text-link" id="test-sound">Ouvir um efeito</button>
-          </div>
-          <div class="volume-group music-group">
-            <label for="music-volume"><img src="assets/configuracoes/musica.png" alt="">Música <output id="music-value" for="music-volume">35%</output></label>
-            <input id="music-volume" type="range" min="0" max="100" value="35">
-            <button class="music-toggle" id="music-toggle" aria-pressed="false"><span class="status-dot"></span><span id="music-status">Ouvir música de teste</span></button>
-          </div>
-          <p class="audio-note">Um som suave para testar.<br>A trilha da aventura virá depois.</p>
-        </section>
-        <div class="book-actions"><button class="asset-button green" data-close>Continuar</button><button class="asset-button red" id="settings-exit">Sair do jogo</button></div>
+      <!-- Configurações: cada página é uma "folha dupla"; escolher uma opção vira a folha. -->
+      <div id="settings-view" class="book-content settings-book" data-section="index" hidden>
+        <!-- Sumário: título e metade dos botões à esquerda, metade à direita. -->
+        <div class="settings-spread" data-settings-section="index">
+          <section class="page left-page index-left">
+            <span class="chapter"><img src="assets/hud/pata.png" alt="" class="chapter-paw">SEU LIVRO DE AVENTURAS</span>
+            <h1 id="settings-title" tabindex="-1">Configurações</h1>
+            <nav class="index-menu" aria-label="Páginas das configurações, parte 1">
+              <button class="index-item" data-settings-go="audio" data-tone="audio"><img src="assets/configuracoes/som.png" alt=""><span>Som</span></button>
+              <button class="index-item" data-settings-go="controls" data-tone="controls"><img src="assets/hud/controle.svg" alt=""><span>Controles</span></button>
+              <button class="index-item" data-settings-go="language" data-tone="language"><img src="assets/hud/globo.svg" alt=""><span>Idioma</span></button>
+              <button class="index-item" data-settings-go="access" data-tone="access"><img src="assets/hud/olho.svg" alt=""><span>Acessibilidade</span></button>
+            </nav>
+          </section>
+          <section class="page right-page index-right" aria-label="Páginas das configurações, parte 2">
+            <nav class="index-menu" aria-label="Páginas das configurações, parte 2">
+              <button class="index-item" data-settings-go="howto" data-tone="howto"><img src="assets/hud/livro.png" alt=""><span>Como jogar</span></button>
+              <button class="index-item" data-settings-go="about" data-tone="about"><img src="assets/hud/pata.png" alt=""><span>Sobre nós</span></button>
+              <button class="index-item" data-settings-go="credits" data-tone="credits"><img src="assets/hud/estrela.svg" alt=""><span>Créditos</span></button>
+              <button class="index-item index-reset" id="settings-reset"><img src="assets/hud/pata.png" alt=""><span>Restaurar padrões</span></button>
+            </nav>
+            <p id="settings-reset-note" class="settings-note" role="status" aria-live="polite"></p>
+          </section>
+        </div>
+
+        <!-- Áudio: volumes à esquerda, silenciar tudo à direita. -->
+        <div class="settings-spread" data-settings-section="audio" hidden>
+          <section class="page left-page" aria-labelledby="settings-audio-title">
+            <span class="chapter">PÁGINA 1 · ÁUDIO</span>
+            <h2 id="settings-audio-title" class="section-title" tabindex="-1">Sons da aventura</h2>
+            <div class="volume-group">
+              <label for="sound-volume"><img src="assets/configuracoes/som.png" alt="">Som <output id="sound-value" for="sound-volume">70%</output></label>
+              <input id="sound-volume" type="range" min="0" max="100" value="70">
+            </div>
+            <div class="volume-group">
+              <label for="music-volume"><img src="assets/configuracoes/musica.png" alt="">Música <output id="music-value" for="music-volume">35%</output></label>
+              <input id="music-volume" type="range" min="0" max="100" value="35">
+            </div>
+            <div class="index-extras">
+              <button class="text-link" id="test-sound">Ouvir um efeito</button>
+              <button class="music-toggle" id="music-toggle" aria-pressed="false"><span class="status-dot"></span><span id="music-status">Ouvir música de teste</span></button>
+            </div>
+          </section>
+          <section class="page right-page" aria-label="Mais opções de áudio">
+            <button id="toggle-mute" class="paw-toggle" role="switch" aria-checked="false" data-setting="mute"><span class="paw-track" aria-hidden="true"><span class="paw-knob"></span></span><span class="paw-label">Silenciar tudo<small>Nenhum som toca enquanto estiver ligado.</small></span><span id="toggle-mute-state" class="paw-state" aria-hidden="true">Desligado</span></button>
+            <div class="section-art notes-only" aria-hidden="true"><span class="art-note">♪</span><span class="art-note">♫</span><span class="art-note">♪</span></div>
+          </section>
+        </div>
+
+        <!-- Controles: teclas que acendem à esquerda, velocidade e controle na tela à direita. -->
+        <div class="settings-spread" data-settings-section="controls" hidden>
+          <section class="page left-page">
+            <span class="chapter">PÁGINA 2 · CONTROLES</span>
+            <h2 id="settings-controls-title" class="section-title" tabindex="-1">Como se mexer</h2>
+            <p class="section-copy">Aperte as teclas do seu teclado: elas acendem aqui no livro!</p>
+            <ul class="key-map">
+              <li><span class="key-caps"><kbd data-key="w">W</kbd><kbd data-key="a">A</kbd><kbd data-key="s">S</kbd><kbd data-key="d">D</kbd></span><span>andar pela ilha</span></li>
+              <li><span class="key-caps"><kbd data-key="arrowup" aria-label="Seta para cima">↑</kbd><kbd data-key="arrowleft" aria-label="Seta para a esquerda">←</kbd><kbd data-key="arrowdown" aria-label="Seta para baixo">↓</kbd><kbd data-key="arrowright" aria-label="Seta para a direita">→</kbd></span><span>também andam</span></li>
+              <li><span class="key-caps"><kbd data-key="e">E</kbd></span><span>falar com placas e abrir desafios</span></li>
+              <li><span class="key-caps"><kbd data-key="m">M</kbd></span><span>ver o mapa</span></li>
+              <li><span class="key-caps"><kbd data-key="escape">Esc</kbd></span><span>pausar ou voltar</span></li>
+            </ul>
+          </section>
+          <section class="page right-page" aria-labelledby="settings-controls-title">
+            <p id="speed-label" class="setting-label"><img src="assets/hud/pata.png" alt="">Velocidade da caminhada</p>
+            <div class="stepper" role="group" aria-labelledby="speed-label">
+              <button id="speed-prev" class="stepper-arrow" aria-label="Mais devagar"></button>
+              <output id="speed-value" class="stepper-value" aria-live="polite">Normal</output>
+              <button id="speed-next" class="stepper-arrow stepper-next" aria-label="Mais rápido"></button>
+            </div>
+            <div id="walk-preview" class="walk-preview" data-speed="normal" aria-hidden="true"><img src="assets/personagem/personagem-lado.png" alt=""></div>
+            <p id="touch-label" class="setting-label"><img src="assets/hud/controle.svg" alt="">Controle na tela</p>
+            <p class="setting-hint">Para jogar com o dedo no tablet ou no celular.</p>
+            <div class="touch-choice" role="radiogroup" aria-labelledby="touch-label">
+              <button class="touch-option" id="touch-arrows" role="radio" aria-checked="true" data-touch="arrows">
+                <span class="touch-demo touch-demo-arrows" aria-hidden="true"><i>↑</i><i>←</i><i>↓</i><i>→</i></span>
+                <span class="touch-name">Setas</span>
+              </button>
+              <button class="touch-option" id="touch-joystick" role="radio" aria-checked="false" data-touch="joystick">
+                <span class="touch-demo touch-demo-joystick" aria-hidden="true"><span class="joy-ring"><span class="joy-nub"></span></span></span>
+                <span class="touch-name">Joystick</span>
+              </button>
+              <button class="touch-option" id="touch-off" role="radio" aria-checked="false" data-touch="off">
+                <span class="touch-demo touch-demo-off" aria-hidden="true">⌨</span>
+                <span class="touch-name">Nenhum</span>
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <!-- Idioma -->
+        <div class="settings-spread" data-settings-section="language" hidden>
+          <section class="page left-page">
+            <span class="chapter">PÁGINA 3 · IDIOMA</span>
+            <h2 id="settings-language-title" class="section-title" tabindex="-1">Qual é a sua língua?</h2>
+            <p class="section-copy">A ilha fala português do Brasil. A versão em inglês ainda está sendo escrita.</p>
+            <div class="section-art prop-only" aria-hidden="true"><img class="art-prop" src="assets/hud/globo.svg" alt=""></div>
+          </section>
+          <section class="page right-page" aria-labelledby="settings-language-title">
+            <div class="language-list">
+              <button id="lang-pt" class="language-card" aria-pressed="true"><span class="flag flag-br" aria-hidden="true"></span><span><strong>Português</strong><small>PT-BR · em uso</small></span><span class="check" aria-hidden="true"></span></button>
+              <button id="lang-en" class="language-card" aria-pressed="false" aria-disabled="true" aria-describedby="language-note"><span class="flag flag-us" aria-hidden="true"></span><span><strong>English</strong><small>EN</small></span><span class="soon">Em breve</span></button>
+            </div>
+            <p id="language-note" class="settings-note" role="status" aria-live="polite">O inglês ainda não está disponível.</p>
+          </section>
+        </div>
+
+        <!-- Acessibilidade -->
+        <div class="settings-spread" data-settings-section="access" hidden>
+          <section class="page left-page">
+            <span class="chapter">PÁGINA 4 · ACESSIBILIDADE</span>
+            <h2 id="settings-access-title" class="section-title" tabindex="-1">Jogar com conforto</h2>
+            <p class="section-copy">Letras maiores ajudam a ler. Menos animações deixam a tela mais calminha.</p>
+            <div class="section-art prop-only" aria-hidden="true"><img class="art-prop" src="assets/hud/olho.svg" alt=""></div>
+          </section>
+          <section class="page right-page" aria-labelledby="settings-access-title">
+            <button id="toggle-large-text" class="paw-toggle" role="switch" aria-checked="false" data-setting="largeText"><span class="paw-track" aria-hidden="true"><span class="paw-knob"></span></span><span class="paw-label">Letras maiores<small>Textos do livro, da ilha e dos desafios crescem.</small></span><span id="toggle-large-text-state" class="paw-state" aria-hidden="true">Desligado</span></button>
+            <button id="toggle-calm" class="paw-toggle" role="switch" aria-checked="false" data-setting="calm"><span class="paw-track" aria-hidden="true"><span class="paw-knob"></span></span><span class="paw-label">Menos animações<small>As páginas trocam sem virar e a ilha fica mais paradinha.</small></span><span id="toggle-calm-state" class="paw-state" aria-hidden="true">Desligado</span></button>
+            <p class="text-preview" aria-hidden="true"><b>Aa</b> A ilha espera por você!</p>
+          </section>
+        </div>
+
+        <!-- Como jogar -->
+        <div class="settings-spread" data-settings-section="howto" hidden>
+          <section class="page left-page">
+            <span class="chapter">PÁGINA 5 · COMO JOGAR</span>
+            <h2 id="settings-howto-title" class="section-title" tabindex="-1">Sua missão</h2>
+            <p class="section-copy">Seu gato ficou preso na montanha. Quatro chaves vão abrir os cadeados!</p>
+            <div class="section-art art-keys keys-only" aria-hidden="true"><img class="art-key" src="assets/hud/chave-verde.png" alt=""><img class="art-key" src="assets/hud/chave-azul.png" alt=""><img class="art-key" src="assets/hud/chave-vermelha.png" alt=""><img class="art-key" src="assets/hud/chave-amarela.png" alt=""></div>
+          </section>
+          <section class="page right-page" aria-labelledby="settings-howto-title">
+            <ol class="howto-steps">
+              <li><img src="assets/personagem/personagem-lado.png" alt=""><span>Ande pela ilha com <b>WASD</b> ou as setas.</span></li>
+              <li><img src="assets/hud/livro.png" alt=""><span>Chegue perto de uma placa e aperte <b>E</b>.</span></li>
+              <li><img src="assets/hud/chave-amarela.png" alt=""><span>Resolva os desafios e ganhe uma chave.</span></li>
+              <li><img src="assets/hud/pata.png" alt=""><span>Leve as quatro chaves até a montanha.</span></li>
+            </ol>
+            <button class="asset-button green howto-tutorial" data-open="tutorial">Abrir o tutorial</button>
+          </section>
+        </div>
+
+        <!-- Sobre nós -->
+        <div class="settings-spread" data-settings-section="about" hidden>
+          <section class="page left-page">
+            <span class="chapter">PÁGINA 6 · SOBRE NÓS</span>
+            <h2 id="settings-about-title" class="section-title" tabindex="-1">Ilha do Conhecimento</h2>
+            <p class="section-copy">Uma pequena aventura para aprender matemática brincando, feita para crianças de 7 a 10 anos.</p>
+            <div class="section-art heart-only" aria-hidden="true"><span class="art-heart">♥</span></div>
+          </section>
+          <section class="page right-page" aria-labelledby="settings-about-title">
+            <ul class="info-cards">
+              <li><img src="assets/hud/estrela.svg" alt=""><div><strong>O que você aprende</strong><p>Lógica, números que faltam, formas e contas.</p></div></li>
+              <li><img src="assets/hud/pata.png" alt=""><div><strong>Errar faz parte</strong><p>Sem pressa: tente de novo quantas vezes quiser.</p></div></li>
+              <li><img src="assets/hud/globo.svg" alt=""><div><strong>Joga no navegador</strong><p>A aventura não é salva. Ao recarregar a página, a ilha começa de novo.</p></div></li>
+            </ul>
+          </section>
+        </div>
+
+        <!-- Créditos -->
+        <div class="settings-spread" data-settings-section="credits" hidden>
+          <section class="page left-page">
+            <span class="chapter">PÁGINA 7 · CRÉDITOS</span>
+            <h2 id="settings-credits-title" class="section-title" tabindex="-1">Quem fez a ilha</h2>
+            <p class="chalkboard" aria-hidden="true"><span>créditos</span></p>
+            <div class="section-art prop-only" aria-hidden="true"><img class="art-prop" src="assets/hud/estrela.svg" alt=""></div>
+          </section>
+          <section class="page right-page" aria-labelledby="settings-credits-title">
+            <!-- Troque "Equipe Ilha do Conhecimento" pelos nomes de quem participou. -->
+            <dl class="credits-list">
+              <div data-tone="about"><dt>Ideia e desafios</dt><dd>Equipe Ilha do Conhecimento</dd></div>
+              <div data-tone="audio"><dt>Programação</dt><dd>Equipe Ilha do Conhecimento</dd></div>
+              <div data-tone="access"><dt>Arte em pixel</dt><dd>Kit visual do projeto, com apoio de imagens geradas por IA</dd></div>
+              <div data-tone="howto"><dt>Sons</dt><dd>Criados pelo próprio navegador</dd></div>
+              <div data-tone="credits"><dt>Agradecimento especial</dt><dd>Você, explorador!</dd></div>
+            </dl>
+          </section>
+        </div>
+
+        <div class="book-actions settings-actions"><button id="settings-back" class="asset-button parchment" hidden>← Sumário</button><button id="settings-continue" class="asset-button green" data-close>Continuar</button><button class="asset-button red" id="settings-exit">Sair do jogo</button></div>
       </div>
 
       <div id="tutorial-view" class="book-content" hidden>
@@ -207,6 +366,8 @@
   <noscript><p class="noscript">Ative o JavaScript para usar os botões do jogo.</p></noscript>
   <script src="js/audio.js"></script>
   <script src="js/config.js"></script>
+  <script src="js/game-settings.js"></script>
+  <script src="js/settings-book.js"></script>
   <script src="js/island-world.js"></script>
   <script src="js/island-art.js"></script>
   <script src="js/island-renderer.js"></script>

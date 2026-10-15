@@ -12,32 +12,7 @@
   ];
   const regionText = ['Lógica: observe e repita uma sequência.','Álgebra: descubra o número que está faltando.','Geometria: gire a peça para encontrar o encaixe.','Operações: escolha a resposta da conta.'];
 
-  function readVolume(key,fallback) {
-    try { const raw=localStorage.getItem(key); if(raw===null)return fallback; const value=Number(raw); return Number.isFinite(value)?Math.min(100,Math.max(0,value)):fallback; } catch { return fallback; }
-  }
-  function updateVolumes() {
-    const sound=Number($('#sound-volume').value),music=Number($('#music-volume').value);
-    for(const [id,value,color] of [['sound',sound,'#65a559'],['music',music,'#579cae']]) {
-      $(`#${id}-value`).value=`${value}%`;
-      $(`#${id}-volume`).style.background=`linear-gradient(to right,${color} ${value}%,#4b393f ${value}%)`;
-      $(`#${id}-volume`).setAttribute('aria-valuetext',`${value} por cento`);
-    }
-    GameAudio.setVolumes(sound,music);
-    try {localStorage.setItem('ilha.sound',String(sound));localStorage.setItem('ilha.music',String(music));}catch{}
-  }
-  $('#sound-volume').value=readVolume('ilha.sound',70);
-  $('#music-volume').value=readVolume('ilha.music',35);
-  updateVolumes();
-  $('#sound-volume').addEventListener('input',updateVolumes);
-  $('#music-volume').addEventListener('input',updateVolumes);
-  $('#sound-volume').addEventListener('change',()=>GameAudio.click());
-  $('#test-sound').addEventListener('click',()=>GameAudio.success());
-  function refreshMusic(active) {
-    $('#music-toggle').setAttribute('aria-pressed',String(active));
-    $('#music-status').textContent=active?'Pausar música de teste':'Ouvir música de teste';
-  }
-  $('#music-toggle').addEventListener('click',()=>refreshMusic(GameAudio.toggleMusic()));
-
+  // Volumes e demais preferências ficam em js/game-settings.js e js/settings-book.js.
   function renderPage() {
     const page=pages[step];
     $('#tutorial-title').textContent=page.title;
@@ -81,14 +56,19 @@
     regionButtons.forEach(button=>button.setAttribute('aria-pressed','false'));
     renderPage();
   }
-  function openBook(kind) {
+  function openBook(kind,section) {
     if(message.open)message.close();
     settings.hidden=kind!=='settings';tutorial.hidden=kind!=='tutorial';
     book.setAttribute('aria-labelledby',kind==='settings'?'settings-title':'tutorial-title');
     if(kind==='tutorial')resetTutorial();
-    book.showModal();
+    else SettingsBook.open(section);
+    // Foca o título da página aberta: sumário, ou a seção pedida (ex.: "audio").
+    const focusTarget=kind==='tutorial'?'#next-step':section&&section!=='index'?`#settings-${section}-title`:'#settings-title';
+    if(book.open)$(focusTarget)?.focus();
+    else book.showModal();
   }
   function openMessage() {
+    confirmQuitTab=false;
     if(book.open)book.close();
     $('#island-preview').hidden=true;
     $('#message-confirm').hidden=false;
@@ -100,18 +80,48 @@
     message.showModal();
   }
   document.querySelectorAll('[data-open]').forEach(button=>button.addEventListener('click',()=>{
-    trigger=button;GameAudio.click();
+    if(button.closest('dialog')!==book)trigger=button;
+    GameAudio.click();
     const kind=button.dataset.open;
-    if(kind==='settings'||kind==='tutorial')openBook(kind);
+    if(kind==='settings'||kind==='tutorial')openBook(kind,button.dataset.settingsStart);
     else if(kind==='start')GameIsland.start();
+    else if(kind==='exit')askQuitTab();
     else openMessage();
   }));
+  // "X" no canto do menu: pergunta a confirmação antes de encerrar e fechar a aba.
+  let confirmQuitTab=false;
+  function askQuitTab() {
+    confirmQuitTab=true;
+    if(book.open)book.close();
+    $('#island-preview').hidden=true;
+    $('#message-confirm').hidden=false;
+    $('#message-chapter').textContent='ATÉ A PRÓXIMA AVENTURA';
+    $('#message-title').textContent='Quer mesmo sair do jogo?';
+    $('#message-copy').textContent='O jogo vai se encerrar e a aba será fechada. Como esta é uma aventura de navegador, nada fica salvo ao sair.';
+    $('#message-back').textContent='Continuar aqui';$('#message-confirm').textContent='Sair do jogo';
+    $('#message-confirm').classList.replace('green','red');
+    message.showModal();
+  }
+  function quitTab() {
+    GameAudio.stopMusic();SettingsBook.refreshMusic(false);
+    window.close();
+    // Alguns navegadores só fecham abas abertas por script; mostramos um aviso se não fechar.
+    setTimeout(()=>{
+      $('#message-confirm').hidden=true;
+      $('#message-title').textContent='Até logo, explorador!';
+      $('#message-copy').textContent='Você pode fechar esta aba do navegador quando quiser.';
+      $('#message-back').textContent='Voltar';
+      if(!message.open)message.showModal();
+    },150);
+  }
   document.querySelectorAll('[data-close]').forEach(button=>button.addEventListener('click',()=>{GameAudio.click();button.closest('dialog').close();}));
   $('#settings-exit').addEventListener('click',()=>{GameAudio.click();openMessage();});
-  $('#message-back').addEventListener('click',()=>{GameAudio.click();message.close();});
+  $('#message-back').addEventListener('click',()=>{GameAudio.click();confirmQuitTab=false;message.close();});
   $('#message-confirm').addEventListener('click',()=>{
     GameAudio.click();
-    GameAudio.stopMusic();refreshMusic(false);
+    // Confirmação do "X" do canto: encerra e fecha a aba.
+    if(confirmQuitTab){confirmQuitTab=false;message.close();quitTab();return;}
+    GameAudio.stopMusic();SettingsBook.refreshMusic(false);
     message.close();
     if(GameIsland.active)GameIsland.stop();
     else {
@@ -142,6 +152,6 @@
       const bounds=dialog.getBoundingClientRect();
       if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)dialog.close();
     });
-    dialog.addEventListener('close',()=>{if(!book.open&&!message.open&&trigger)trigger.focus();});
+    dialog.addEventListener('close',()=>{if(dialog===message)confirmQuitTab=false;if(!book.open&&!message.open&&trigger)trigger.focus();});
   }
 })();

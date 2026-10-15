@@ -29,6 +29,25 @@ window.GameAudio = (() => {
   }
   function click() { if (prepare()) tone(660,.09,effectsGain,'triangle'); }
   function success() { if (prepare()) { tone(523.25,.25,effectsGain); setTimeout(() => tone(783.99,.3,effectsGain),110); } }
+  // Folhear: ruído curto filtrado, com o filtro descendo como o papel assentando.
+  function page() {
+    if (!prepare()) return;
+    const length = Math.floor(context.sampleRate*.32), buffer = context.createBuffer(1,length,context.sampleRate), data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) data[i] = (Math.random()*2-1)*Math.sin(Math.PI*i/length);
+    const source = context.createBufferSource(), filter = context.createBiquadFilter(), envelope = context.createGain(), now = context.currentTime;
+    source.buffer = buffer; filter.type = 'bandpass'; filter.Q.value = .9;
+    filter.frequency.setValueAtTime(2600,now); filter.frequency.exponentialRampToValueAtTime(700,now+.3);
+    envelope.gain.value = .55;
+    source.connect(filter); filter.connect(envelope); envelope.connect(effectsGain);
+    source.start(now);
+    source.onended = () => { source.disconnect(); filter.disconnect(); envelope.disconnect(); };
+  }
+  // Interruptores: nota subindo ao ligar e descendo ao desligar.
+  function toggle(on) {
+    if (!prepare()) return;
+    tone(on?587.33:659.25,.1,effectsGain,'triangle');
+    setTimeout(() => tone(on?880:440,.14,effectsGain,'triangle'),70);
+  }
   function setVolumes(sound,music) {
     soundVolume = sound; musicVolume = music;
     if (context) {
@@ -50,5 +69,5 @@ window.GameAudio = (() => {
     return enabled;
   }
   function stopMusic() { enabled=false; clearTimeout(musicTimer); setVolumes(soundVolume,musicVolume); }
-  return { click, success, setVolumes, toggleMusic, stopMusic };
+  return { click, success, page, toggle, setVolumes, toggleMusic, stopMusic };
 })();
