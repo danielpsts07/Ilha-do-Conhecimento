@@ -8,10 +8,12 @@ window.IslandRenderer = (() => {
     const images={},failed=[],patterns={};
     const ready=Promise.all(Object.entries(sources).map(([name,path])=>new Promise(resolve=>{
       const img=new Image();images[name]=img;
-      img.onload=()=>{
+      img.onload=async()=>{
         if(name==='island') {
           world.width=img.naturalWidth*WORLD_SCALE;world.height=img.naturalHeight*WORLD_SCALE;
           overviewCtx.drawImage(img,0,0,overview.width,overview.height);
+          try {await IslandWorld.buildCollision(world,img);}
+          catch(error){world.collision=null;console.error('[Colisão] Falha ao preparar terreno; movimento bloqueado.',error);failed.push('colisão do terreno');}
         }
         resolve();
       };img.onerror=()=>{failed.push(path);resolve();};img.src=`assets/${path}`;
@@ -280,11 +282,16 @@ window.IslandRenderer = (() => {
       marker(target,player.x*sx,player.y*sy,large?6:3);
     }
     function draw(player,camera,near,time,reducedMotion,visited) {
+      if(world.spawnPending){Object.assign(player,world.spawn);world.spawnPending=false;}
       ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);ctx.save();ctx.translate(-camera.x,-camera.y);
       const background=images.island,vw=Math.min(width,world.width-camera.x),vh=Math.min(height,world.height-camera.y);
       if(background.naturalWidth&&vw>0&&vh>0) {
         // Câmera em px do mundo → JPEG: sx = cam.x / WORLD_SCALE (idem y e tamanho).
         ctx.drawImage(background,camera.x/WORLD_SCALE,camera.y/WORLD_SCALE,vw/WORLD_SCALE,vh/WORLD_SCALE,camera.x,camera.y,vw,vh);
+        if(debug&&world.collision) {
+          const unit=COLLISION_CELL_SIZE*WORLD_SCALE;
+          ctx.drawImage(world.collision.overlay,camera.x/unit,camera.y/unit,vw/unit,vh/unit,camera.x,camera.y,vw,vh);
+        }
       }
       ellipse(player.x,player.y-2,9,3,'#3b593a55');
       const bob=!reducedMotion&&player.moving?Math.sin(time/80)*1.5:0;
@@ -295,8 +302,9 @@ window.IslandRenderer = (() => {
       }
       ctx.restore();
       if(debug) {
-        rect(8,8,310,28,'#172c37e8');ctx.fillStyle='#fff';ctx.font='14px monospace';ctx.textAlign='left';
+        rect(8,8,310,48,'#172c37e8');ctx.fillStyle='#fff';ctx.font='14px monospace';ctx.textAlign='left';
         ctx.fillText(`Imagem: x=${(player.x/WORLD_SCALE).toFixed(1)} y=${(player.y/WORLD_SCALE).toFixed(1)} px`,16,27);
+        ctx.fillText(`Célula: ${IslandWorld.cellAt(world,player.x,player.y)?'andável':'bloqueada'}`,16,47);
       }
       renderOverview(player,camera,visited);
     }
