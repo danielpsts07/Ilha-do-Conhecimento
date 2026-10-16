@@ -11,6 +11,9 @@ window.GameIsland = (() => {
   const dialogs=Array.from(document.querySelectorAll('dialog'));
   const directionKeys={w:'up',a:'left',s:'down',d:'right',arrowup:'up',arrowleft:'left',arrowdown:'down',arrowright:'right'};
   const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+  // Preferências do livro de configurações: "Menos animações" e velocidade da caminhada.
+  const calmMotion=()=>reducedMotion.matches||Boolean(window.GameSettings?.calm);
+  const walkSpeed=()=>210*(window.GameSettings?.walkSpeed||1);
   let active=false,loaded=false,frame=0,lastTime=0,near=null,currentRegion='center',dialogTrigger=null,foundCat=false;
   const inChallenge=()=>Boolean(window.PuzzleGame?.active||window.GameRescue?.active);
   const blocked=()=>!loaded||document.hidden||inChallenge()||dialogs.some(dialog=>dialog.open);
@@ -33,11 +36,12 @@ window.GameIsland = (() => {
     clearInput();screen.hidden=false;renderer.resize();updateCamera(true);lastTime=0;
     updateProgress();(trigger||canvas).focus();
   }
-  function clearInput(){keys.clear();pointers.clear();player.moving=false;}
+  function clearInput(){keys.clear();pointers.clear();player.moving=false;resetJoystick();}
+  function resetJoystick(){const stick=$('#joystick-stick'),joystick=$('#island-joystick');if(stick)stick.style.transform='translate(-50%,-50%)';if(joystick)joystick.classList.remove('is-active');}
   function updateCamera(snap,dt=0) {
     const tx=Math.max(0,Math.min(world.width-renderer.width,player.x-renderer.width/2));
     const ty=Math.max(0,Math.min(world.height-renderer.height,player.y-renderer.height*.58));
-    const follow=snap||reducedMotion.matches?1:1-Math.exp(-dt*10);
+    const follow=snap||calmMotion()?1:1-Math.exp(-dt*10);
     camera.x+=(tx-camera.x)*follow;camera.y+=(ty-camera.y)*follow;
     camera.x=Math.max(0,Math.min(Math.max(0,world.width-renderer.width),camera.x));
     camera.y=Math.max(0,Math.min(Math.max(0,world.height-renderer.height),camera.y));
@@ -64,17 +68,25 @@ window.GameIsland = (() => {
     const dt=lastTime?Math.min((time-lastTime)/1000,.05):0;lastTime=time;
     if(blocked())clearInput();
     else {
-      const pressed=new Set([...Array.from(keys,key=>directionKeys[key]),...pointers.values()]);
-      let dx=Number(pressed.has('right'))-Number(pressed.has('left')),dy=Number(pressed.has('down'))-Number(pressed.has('up'));
+      // Teclas e d-pad dão direções fixas; o joystick dá um vetor analógico {x,y}.
+      const dirs=new Set(Array.from(keys,key=>directionKeys[key]));
+      let dx=0,dy=0;
+      for(const value of pointers.values()) {
+        if(typeof value==='string')dirs.add(value);
+        else {dx+=value.x;dy+=value.y;}
+      }
+      if(dirs.has('right'))dx+=1; if(dirs.has('left'))dx-=1;
+      if(dirs.has('down'))dy+=1; if(dirs.has('up'))dy-=1;
       const length=Math.hypot(dx,dy),oldX=player.x,oldY=player.y;
       if(length) {
-        player.facing=dx?(dx>0?'right':'left'):(dy>0?'down':'up');
-        IslandWorld.movePlayer(world,player,dx/length*210*dt,dy/length*210*dt);
+        player.facing=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
+        const magnitude=Math.min(1,length),speed=walkSpeed();
+        IslandWorld.movePlayer(world,player,dx/length*speed*magnitude*dt,dy/length*speed*magnitude*dt);
       }
       player.moving=Math.hypot(player.x-oldX,player.y-oldY)>.1;
       updateLocation();updateNearby();
     }
-    updateCamera(false,dt);renderer.draw(player,camera,near,time,reducedMotion.matches,visited);
+    updateCamera(false,dt);renderer.draw(player,camera,near,time,calmMotion(),visited);
     frame=requestAnimationFrame(loop);
   }
   function start() {
@@ -163,6 +175,33 @@ window.GameIsland = (() => {
       player.facing=button.dataset.walk;IslandWorld.movePlayer(world,player,dx,dy);updateLocation();updateNearby();
     });
   });
+  // Joystick analógico: arrastar o bastão dá um vetor {x,y} dentro de pointers.
+  const joystick=$('#island-joystick'),stick=$('#joystick-stick');
+  if(joystick) {
+    const radius=46; // alcance do bastão em pixels, limitado ao anel da base
+    const setStick=(nx,ny)=>{stick.style.transform=`translate(calc(-50% + ${nx*radius}px),calc(-50% + ${ny*radius}px))`;};
+    joystick.addEventListener('pointerdown',event=>{
+      if(!active||blocked())return;
+      event.preventDefault();joystick.setPointerCapture(event.pointerId);joystick.classList.add('is-active');
+      pointers.set(event.pointerId,{x:0,y:0});
+    });
+    joystick.addEventListener('pointermove',event=>{
+      if(!pointers.has(event.pointerId))return;
+      event.preventDefault();
+      const base=joystick.getBoundingClientRect();
+      const cx=(base.left+base.right)/2,cy=(base.top+base.bottom)/2;
+      let vx=(event.clientX-cx)/radius,vy=(event.clientY-cy)/radius;
+      const len=Math.hypot(vx,vy);
+      if(len>1){vx/=len;vy/=len;} // mantém o bastão dentro do anel
+      // Pequena zona morta no centro evita andar sem querer com um toque parado.
+      const vec=Math.hypot(vx,vy)<.18?{x:0,y:0}:{x:vx,y:vy};
+      pointers.set(event.pointerId,vec);setStick(vec.x,vec.y);
+    });
+    for(const type of ['pointerup','pointercancel','lostpointercapture'])joystick.addEventListener(type,event=>{
+      if(!pointers.has(event.pointerId))return;
+      pointers.delete(event.pointerId);resetJoystick();
+    });
+  }
   window.addEventListener('blur',clearInput);
   document.addEventListener('visibilitychange',()=>{clearInput();lastTime=0;});
   window.addEventListener('resize',()=>{if(active&&!inChallenge()){renderer.resize();updateCamera(true);}});
