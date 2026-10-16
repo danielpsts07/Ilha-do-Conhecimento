@@ -281,10 +281,24 @@ window.IslandWorld = (() => {
   function movePlayer(world,position,dx,dy) {
     if(world.spawnPending){Object.assign(position,world.spawn);world.spawnPending=false;}
     const steps=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dy))/(COLLISION_CELL_SIZE*WORLD_SCALE/2)));
+    const sx=dx/steps,sy=dy/steps;let nudged=false;
     for(let i=0;i<steps;i++) {
+      const oldX=position.x,oldY=position.y;
       // X e depois Y permitem deslizar na parede. Subpassos evitam saltar células finas.
-      if(isWalkable(world,position.x+dx/steps,position.y))position.x+=dx/steps;
-      if(isWalkable(world,position.x,position.y+dy/steps))position.y+=dy/steps;
+      if(isWalkable(world,position.x+sx,position.y))position.x+=sx;
+      if(isWalkable(world,position.x,position.y+sy))position.y+=sy;
+      if(nudged||(!sx&&!sy)||position.x!==oldX||position.y!==oldY)continue;
+      // Cantos de máscara pintada à mão podem prender os pés: busque uma saída lateral curta.
+      const horizontal=Math.abs(sx)>=Math.abs(sy);
+      for(const sign of [1,-1]) {
+        for(let offset=1;offset<=CORNER_NUDGE;offset++) {
+          const x=oldX+(horizontal?0:offset*sign),y=oldY+(horizontal?offset*sign:0);
+          if(!isWalkable(world,x,y))break; // Não salta uma célula bloqueada no ajuste.
+          if(!isWalkable(world,x+sx,y+sy))continue; // Só ajusta se liberar a caminhada.
+          position.x=x;position.y=y;nudged=true;break;
+        }
+        if(nudged)break; // No máximo 3 px laterais por movimento, mesmo com subpassos.
+      }
     }
   }
   return {create,terrain,noise,regionAt,buildCollision,cellAt,isWalkable,movePlayer};

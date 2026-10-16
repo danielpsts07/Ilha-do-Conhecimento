@@ -300,6 +300,10 @@ window.IslandRenderer = (() => {
         const px=near.x,py=near.y-(near.id==='portal'?142:near.id==='mountain'?105:76);
         rect(px-14,py-14,28,28,'#574a38');rect(px-11,py-11,22,22,'#ffefba');ctx.fillStyle='#584634';ctx.font='bold 17px system-ui';ctx.textAlign='center';ctx.fillText('E',px,py+6);
       }
+      if(debug) {
+        ctx.strokeStyle='#ffff00';ctx.lineWidth=1;
+        ctx.strokeRect(player.x-FOOT_W/2,player.y-FOOT_H,FOOT_W,FOOT_H);
+      }
       ctx.restore();
       if(debug) {
         rect(8,8,310,48,'#172c37e8');ctx.fillStyle='#fff';ctx.font='14px monospace';ctx.textAlign='left';
