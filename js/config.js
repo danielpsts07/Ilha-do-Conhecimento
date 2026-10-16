@@ -1,11 +1,12 @@
-// Escala do JPEG no mundo e altura máxima da personagem na tela (px CSS).
+// Escala do JPEG no mundo; câmera amplia o mundo inteiro sem mudar a física.
 const WORLD_SCALE = 0.6;
+const CAMERA_ZOOM = 1.55;
 const PLAYER_HEIGHT = 40;
 // Colisão: coordenadas da imagem, exceto a pegada em px de tela/mundo.
 const COLLISION_CELL_SIZE = 4;
-const FOOT_W = 12; // Largura da pegada, centrada nos pés (px de tela).
-const FOOT_H = 6; // Altura da pegada acima da base dos pés (px de tela).
-const CORNER_NUDGE = 3; // Ajuste lateral máximo para contornar cantos (px de tela).
+const FOOT_W = 10; // Largura da pegada, centrada nos pés (unidades de mundo).
+const FOOT_H = 5; // Altura acima da base dos pés (unidades de mundo).
+const CORNER_NUDGE = 3; // Ajuste lateral máximo para contornar cantos (unidades de mundo).
 const WATER_H_MIN = 190, WATER_H_MAX = 222;
 const WATER_S_MIN = 0.5, WATER_V_MIN = 0.6;
 const WATER_MIN_COMPONENT_CELLS = 30;

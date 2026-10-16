@@ -18,7 +18,16 @@ window.IslandRenderer = (() => {
         resolve();
       };img.onerror=()=>{failed.push(path);resolve();};img.src=`assets/${path}`;
     })));
-    let width=960,height=600,dpr=1,debug=false;
+    let width=960,height=600,dpr=1,debug=false,zoom=CAMERA_ZOOM;
+    // Única escala mapa → tela; o mínimo de encaixe evita expor área fora do JPEG.
+    const scale=()=>Math.max(WORLD_SCALE*zoom,width/(images.island?.naturalWidth||Infinity),height/(images.island?.naturalHeight||Infinity));
+    const viewSize=()=>{const s=scale();return {width:width*WORLD_SCALE/s,height:height*WORLD_SCALE/s};};
+    document.addEventListener('keydown',event=>{
+      if(!debug||canvas.closest('[hidden]')||document.querySelector('dialog[open]')||event.ctrlKey||event.altKey||event.metaKey)return;
+      if(!['+','=','-','_'].includes(event.key))return;
+      event.preventDefault();
+      zoom=Math.max(.8,Math.min(2,Math.round((zoom+(['-','_'].includes(event.key)?-.05:.05))*100)/100));
+    });
     const overview=document.createElement('canvas');overview.width=world.cols*3;overview.height=world.rows*3;
     const overviewCtx=overview.getContext('2d');
     function resize() {
@@ -273,7 +282,7 @@ window.IslandRenderer = (() => {
       target.imageSmoothingEnabled=false;target.clearRect(0,0,c.width,c.height);target.drawImage(overview,0,0,c.width,c.height);
       if(!world.width||!world.height)return;
       const sx=c.width/world.width,sy=c.height/world.height;
-      if(!large){target.strokeStyle='#fff1c399';target.lineWidth=1;target.strokeRect(camera.x*sx,camera.y*sy,width*sx,height*sy);}
+      if(!large){const view=viewSize();target.strokeStyle='#fff1c399';target.lineWidth=1;target.strokeRect(camera.x*sx,camera.y*sy,view.width*sx,view.height*sy);}
       for(const region of world.regions) {
         const rx=(region.x+.5)*T*sx,ry=(region.y+.5)*T*sy;
         target.fillStyle=visited.has(region.id)?'#fbefc1':'#454e40';target.fillRect(rx-2,ry-2,4,4);
@@ -283,8 +292,11 @@ window.IslandRenderer = (() => {
     }
     function draw(player,camera,near,time,reducedMotion,visited) {
       if(world.spawnPending){Object.assign(player,world.spawn);world.spawnPending=false;}
-      ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);ctx.save();ctx.translate(-camera.x,-camera.y);
-      const background=images.island,vw=Math.min(width,world.width-camera.x),vh=Math.min(height,world.height-camera.y);
+      const view=viewSize(),factor=scale()/WORLD_SCALE;
+      // Janela em mundo, centralizada no jogador e limitada pelo tamanho real do mapa.
+      camera={x:Math.max(0,Math.min(world.width-view.width,player.x-view.width/2)),y:Math.max(0,Math.min(world.height-view.height,player.y-view.height/2))};
+      ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);ctx.save();ctx.scale(factor,factor);ctx.translate(-camera.x,-camera.y);
+      const background=images.island,vw=Math.min(view.width,world.width-camera.x),vh=Math.min(view.height,world.height-camera.y);
       if(background.naturalWidth&&vw>0&&vh>0) {
         // Câmera em px do mundo → JPEG: sx = cam.x / WORLD_SCALE (idem y e tamanho).
         ctx.drawImage(background,camera.x/WORLD_SCALE,camera.y/WORLD_SCALE,vw/WORLD_SCALE,vh/WORLD_SCALE,camera.x,camera.y,vw,vh);
@@ -306,13 +318,15 @@ window.IslandRenderer = (() => {
       }
       ctx.restore();
       if(debug) {
-        rect(8,8,310,48,'#172c37e8');ctx.fillStyle='#fff';ctx.font='14px monospace';ctx.textAlign='left';
+        rect(8,8,Math.min(width-16,360),88,'#172c37e8');ctx.fillStyle='#fff';ctx.font='14px monospace';ctx.textAlign='left';
         ctx.fillText(`Imagem: x=${(player.x/WORLD_SCALE).toFixed(1)} y=${(player.y/WORLD_SCALE).toFixed(1)} px`,16,27);
         ctx.fillText(`Célula: ${IslandWorld.cellAt(world,player.x,player.y)?'andável':'bloqueada'}`,16,47);
+        ctx.fillText(`Zoom: ${zoom.toFixed(2)}${factor>zoom+.001?` (encaixe: ${factor.toFixed(2)})`:''} [+/-]`,16,67);
+        ctx.fillText(`Largura visível: ${(Math.min(1,view.width/world.width)*100).toFixed(2)}%`,16,87);
       }
       renderOverview(player,camera,visited);
     }
-    return {ready,failed,resize,draw,renderOverview,toggleDebug(){debug=!debug;},get width(){return width;},get height(){return height;}};
+    return {ready,failed,resize,draw,renderOverview,toggleDebug(){debug=!debug;},get width(){return viewSize().width;},get height(){return viewSize().height;}};
   }
   return {create};
 })();

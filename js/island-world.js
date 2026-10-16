@@ -269,7 +269,8 @@ window.IslandWorld = (() => {
     if(world.collision.report.footUnreachable.length)console.warn('[Colisão] Acessos estreitos para a pegada:',world.collision.report.footUnreachable.map(p=>p.name));
   }
   function cellAt(world,x,y) {
-    // Mundo → imagem (divide WORLD_SCALE) → célula de 4 px; fora da imagem é bloqueado.
+    // Mundo → imagem → célula: a câmera projeta esse mesmo mundo, sem alterar a física.
+    // Desfazer WORLD_SCALE basta; aplicar CAMERA_ZOOM aqui deslocaria a máscara ao dar zoom.
     const c=world.collision;if(!c||x<0||y<0||x>=world.width||y>=world.height)return false;
     const gx=Math.floor(x/WORLD_SCALE/COLLISION_CELL_SIZE),gy=Math.floor(y/WORLD_SCALE/COLLISION_CELL_SIZE);
     return c.cells[gy*c.cols+gx]===1;
