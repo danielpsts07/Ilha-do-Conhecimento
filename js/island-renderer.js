@@ -17,7 +17,7 @@ window.IslandRenderer = (() => {
         }
         resolve();
       };img.onerror=()=>{failed.push(path);resolve();};img.src=`assets/${path}`;
-    })));
+    }))).then(()=>window.IslandKeys?.load());
     let width=960,height=600,dpr=1,debug=false,zoom=CAMERA_ZOOM;
     // Única escala mapa → tela; o mínimo de encaixe evita expor área fora do JPEG.
     const scale=()=>Math.max(WORLD_SCALE*zoom,width/(images.island?.naturalWidth||Infinity),height/(images.island?.naturalHeight||Infinity));
@@ -305,6 +305,7 @@ window.IslandRenderer = (() => {
           ctx.drawImage(world.collision.overlay,camera.x/unit,camera.y/unit,vw/unit,vh/unit,camera.x,camera.y,vw,vh);
         }
       }
+      window.IslandKeys?.draw(ctx,world,player,camera,view,factor,time,reducedMotion);
       ellipse(player.x,player.y-2,9,3,'#3b593a55');
       const bob=!reducedMotion&&player.moving?Math.sin(time/80)*1.5:0;
       sprite(player.facing==='up'?'back':player.facing==='down'?'front':'side',player.x,player.y+bob,PLAYER_HEIGHT,PLAYER_HEIGHT,player.facing==='left');
@@ -325,8 +326,9 @@ window.IslandRenderer = (() => {
         ctx.fillText(`Largura visível: ${(Math.min(1,view.width/world.width)*100).toFixed(2)}%`,16,87);
       }
       renderOverview(player,camera,visited);
+      world.devScreen?.draw(ctx,width,height,time);
     }
-    return {ready,failed,resize,draw,renderOverview,toggleDebug(){debug=!debug;},get width(){return viewSize().width;},get height(){return viewSize().height;}};
+    return {ready,failed,resize,draw,renderOverview,toggleDebug(){debug=!debug;},get debug(){return debug;},get width(){return viewSize().width;},get height(){return viewSize().height;}};
   }
   return {create};
 })();

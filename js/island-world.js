@@ -250,15 +250,18 @@ window.IslandWorld = (() => {
     const spawn=adjust({...SPAWN,name:'SPAWN'},true);
     world.spawn.x=spawn.x*WORLD_SCALE;world.spawn.y=spawn.y*WORLD_SCALE;world.spawnPending=true;
     world.checkpoints=CHECKPOINTS.map(point=>adjust(point,true));
+    window.IslandKeys?.place(world);
     const seen=new Uint8Array(n),start=Math.floor(spawn.y/C)*cols+Math.floor(spawn.x/C);
     const reached=flood(cells,start,seen),total=cells.reduce((sum,value)=>sum+value,0);
+    const keyUnreachable=(world.mapKeys||[]).filter(p=>!cells[Math.floor(p.y/C)*cols+Math.floor(p.x/C)]||!seen[Math.floor(p.y/C)*cols+Math.floor(p.x/C)]);
+    (keyUnreachable.length?console.warn:console.info)('[Chaves] BFS do spawn — INALCANÇÁVEIS:',keyUnreachable.length?keyUnreachable.map(p=>p.label):'nenhuma');
     const unreachable=world.checkpoints.filter(p=>!seen[Math.floor(p.y/C)*cols+Math.floor(p.x/C)]);
     const isolated=[];
     for(let i=0;i<n;i++)if(cells[i]&&!seen[i]) {
       const count=flood(cells,i,seen);
       if(count>500)isolated.push({cells:count,x:(i%cols)*C+C/2,y:Math.floor(i/cols)*C+C/2});
     }
-    world.collision.report={unreachable,reachablePercent:100*reached/total,isolated};
+    world.collision.report={unreachable,keyUnreachable,reachablePercent:100*reached/total,isolated};
     console.info('[Colisão] Checkpoints INALCANÇÁVEIS:',unreachable.length?unreachable.map(p=>p.name):'nenhum');
     console.info(`[Colisão] Células andáveis alcançáveis: ${(100*reached/total).toFixed(2)}%.`);
     console.info('[Colisão] Regiões isoladas com mais de 500 células (exemplos em px da imagem):',isolated);

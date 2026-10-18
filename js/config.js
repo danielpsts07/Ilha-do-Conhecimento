@@ -2,6 +2,13 @@
 const WORLD_SCALE = 0.6;
 const CAMERA_ZOOM = 1.90;
 const PLAYER_HEIGHT = 40;
+const KEY_HEIGHT = 36, KEY_HOVER = 8, INTERACT_RADIUS = 64;
+const KEYS = [
+  {id:'geometria',label:'Geometria',x:1950,y:385,img:'assets/hud/chave_geometria.png',color:'#a855f7'},
+  {id:'logica',label:'Raciocínio Lógico',x:630,y:610,img:'assets/hud/chave_logica.png',color:'#4ade80'},
+  {id:'algebra',label:'Álgebra Inicial',x:715,y:990,img:'assets/hud/chave_algebra.png',color:'#60a5fa'},
+  {id:'operacoes',label:'Operações',x:2230,y:945,img:'assets/hud/chave_operacoes.png',color:'#fb923c'}
+];
 // Colisão: coordenadas da imagem, exceto a pegada em px de tela/mundo.
 const COLLISION_CELL_SIZE = 4;
 const FOOT_W = 3; // Largura da pegada, centrada nos pés (unidades de mundo).

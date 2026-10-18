@@ -6,6 +6,7 @@ window.GameIsland = (() => {
   const world=IslandWorld.create();
   const renderer=IslandRenderer.create(canvas,$('#island-minimap'),$('#island-map'),world);
   const player={...world.spawn,facing:'down',moving:false},camera={x:0,y:0};
+  const dev=world.devScreen=window.DevPuzzleScreen?.create(canvas,world,clearInput);
   const visited=new Set(['center']),keys=new Set(),pointers=new Map();
   const info=$('#island-info-dialog'),pause=$('#island-pause-dialog'),map=$('#island-map-dialog');
   const dialogs=Array.from(document.querySelectorAll('dialog'));
@@ -16,7 +17,7 @@ window.GameIsland = (() => {
   const walkSpeed=()=>210*(window.GameSettings?.walkSpeed||1);
   let active=false,loaded=false,frame=0,lastTime=0,near=null,currentRegion='center',dialogTrigger=null,foundCat=false;
   const inChallenge=()=>Boolean(window.PuzzleGame?.active||window.GameRescue?.active);
-  const blocked=()=>!loaded||document.hidden||inChallenge()||dialogs.some(dialog=>dialog.open);
+  const blocked=()=>!loaded||document.hidden||inChallenge()||dev?.active||dialogs.some(dialog=>dialog.open);
   function updateProgress() {
     const progress=window.AdventureProgress;
     if(!progress)return;
@@ -56,6 +57,8 @@ window.GameIsland = (() => {
     }
   }
   function updateNearby() {
+    const key=window.IslandKeys?.nearest(world,player);
+    if(key){near=key;$('#island-interact').disabled=false;$('#island-interact-label').textContent='E — Interagir';return;}
     const next=world.points.filter(point=>Math.hypot(point.x-player.x,point.y-player.y)<112).sort((a,b)=>Math.hypot(a.x-player.x,a.y-player.y)-Math.hypot(b.x-player.x,b.y-player.y))[0]||null;
     if(next===near)return;
     near=next;$('#island-interact').disabled=!near;
@@ -95,6 +98,7 @@ window.GameIsland = (() => {
     renderer.resize();updateCamera(true);updateNearby();updateProgress();lastTime=0;canvas.focus();frame=requestAnimationFrame(loop);
   }
   function stop() {
+    dev?.close();
     active=false;cancelAnimationFrame(frame);clearInput();lastTime=0;
     window.PuzzleGame?.stop();window.GameRescue?.stop();
     for(const dialog of [info,pause,map])if(dialog.open)dialog.close();
@@ -107,6 +111,9 @@ window.GameIsland = (() => {
     GameAudio.click();dialog.showModal();
   }
   function interact(trigger) {
+    if(active&&!blocked())updateNearby();
+    const key=window.IslandKeys?.nearest(world,player);
+    if(key&&active&&!blocked()){dev.open(key);return;}
     if(!near||!active||blocked())return;
     if(window.AdventureProgress?.regions.includes(near.id)&&window.PuzzleGame) {
       const region=near.id;
@@ -150,6 +157,10 @@ window.GameIsland = (() => {
   document.addEventListener('keydown',event=>{
     if(!active||event.defaultPrevented||event.ctrlKey||event.altKey||event.metaKey)return;
     const key=event.key.toLowerCase();
+    if(key==='k'&&renderer.debug&&!event.repeat&&!document.hidden&&!inChallenge()&&!dialogs.some(dialog=>dialog.open)) {
+      event.preventDefault();window.IslandKeys?.reset(world);updateNearby();return;
+    }
+    if(dev?.input(event))return;
     if(blocked())return;
     const direction=directionKeys[key];
     if(direction){event.preventDefault();keys.add(key);}

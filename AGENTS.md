@@ -50,7 +50,8 @@ O menu já oferece uma direção visual suficiente para avançar. Priorizar o pr
 - Configurações têm volumes, persistência local opcional e áudio sintetizado de teste.
 - O tutorial tem três etapas com práticas de movimento e coleta de chave.
 - Iniciar mostra apenas `assets/ilha/ilha.jpeg` (2752 × 1536), intacto, em escala 0,6: mundo de 1651,2 × 921,6 px. `js/config.js` define escala e personagem de 40 px; nascimento na imagem (1290, 945), mundo (774, 567).
-- Exploração tem WASD/setas, toque, câmera suave com clamp, minimapa, mapa completo e pausa. Colisões antigas de água e objetos estão desativadas; somente as bordas do mundo bloqueiam. F3 mostra coordenadas da imagem.
+- Exploração tem WASD/setas, toque, câmera com clamp, minimapa, mapa completo e pausa. A grade usa água automática e `assets/ilha/island_mask.png`; objetos procedurais antigos não bloqueiam. F3 mostra coordenadas da imagem e permite zoom com +/−.
+- Quatro chaves flutuantes usam posições de imagem em `js/config.js`, com ajuste à célula livre em até 40 células e BFS do spawn. `js/island-keys.js` mantém a coleta em memória separada do progresso real; `js/dev-puzzle-screen.js` abre uma sobreposição pausada por E, com Voltar/Esc e Simular conclusão/Enter. F3 + K restaura as chaves de teste. Imagens e brilhos carregam uma vez; nenhum puzzle existente foi alterado.
 - Os sete pontos interativos e as regiões estão preservados nas posições antigas, listadas no README, aguardando reposicionamento. Vários estão fora do novo mundo; ainda não há acesso normal a todos os puzzles e ao resgate por este mapa.
 - Cada puzzle tem três rodadas, dicas e novas tentativas sem punição. Concluir uma fase concede sua chave uma única vez; repetir serve para praticar.
 - Posição, lugares descobertos, progresso parcial dos puzzles, chaves, cadeados abertos e resgate são mantidos ao retornar ao menu nesta sessão; recarregar reinicia a aventura. O progresso da aventura não usa `localStorage`.
@@ -61,7 +62,7 @@ O menu já oferece uma direção visual suficiente para avançar. Priorizar o pr
 - Personagem muda de pose conforme a direção e usa leve deslocamento visual ao caminhar; não há ciclos completos de animação. O gato usa uma pose estática.
 - O mapa usa Canvas 2D com um recorte visível do JPEG em `drawImage` de nove argumentos; o fundo carrega uma vez. O minimapa usa uma cópia pequena preparada uma vez. `js/island-art.js` ainda fornece as três poses da personagem.
 - A ambientação tem 24 novos sprites e seis texturas preparados a partir de três atlas gerados com ImageGen. As fontes e os prompts estão preservados no projeto; ver `referencia/docs/ambientacao-v4.md`. Personagem, gato, parte das árvores, peças das ruínas e cadeados reutilizam o kit original.
-- Terreno, objetos e caminhos procedurais antigos não são desenhados. Os assets antigos foram preservados; a lista dos que saíram da exploração está no README. Não há nova máscara de colisão.
+- Terreno, objetos e caminhos procedurais antigos não são desenhados. Os assets antigos foram preservados; a máscara atual é `assets/ilha/island_mask.png`.
 - Atualizar esta seção e o `README.md` quando esses fatos mudarem.
 
 ## Organização dos arquivos
