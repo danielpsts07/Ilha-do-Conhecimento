@@ -14,27 +14,20 @@ window.IslandKeys = (() => {
       };image.src=key.img;
     })));
   }
-  function place(world) {
-    const {cells,cols,rows}=world.collision,C=COLLISION_CELL_SIZE;
+  function place(world,seen) {
+    const {cells,cols}=world.collision,C=COLLISION_CELL_SIZE,radius=INTERACT_RADIUS/WORLD_SCALE;
     world.keyState ||= {keys:{}};
     world.mapKeys=KEYS.map(key=>{
-      const gx=Math.floor(key.x/C),gy=Math.floor(key.y/C);
-      const valid=(x,y)=>x>=0&&y>=0&&x<cols&&y<rows&&cells[y*cols+x];
-      let point={...key},adjusted=false;
-      if(!valid(gx,gy)) {
-        let best=null,bestDistance=Infinity;
-        // Espiral de anéis até 40 células; guarda o centro livre mais próximo.
-        for(let r=1;r<=40;r++)for(let d=-r;d<=r;d++)for(const [x,y] of [
-          [gx+d,gy-r],[gx+r,gy+d],[gx-d,gy+r],[gx-r,gy-d]
-        ])if(valid(x,y)) {
-          const distance=(x*C+C/2-key.x)**2+(y*C+C/2-key.y)**2;
-          if(distance<bestDistance){bestDistance=distance;best={x:x*C+C/2,y:y*C+C/2};}
-        }
-        if(best){Object.assign(point,best);adjusted=true;}
-        else console.warn(`[Chaves] ${key.label}: sem célula andável em até 40 células.`);
+      let distance2=Infinity;
+      for(let i=0;i<seen.length;i++)if(cells[i]&&seen[i]) {
+        const d=(i%cols*C+C/2-key.x)**2+(Math.floor(i/cols)*C+C/2-key.y)**2;
+        if(d<distance2)distance2=d;
       }
-      console.info(`[Chaves] ${key.label}: imagem (${point.x}, ${point.y}) px; ajuste: ${adjusted?'sim':'não'}.`);
-      return {...point,wx:point.x*WORLD_SCALE,wy:point.y*WORLD_SCALE,name:`Chave de ${key.label}`};
+      const reachableDistance=Math.sqrt(distance2),blocked=!cells[Math.floor(key.y/C)*cols+Math.floor(key.x/C)];
+      console.info(`[Chaves] ${key.label}: imagem (${key.x}, ${key.y}) px; célula bloqueada: ${blocked?'sim':'não'}; célula alcançável mais próxima: ${reachableDistance.toFixed(1)} px da imagem.`);
+      if(reachableDistance>radius)console.warn(`[Chaves] ${key.label}: nenhuma célula andável alcançável no raio de interação (${radius.toFixed(1)} px da imagem).`);
+      // O BFS só diagnostica o alcance; a base visual permanece exatamente no config.
+      return {...key,wx:key.x*WORLD_SCALE,wy:key.y*WORLD_SCALE,reachableDistance,name:`Chave de ${key.label}`};
     });
   }
   function nearest(world,player) {

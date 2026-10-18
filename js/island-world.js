@@ -250,10 +250,10 @@ window.IslandWorld = (() => {
     const spawn=adjust({...SPAWN,name:'SPAWN'},true);
     world.spawn.x=spawn.x*WORLD_SCALE;world.spawn.y=spawn.y*WORLD_SCALE;world.spawnPending=true;
     world.checkpoints=CHECKPOINTS.map(point=>adjust(point,true));
-    window.IslandKeys?.place(world);
     const seen=new Uint8Array(n),start=Math.floor(spawn.y/C)*cols+Math.floor(spawn.x/C);
     const reached=flood(cells,start,seen),total=cells.reduce((sum,value)=>sum+value,0);
-    const keyUnreachable=(world.mapKeys||[]).filter(p=>!cells[Math.floor(p.y/C)*cols+Math.floor(p.x/C)]||!seen[Math.floor(p.y/C)*cols+Math.floor(p.x/C)]);
+    window.IslandKeys?.place(world,seen);
+    const keyUnreachable=(world.mapKeys||[]).filter(p=>p.reachableDistance>INTERACT_RADIUS/WORLD_SCALE);
     (keyUnreachable.length?console.warn:console.info)('[Chaves] BFS do spawn — INALCANÇÁVEIS:',keyUnreachable.length?keyUnreachable.map(p=>p.label):'nenhuma');
     const unreachable=world.checkpoints.filter(p=>!seen[Math.floor(p.y/C)*cols+Math.floor(p.x/C)]);
     const isolated=[];
