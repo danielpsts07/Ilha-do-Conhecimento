@@ -44,7 +44,7 @@ window.IslandWorld = (() => {
     return regions[0];
   }
   function create() {
-    const tiles=new Uint8Array(COLS*ROWS), objects=[], colliders=[];
+    const tiles=new Uint8Array(COLS*ROWS), objects=[];
     const at=(x,y)=>x<0||y<0||x>=COLS||y>=ROWS?terrain.water:tiles[y*COLS+x];
     for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++) {
       const edge=Math.sin(x*.59+y*.28)*.035+Math.cos(y*.73-x*.23)*.035;
@@ -75,16 +75,10 @@ window.IslandWorld = (() => {
     disk(48,38,5.8,terrain.path);
     disk(48,35,3.1,terrain.stone);
     for(const cy of [38,55])for(let y=cy-1;y<=cy+1;y++)for(let x=61;x<=67;x++)tiles[y*COLS+x]=terrain.bridge;
-    // É possível passar sob a copa; só a base da árvore bloqueia os pés.
+    // Objetos legados são apenas dados visuais; a máscara define as colisões.
     function add(kind,tx,ty,width,height,extra={}) {
       const object={kind,x:(tx+.5)*TILE,y:(ty+.5)*TILE,width,height,...extra};
       objects.push(object);
-      if(extra.solid!==false) {
-        const footprint=extra.footprint||[width*.68,height*.26];
-        if(kind==='arch') {
-          for(const side of [-1,1])colliders.push({x:object.x+side*55-17,y:object.y-42,width:34,height:42,kind});
-        } else colliders.push({x:object.x-footprint[0]/2,y:object.y-footprint[1],width:footprint[0],height:footprint[1],kind});
-      }
       return object;
     }
     add('fountain',48,35,138,100,{footprint:[114,66]});
@@ -159,18 +153,157 @@ window.IslandWorld = (() => {
       add(i%3?'fern':'flowers',tx,ty,i%3?32:38,i%3?27:32,{solid:false});
     }
     // O carregamento do JPEG define as dimensões reais; pontos antigos aguardam reposicionamento.
-    return {tile:TILE,cols:COLS,rows:ROWS,width:0,height:0,tiles,objects,colliders,regions,routes,points:points.map(p=>({...p,x:(p.x+.5)*TILE,y:(p.y+.5)*TILE})),spawn:{x:1290*WORLD_SCALE,y:945*WORLD_SCALE},at};
+    return {tile:TILE,cols:COLS,rows:ROWS,width:0,height:0,tiles,objects,regions,routes,points:points.map(p=>({...p,x:(p.x+.5)*TILE,y:(p.y+.5)*TILE})),spawn:{x:SPAWN.x*WORLD_SCALE,y:SPAWN.y*WORLD_SCALE},at};
   }
-  function isWalkable(world,x,y,radius=PLAYER_HEIGHT/2) {
-    // Água e bases de objetos pertencem ao mapa antigo: somente o limite do mundo fica ativo.
-    return x>=radius&&x<=world.width-radius&&y>=PLAYER_HEIGHT+2&&y<=world.height-6;
+  async function buildCollision(world,map) {
+    const mapW=map.naturalWidth,mapH=map.naturalHeight,C=COLLISION_CELL_SIZE;
+    const cols=Math.ceil(mapW/C),rows=Math.ceil(mapH/C),n=cols*rows;
+    const cells=new Uint8Array(n).fill(1),water=new Uint8Array(n),free=new Uint8Array(n),queue=new Int32Array(n);
+    const sample=document.createElement('canvas');sample.width=cols;sample.height=rows;
+    const context=sample.getContext('2d',{willReadFrequently:true});
+    // Escala por célula: a última linha/coluna pode cobrir uma fração da imagem.
+    context.drawImage(map,0,0,mapW/C,mapH/C);
+    const rgb=context.getImageData(0,0,cols,rows).data;
+    for(let i=0;i<n;i++) {
+      // RGB → HSV: V é o maior canal; S é a amplitude/V. H depende do canal máximo.
+      const r=rgb[i*4]/255,g=rgb[i*4+1]/255,b=rgb[i*4+2]/255;
+      const v=Math.max(r,g,b),d=v-Math.min(r,g,b),s=v?d/v:0;
+      const h=d?(60*(v===r?(g-b)/d:v===g?(b-r)/d+2:(r-g)/d+4)+360)%360:0;
+      water[i]=h>=WATER_H_MIN&&h<=WATER_H_MAX&&s>=WATER_S_MIN&&v>=WATER_V_MIN?1:0;
+    }
+    sample.width=sample.height=0;
+    function neighbors(i,visit) {
+      if(i>=cols)visit(i-cols);if(i+cols<n)visit(i+cols);
+      if(i%cols)visit(i-1);if(i%cols<cols-1)visit(i+1);
+    }
+    function flood(field,start,seen) {
+      let head=0,tail=1;queue[0]=start;seen[start]=1;
+      while(head<tail)neighbors(queue[head++],j=>{if(field[j]&&!seen[j]){seen[j]=1;queue[tail++]=j;}});
+      return tail;
+    }
+    const seenWater=new Uint8Array(n);
+    for(let i=0;i<n;i++)if(water[i]&&!seenWater[i]) {
+      const count=flood(water,i,seenWater);
+      if(count<WATER_MIN_COMPONENT_CELLS)for(let j=0;j<count;j++)water[queue[j]]=0;
+    }
+    // Dilatação em oito direções (distância de Chebyshev), feita só no carregamento.
+    const distance=new Uint16Array(n).fill(65535);let head=0,tail=0;
+    for(let i=0;i<n;i++)if(water[i]){distance[i]=0;queue[tail++]=i;cells[i]=0;}
+    while(head<tail) {
+      const i=queue[head++],x=i%cols,y=Math.floor(i/cols);
+      if(distance[i]>=WATER_MARGIN_CELLS)continue;
+      for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++) {
+        const nx=x+dx,ny=y+dy,j=ny*cols+nx;
+        if(nx>=0&&nx<cols&&ny>=0&&ny<rows&&distance[j]===65535) {
+          distance[j]=distance[i]+1;cells[j]=0;queue[tail++]=j;
+        }
+      }
+    }
+    const mask=await new Promise(resolve=>{
+      const image=new Image();image.onload=()=>resolve(image);
+      image.onerror=()=>{console.warn('[Colisão] Máscara ausente: usando somente água automática.');resolve(null);};
+      image.src='assets/ilha/island_mask.png';
+    });
+    if(mask) {
+      const maskW=mask.naturalWidth,maskH=mask.naturalHeight,canvas=document.createElement('canvas');
+      canvas.width=maskW;canvas.height=maskH;
+      try {
+        const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(mask,0,0);
+        const rgba=ctx.getImageData(0,0,maskW,maskH).data; // Uma única leitura da máscara original.
+        for(let gy=0;gy<rows;gy++)for(let gx=0;gx<cols;gx++) {
+          // Célula → centro na imagem (gx*4+2) → máscara, pela razão maskW/mapW (idem Y).
+          const mx=Math.min(maskW-1,Math.floor((gx*C+C/2)*maskW/mapW));
+          const my=Math.min(maskH-1,Math.floor((gy*C+C/2)*maskH/mapH)),p=(my*maskW+mx)*4,i=gy*cols+gx;
+          const r=rgba[p],g=rgba[p+1],b=rgba[p+2];if(rgba[p+3]<=40)continue;
+          if(r>150&&g<110&&b<110)cells[i]=0;
+          if(g>150&&r<120&&b<120)free[i]=1;
+        }
+      } finally {canvas.width=canvas.height=0;}
+    }
+    // Verde vence inclusive a água dilatada; áreas transparentes mantêm a regra anterior.
+    for(let i=0;i<n;i++)if(free[i])cells[i]=1;
+    const overlay=document.createElement('canvas');overlay.width=cols;overlay.height=rows;
+    const overlayCtx=overlay.getContext('2d'),pixels=overlayCtx.createImageData(cols,rows);
+    for(let i=0;i<n;i++)if(!cells[i]||free[i]) {
+      pixels.data[i*4]=free[i]?0:255;pixels.data[i*4+1]=free[i]?255:0;pixels.data[i*4+3]=96;
+    }
+    overlayCtx.putImageData(pixels,0,0);
+    world.collision={cells,free,cols,rows,mapW,mapH,overlay};
+    function adjust(point,feet=false) {
+      const gx=Math.floor(point.x/C),gy=Math.floor(point.y/C);
+      const valid=(x,y)=>x>=0&&x<cols&&y>=0&&y<rows&&cells[y*cols+x]&&(!feet||isWalkable(world,(x*C+C/2)*WORLD_SCALE,(y*C+C/2)*WORLD_SCALE));
+      if(valid(gx,gy)&&(!feet||isWalkable(world,point.x*WORLD_SCALE,point.y*WORLD_SCALE)))return {...point};
+      // Anéis quadrados em espiral; escolhe o centro mais próximo no primeiro anel livre.
+      for(let radius=1;radius<=Math.max(cols,rows);radius++) {
+        let best=null,dist=Infinity;
+        for(let offset=-radius;offset<=radius;offset++)for(const [x,y] of [
+          [gx+offset,gy-radius],[gx+offset,gy+radius],[gx-radius,gy+offset],[gx+radius,gy+offset]
+        ]) {
+          if(!valid(x,y))continue;
+          const d=(x*C+C/2-point.x)**2+(y*C+C/2-point.y)**2;
+          if(d<dist){dist=d;best={...point,x:x*C+C/2,y:y*C+C/2};}
+        }
+        if(best){console.warn(`[Colisão] ${point.name}: (${point.x}, ${point.y}) → (${best.x}, ${best.y}).`);return best;}
+      }
+      throw new Error('[Colisão] Não há célula andável para '+point.name);
+    }
+    const spawn=adjust({...SPAWN,name:'SPAWN'},true);
+    world.spawn.x=spawn.x*WORLD_SCALE;world.spawn.y=spawn.y*WORLD_SCALE;world.spawnPending=true;
+    world.checkpoints=CHECKPOINTS.map(point=>adjust(point,true));
+    const seen=new Uint8Array(n),start=Math.floor(spawn.y/C)*cols+Math.floor(spawn.x/C);
+    const reached=flood(cells,start,seen),total=cells.reduce((sum,value)=>sum+value,0);
+    window.IslandKeys?.place(world,seen);
+    const keyUnreachable=(world.mapKeys||[]).filter(p=>p.reachableDistance>INTERACT_RADIUS/WORLD_SCALE);
+    (keyUnreachable.length?console.warn:console.info)('[Chaves] BFS do spawn — INALCANÇÁVEIS:',keyUnreachable.length?keyUnreachable.map(p=>p.label):'nenhuma');
+    const unreachable=world.checkpoints.filter(p=>!seen[Math.floor(p.y/C)*cols+Math.floor(p.x/C)]);
+    const isolated=[];
+    for(let i=0;i<n;i++)if(cells[i]&&!seen[i]) {
+      const count=flood(cells,i,seen);
+      if(count>500)isolated.push({cells:count,x:(i%cols)*C+C/2,y:Math.floor(i/cols)*C+C/2});
+    }
+    world.collision.report={unreachable,keyUnreachable,reachablePercent:100*reached/total,isolated};
+    console.info('[Colisão] Checkpoints INALCANÇÁVEIS:',unreachable.length?unreachable.map(p=>p.name):'nenhum');
+    console.info(`[Colisão] Células andáveis alcançáveis: ${(100*reached/total).toFixed(2)}%.`);
+    console.info('[Colisão] Regiões isoladas com mais de 500 células (exemplos em px da imagem):',isolated);
+    // Diagnóstico adicional: conexões de uma célula podem não comportar a pegada inteira.
+    const footCells=cells.map((value,i)=>value&&isWalkable(world,(i%cols*C+C/2)*WORLD_SCALE,(Math.floor(i/cols)*C+C/2)*WORLD_SCALE)?1:0);
+    const footSeen=new Uint8Array(n);flood(footCells,start,footSeen);
+    world.collision.report.footUnreachable=world.checkpoints.filter(p=>!footSeen[Math.floor(p.y/C)*cols+Math.floor(p.x/C)]);
+    if(world.collision.report.footUnreachable.length)console.warn('[Colisão] Acessos estreitos para a pegada:',world.collision.report.footUnreachable.map(p=>p.name));
+  }
+  function cellAt(world,x,y) {
+    // Mundo → imagem → célula: a câmera projeta esse mesmo mundo, sem alterar a física.
+    // Desfazer WORLD_SCALE basta; aplicar CAMERA_ZOOM aqui deslocaria a máscara ao dar zoom.
+    const c=world.collision;if(!c||x<0||y<0||x>=world.width||y>=world.height)return false;
+    const gx=Math.floor(x/WORLD_SCALE/COLLISION_CELL_SIZE),gy=Math.floor(y/WORLD_SCALE/COLLISION_CELL_SIZE);
+    return c.cells[gy*c.cols+gx]===1;
+  }
+  function isWalkable(world,x,y) {
+    // (x,y) ancora os pés; a pegada ocupa FOOT_H pixels acima da base do sprite.
+    return cellAt(world,x-FOOT_W/2,y-FOOT_H)&&cellAt(world,x+FOOT_W/2,y-FOOT_H)&&cellAt(world,x-FOOT_W/2,y)&&cellAt(world,x+FOOT_W/2,y);
   }
   function movePlayer(world,position,dx,dy) {
-    const steps=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dy))/6));
+    if(world.spawnPending){Object.assign(position,world.spawn);world.spawnPending=false;}
+    const steps=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dy))/(COLLISION_CELL_SIZE*WORLD_SCALE/2)));
+    const sx=dx/steps,sy=dy/steps;let nudged=false;
     for(let i=0;i<steps;i++) {
-      if(isWalkable(world,position.x+dx/steps,position.y))position.x+=dx/steps;
-      if(isWalkable(world,position.x,position.y+dy/steps))position.y+=dy/steps;
+      const oldX=position.x,oldY=position.y;
+      // X e depois Y permitem deslizar na parede. Subpassos evitam saltar células finas.
+      if(isWalkable(world,position.x+sx,position.y))position.x+=sx;
+      if(isWalkable(world,position.x,position.y+sy))position.y+=sy;
+      if(nudged||(!sx&&!sy)||position.x!==oldX||position.y!==oldY)continue;
+      // Cantos de máscara pintada à mão podem prender os pés: busque uma saída lateral curta.
+      const horizontal=Math.abs(sx)>=Math.abs(sy);
+      for(const sign of [1,-1]) {
+        for(let offset=1;offset<=CORNER_NUDGE;offset++) {
+          const x=oldX+(horizontal?0:offset*sign),y=oldY+(horizontal?offset*sign:0);
+          if(!isWalkable(world,x,y))break; // Não salta uma célula bloqueada no ajuste.
+          if(!isWalkable(world,x+sx,y+sy))continue; // Só ajusta se liberar a caminhada.
+          position.x=x;position.y=y;nudged=true;break;
+        }
+        if(nudged)break; // No máximo 3 px laterais por movimento, mesmo com subpassos.
+      }
     }
   }
-  return {create,terrain,noise,regionAt,isWalkable,movePlayer};
+  return {create,terrain,noise,regionAt,buildCollision,cellAt,isWalkable,movePlayer};
 })();
