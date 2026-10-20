@@ -4,7 +4,8 @@ window.GameSettings = (() => {
   'use strict';
   // "touch" escolhe o controle na tela para tablet e celular: setas, joystick ou nenhum.
   const defaults = {sound:70, music:35, mute:false, speed:'normal', touch:'arrows', largeText:false, calm:false};
-  const speeds = {slow:{factor:.7,label:'Devagar'}, normal:{factor:1,label:'Normal'}, fast:{factor:1.3,label:'Rápido'}};
+  // Devagar = antigo Normal (16 ticks por passo), Normal = antigo Rápido (12), Rápido = Normal × 1,5 (8).
+  const speeds = {slow:{factor:1,label:'Devagar'}, normal:{factor:1.3,label:'Normal'}, fast:{factor:1.95,label:'Rápido'}};
   const touchModes = {arrows:{label:'Setas'}, joystick:{label:'Joystick'}, off:{label:'Nenhum'}};
   const values = {...defaults};
   const listeners = [];

@@ -17,7 +17,7 @@ window.GameIsland = (() => {
   const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
   // Preferências do livro de configurações: "Menos animações" e velocidade da caminhada.
   const calmMotion=()=>reducedMotion.matches||Boolean(window.GameSettings?.calm);
-  // Devagar 23, Normal 16, Rápido 12 ticks por passo.
+  // Devagar 16, Normal 12, Rápido 8 ticks por passo (fatores em game-settings.js).
   const ticksPerTile=()=>Math.round(TICKS_PER_TILE/(window.GameSettings?.walkSpeed||1));
   const TICK_MS=1000/TICK_HZ;
   let active=false,loaded=false,frame=0,lastTime=0,acc=0,near=null,currentRegion='center',dialogTrigger=null,foundCat=false;

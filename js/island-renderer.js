@@ -372,14 +372,21 @@ window.IslandRenderer = (() => {
         }
       }
       window.IslandKeys?.draw(ctx,world,player,camera,view,factor,time,reducedMotion);
-      ellipse(player.x,player.y-2,9,3,'#3b593a55');
+      // Sombra acompanha o tamanho da personagem (9×3 era para HERO_SCALE 1,2).
+      const shadow=HERO_SCALE/1.2;
+      ellipse(player.x,player.y-2*shadow,9*shadow,3*shadow,'#3b593a55');
       const hero=images.hero;
       if(hero?.complete&&hero.naturalWidth) {
         // Quadro da folha: coluna = passo da animação, linha = direção; pés no pivô (24,52).
         const {frameW:fw,frameH:fh,pivotX,pivotY}=HERO_SHEET,k=HERO_SCALE;
         // A coluna já vem de HeroAnimation (respeita "Menos animações").
         const column=player.frame??HeroAnimation.IDLE,row=player.dir||0;
-        ctx.drawImage(hero,column*fw,row*fh,fw,fh,Math.round(player.x-pivotX*k),Math.round(player.y-pivotY*k),fw*k,fh*k);
+        // Reduzida abaixo de 1:1, a arte perde pixels e cintila ao andar; suavizar só a personagem
+        // mantém o contorno estável. Sem arredondar a posição, que faria a personagem tremer.
+        ctx.save();
+        if(k<1){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';}
+        ctx.drawImage(hero,column*fw,row*fh,fw,fh,player.x-pivotX*k,player.y-pivotY*k,fw*k,fh*k);
+        ctx.restore();
       } else {
         sprite(player.facing==='up'?'back':player.facing==='down'?'front':'side',player.x,player.y,PLAYER_HEIGHT,PLAYER_HEIGHT,player.facing==='left');
       }
