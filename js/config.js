@@ -10,12 +10,12 @@ const PLAYER_HEIGHT = 40;
 // (gerado de menina-caminhada.png por assets/ferramentas-sprites/gerar-ciclo-8.cjs); 8–9 = respiração.
 const HERO_SHEET = {src:'personagem/menina-caminhada-8.png',frameW:48,frameH:56,pivotX:24,pivotY:52};
 const TICK_HZ = 60;            // Lógica em passo fixo de 60 ticks por segundo.
-const STEP_TILE = 32;          // Tamanho de um passo, em unidades de mundo.
+const STEP_TILE = 32 * (0.5 - 0.17); // Passo em unidades de mundo: 0,33 dos 32 originais (≈10,56).
 const TICKS_PER_TILE = 16;     // Um passo dura 16 ticks na velocidade normal.
 const TICKS_PER_FRAME = 4;     // 4 quadros por passo: cada um fica 4 ticks (15 trocas por segundo).
 const IDLE_BREATH_TICKS = 36;  // Parada, a respiração alterna a cada 0,6 s.
 const TURN_TICKS = 6;          // Toque rápido só vira a personagem; segurar depois disso anda.
-const HERO_SCALE = 1.2;        // Quadro 48×56 → unidades de mundo (personagem com ~58 de altura).
+const HERO_SCALE = 1.2 / 7 * 3.5; // Quadro 48×56 → unidades de mundo: 0,6 (~33,6 de altura).
 const KEY_HEIGHT = 36, KEY_HOVER = 8, INTERACT_RADIUS = 64;
 const KEYS = [
   {id:'geometria',label:'Geometria',x:2060,y:390,img:'assets/hud/chave_geometria.png',color:'#a855f7'},
