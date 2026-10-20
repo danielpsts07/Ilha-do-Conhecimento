@@ -2,7 +2,7 @@
 window.IslandRenderer = (() => {
   'use strict';
   const T=48, types=IslandWorld.terrain, noise=IslandWorld.noise;
-  const sources={island:'ilha/ilha.jpeg',front:IslandArt.sources.front,back:IslandArt.sources.back,side:IslandArt.sources.side};
+  const sources={island:'ilha/ilha.jpeg',hero:HERO_SHEET.src,front:IslandArt.sources.front,back:IslandArt.sources.back,side:IslandArt.sources.side};
   function create(canvas,miniCanvas,mapCanvas,world) {
     const ctx=canvas.getContext('2d'),mini=miniCanvas.getContext('2d'),map=mapCanvas.getContext('2d');
     const images={},failed=[],patterns={};
@@ -10,7 +10,7 @@ window.IslandRenderer = (() => {
     const hudIcons=new Array(4),hudSilhouettes=new Array(4),hudGlows=new Array(4);
     const hudPrevious=new Uint8Array(4),hudPop=new Float64Array(4).fill(-Infinity);
     const hudBox={x:0,y:0,w:0,h:0,s:1},slotW=Math.ceil(HUD_KEY_H*229/482);
-    const overlayNodes=Array.from(document.querySelectorAll('.island-location, .island-minimap'));
+    const overlayNodes=Array.from(document.querySelectorAll('.island-place, .island-minimap, .island-gear, .island-touch'));
     let hudWidth=0,hudDirty=true;
     if(HUD_KEYS_CORNER===DEBUG_PANEL_CORNER)console.warn('[HUD] HUD_KEYS_CORNER e DEBUG_PANEL_CORNER são iguais; o F3 será reposicionado para evitar sobreposição.');
     if(typeof ResizeObserver!=='undefined') {
@@ -79,7 +79,7 @@ window.IslandRenderer = (() => {
     function drawHud(time,calm) {
       if(!hudWidth)return;
       if(hudDirty) {
-        const h=HUD_KEY_H+20,right=HUD_KEYS_CORNER!=='bottom-left',top=HUD_KEYS_CORNER==='top-right';
+        const h=HUD_KEY_H+20,right=HUD_KEYS_CORNER.endsWith('right'),top=HUD_KEYS_CORNER.startsWith('top');
         const spaces=overlaySpaces(HUD_MARGIN),fit=a=>Math.min(1,a.w/hudWidth,a.h/h);
         const score=a=>fit(a)*1e6-Math.hypot((right?width-a.x-a.w:a.x),(top?a.y:height-a.y-a.h));
         spaces.sort((a,b)=>score(b)-score(a));
@@ -373,8 +373,16 @@ window.IslandRenderer = (() => {
       }
       window.IslandKeys?.draw(ctx,world,player,camera,view,factor,time,reducedMotion);
       ellipse(player.x,player.y-2,9,3,'#3b593a55');
-      const bob=!reducedMotion&&player.moving?Math.sin(time/80)*1.5:0;
-      sprite(player.facing==='up'?'back':player.facing==='down'?'front':'side',player.x,player.y+bob,PLAYER_HEIGHT,PLAYER_HEIGHT,player.facing==='left');
+      const hero=images.hero;
+      if(hero?.complete&&hero.naturalWidth) {
+        // Quadro da folha: coluna = passo da animação, linha = direção; pés no pivô (24,52).
+        const {frameW:fw,frameH:fh,pivotX,pivotY}=HERO_SHEET,k=HERO_SCALE;
+        // A coluna já vem de HeroAnimation (respeita "Menos animações").
+        const column=player.frame??HeroAnimation.IDLE,row=player.dir||0;
+        ctx.drawImage(hero,column*fw,row*fh,fw,fh,Math.round(player.x-pivotX*k),Math.round(player.y-pivotY*k),fw*k,fh*k);
+      } else {
+        sprite(player.facing==='up'?'back':player.facing==='down'?'front':'side',player.x,player.y,PLAYER_HEIGHT,PLAYER_HEIGHT,player.facing==='left');
+      }
       if(near) {
         const px=near.x,py=near.y-(near.id==='portal'?142:near.id==='mountain'?105:76);
         rect(px-14,py-14,28,28,'#574a38');rect(px-11,py-11,22,22,'#ffefba');ctx.fillStyle='#584634';ctx.font='bold 17px system-ui';ctx.textAlign='center';ctx.fillText('E',px,py+6);
@@ -394,7 +402,7 @@ window.IslandRenderer = (() => {
           `Zoom: ${zoom.toFixed(2)}${factor>zoom+.001?` (encaixe: ${factor.toFixed(2)})`:''} [+/-]`,
           `Largura visível: ${(Math.min(1,view.width/world.width)*100).toFixed(2)}%`];
         const pw=Math.ceil(Math.max(...lines.map(line=>ctx.measureText(line).width)))+20,ph=lines.length*22+16;
-        const right=DEBUG_PANEL_CORNER!=='bottom-left',top=DEBUG_PANEL_CORNER==='top-right';
+        const right=DEBUG_PANEL_CORNER.endsWith('right'),top=DEBUG_PANEL_CORNER.startsWith('top');
         const spaces=overlaySpaces(8,true);
         const fit=a=>Math.min(1,a.w/pw,a.h/ph),anchor=a=>({x:right?a.x+a.w-pw*fit(a):a.x,y:top?a.y:a.y+a.h-ph*fit(a)});
         const score=a=>{const p=anchor(a);return fit(a)*1e6-Math.hypot(p.x-(right?width-pw-8:8),p.y-(top?8:height-ph-8));};

@@ -47,3 +47,15 @@ input[type=range] { display: block; appearance: none; width: 100%; height: 18px;
 @media (max-width:700px) { .home-footer { font-size: 8px; letter-spacing: 1px; gap: 12px; }.game-shell { width: 96vw; }.home-menu { top: 4%; left: 25%; width: 50%; }.home-menu nav { gap: 2px; width: 63%; }.corner-button { width: 9%; }.book-dialog { width: min(94vw,600px); max-height: 92svh; background: #edcf99; border: 4px solid #886041; border-radius: 10px; }.book-scene { aspect-ratio: auto; }.book-background { object-fit: cover; opacity: .14; }.book-close { position: absolute; top: 7px; right: 7px; width: 34px; }.book-content { position: relative; inset: auto; display: flex; flex-direction: column; gap: 18px; padding: 33px 23px 22px; }.chapter { font-size: 10px; }h1 { font-size: 28px; margin-top: 9px; }.subtitle { font-size: 16px; }.settings-cat,.cat-caption { display: none; }.right-page { border-top: 1px solid #ad844a77; padding-top: 14px; }.volume-group { margin: 5px 0 24px; }.volume-group label { font-size: 17px; }.volume-group output { font-size: 13px; }.audio-note { font-size: 12px; margin: 0; }.book-actions { margin-top: 0; gap: 8px; }.asset-button { font-size: 13px; min-height: 48px; }.tutorial-copy { font-size: 16px; }.key-guide { display: none; }.tutorial-tip { font-size: 13px; margin: 10px 0 0; }.practice-board { height: 160px; }.tutorial-practice { padding-top: 12px; }.practice-caption { font-size: 13px; }.interaction-scene { height: 145px; }.region-grid button { font-size: 13px; }.message-dialog { padding: 25px 20px; }.message-dialog h1 { font-size: 26px; }.message-dialog p { font-size: 14px; } }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; } }
 @media (max-width:480px) and (orientation:portrait) { .home { aspect-ratio:4/3; }.home-menu { top:3%;left:17%;width:66%; }.home-menu nav { width:72%;gap:5px; }.corner-button { width:12%; }.room { object-position:center; }.sleep-mark { display:none; }.home-footer { letter-spacing:.5px; } }
+
+/* Menu em tela cheia: o quarto ocupa toda a janela, sem moldura nem rodapé.
+   Fica no fim do arquivo para prevalecer sobre as regras de tamanho acima. */
+.game-shell { position: fixed; inset: 0; width: 100vw; height: 100svh; padding: 0; }
+.home { width: 100%; height: 100%; aspect-ratio: auto; border: 0; border-radius: 0; box-shadow: none; }
+.room { object-fit: cover; object-position: center; }
+.home-menu { top: 6%; left: 50%; width: min(44vw, 72svh * 1.1, 620px); transform: translateX(-50%); }
+.home-menu nav { width: 60%; gap: 10px; margin-top: 2%; }
+.corner-button { top: 3%; width: clamp(44px, 6vw, 84px); }
+.exit-button { left: 2.2%; }
+.settings-button { right: 2.2%; }
+@media (max-width:700px) { .home-menu { top: 8%; width: 70vw; } .corner-button { width: 48px; } }

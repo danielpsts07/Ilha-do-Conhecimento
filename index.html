@@ -28,23 +28,18 @@
       </div>
       <span class="sleep-mark" aria-hidden="true">z<span>z</span></span>
     </section>
-    <footer class="home-footer"><span>EXPLORAR · APRENDER · CONQUISTAR</span><span class="version">AVENTURA · VERSÃO 05</span></footer>
   </main>
 
   <section id="island-screen" class="island-screen" aria-label="Exploração da Ilha do Conhecimento" hidden>
-    <header class="island-header">
-      <div class="island-brand"><img src="assets/hud/gato-rosto.png" alt=""><div><strong>Ilha do Conhecimento</strong><span>A caminho do seu amigo</span></div></div>
-      <nav class="island-nav" aria-label="Opções da aventura">
-        <button id="island-map-button" class="island-ui-button" aria-label="Abrir mapa da ilha, atalho M">Mapa <kbd>M</kbd></button>
-        <button class="island-ui-button" data-open="tutorial" aria-label="Abrir tutorial"><img src="assets/hud/livro.png" alt=""><span>Ajuda</span></button>
-        <button class="island-ui-button" data-open="settings" data-settings-start="audio" aria-label="Abrir configurações de som"><img src="assets/hud/configuracoes.png" alt=""><span>Som</span></button>
-        <button id="island-pause-button" class="island-ui-button" aria-label="Pausar aventura, atalho Escape">Pausa <span class="pause-symbol" aria-hidden="true">Ⅱ</span></button>
-      </nav>
-    </header>
     <div class="island-viewport">
-      <canvas id="island-canvas" tabindex="0" aria-label="Ilha explorável. Mova-se com WASD ou setas, interaja com E e abra o mapa com M." aria-describedby="island-instructions">Seu navegador precisa permitir Canvas 2D para desenhar a ilha.</canvas>
-      <div class="island-location"><span class="location-eyebrow">VOCÊ ESTÁ EM</span><h1 id="island-region">Praça do Portal</h1><p id="island-objective">Conquiste as quatro chaves e encontre seu gato na montanha.</p><span id="island-discovery" aria-live="polite">1 de 6 lugares descobertos</span></div>
-      <div class="island-keyring" role="group" aria-label="Chaves da aventura">
+      <canvas id="island-canvas" tabindex="0" aria-label="Ilha explorável. Mova-se com WASD ou setas, interaja com E, abra o mapa com M e pause com Esc.">Seu navegador precisa permitir Canvas 2D para desenhar a ilha.</canvas>
+      <!-- Nome do lugar no alto, ao centro. Objetivo e descobertas seguem para leitores de tela. -->
+      <div class="island-place"><h1 id="island-region">Praça do Portal</h1></div>
+      <p id="island-objective" class="visually-hidden">Conquiste as quatro chaves e encontre seu gato na montanha.</p>
+      <span id="island-discovery" class="visually-hidden" aria-live="polite">1 de 6 lugares descobertos</span>
+      <button id="island-settings-button" class="island-gear" data-open="settings" aria-label="Configurações" title="Configurações"><img src="assets/tela-inicial/configuracoes-menu.png" alt=""></button>
+      <!-- As chaves aparecem no canvas (canto superior esquerdo); esta lista fica só para leitores de tela. -->
+      <div class="island-keyring visually-hidden" role="group" aria-label="Chaves da aventura">
         <span id="island-key-count" aria-live="polite">0 de 4 chaves</span>
         <div class="island-key-slots">
           <span id="island-key-forest" class="island-key-slot" data-owned="false" data-key-name="Chave verde" role="img" aria-label="Chave verde: a encontrar"><img src="assets/hud/chave-verde.png" alt=""><small>Lógica</small></span>
@@ -55,13 +50,10 @@
       </div>
       <button id="island-minimap-button" class="island-minimap" aria-label="Abrir mapa completo da ilha"><span>ILHA DO CONHECIMENTO <span aria-hidden="true">↗</span></span><canvas id="island-minimap" width="192" height="144" aria-hidden="true"></canvas><span class="minimap-caption"><i aria-hidden="true"></i> Você está aqui</span></button>
       <p id="island-loading" class="island-loading" role="status">Preparando sua ilha…</p>
+      <div class="island-direction-pad island-touch" role="group" aria-label="Movimento. Segure uma direção para caminhar."><button data-walk="up" aria-label="Caminhar para cima">↑</button><button data-walk="left" aria-label="Caminhar para a esquerda">←</button><button data-walk="down" aria-label="Caminhar para baixo">↓</button><button data-walk="right" aria-label="Caminhar para a direita">→</button></div>
+      <div id="island-joystick" class="island-joystick island-touch" role="group" aria-label="Joystick. Arraste para caminhar."><span class="joystick-base"><span id="joystick-stick" class="joystick-stick"></span></span></div>
+      <button id="island-interact" class="island-interact island-touch" disabled><kbd>E</kbd><span id="island-interact-label">Aproxime-se de uma placa</span></button>
     </div>
-    <footer class="island-controls">
-      <div class="island-direction-pad" role="group" aria-label="Movimento. Segure uma direção para caminhar."><button data-walk="up" aria-label="Caminhar para cima">↑</button><button data-walk="left" aria-label="Caminhar para a esquerda">←</button><button data-walk="down" aria-label="Caminhar para baixo">↓</button><button data-walk="right" aria-label="Caminhar para a direita">→</button></div>
-      <div id="island-joystick" class="island-joystick" role="group" aria-label="Joystick. Arraste para caminhar."><span class="joystick-base"><span id="joystick-stick" class="joystick-stick"></span></span></div>
-      <p id="island-instructions"><strong>Uma ilha, quatro chaves.</strong><span><kbd>WASD</kbd> ou <kbd>↑ ← ↓ →</kbd> caminhar <b>·</b> <kbd>E</kbd> interagir <b>·</b> <kbd>Esc</kbd> pausa</span><small>Aproxime-se das placas para entrar nos desafios.</small></p>
-      <button id="island-interact" class="island-interact" disabled><kbd>E</kbd><span id="island-interact-label">Aproxime-se de uma placa</span></button>
-    </footer>
     <p id="island-announcement" class="visually-hidden" aria-live="polite"></p>
   </section>
 
@@ -372,6 +364,7 @@
   <script src="js/island-art.js"></script>
   <script src="js/island-keys.js"></script>
   <script src="js/dev-puzzle-screen.js"></script>
+  <script src="js/hero-animation.js"></script>
   <script src="js/island-renderer.js"></script>
   <script src="js/adventure-progress.js"></script>
   <script src="js/puzzle-data.js"></script>

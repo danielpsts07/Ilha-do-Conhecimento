@@ -2,9 +2,20 @@
 const WORLD_SCALE = 0.6;
 const CAMERA_ZOOM = 1.90;
 const DEBUG_PANEL_CORNER = 'bottom-left'; // Também aceita 'bottom-right' e 'top-right'.
-const HUD_KEYS_CORNER = 'bottom-right';
+const HUD_KEYS_CORNER = 'top-left'; // Aceita 'top-left', 'top-right', 'bottom-left' e 'bottom-right'.
 const HUD_MARGIN = 12, HUD_KEY_H = 38, HUD_GAP = 8;
 const PLAYER_HEIGHT = 40;
+// Caminhada estilo Pokémon 2D: folha 10×4 de 48×56, pés em (24,52).
+// Linhas: 0 baixo, 1 esquerda, 2 direita, 3 cima. Colunas 0–7 = ciclo de 8 quadros
+// (gerado de menina-caminhada.png por assets/ferramentas-sprites/gerar-ciclo-8.cjs); 8–9 = respiração.
+const HERO_SHEET = {src:'personagem/menina-caminhada-8.png',frameW:48,frameH:56,pivotX:24,pivotY:52};
+const TICK_HZ = 60;            // Lógica em passo fixo de 60 ticks por segundo.
+const STEP_TILE = 32;          // Tamanho de um passo, em unidades de mundo.
+const TICKS_PER_TILE = 16;     // Um passo dura 16 ticks na velocidade normal.
+const TICKS_PER_FRAME = 4;     // 4 quadros por passo: cada um fica 4 ticks (15 trocas por segundo).
+const IDLE_BREATH_TICKS = 36;  // Parada, a respiração alterna a cada 0,6 s.
+const TURN_TICKS = 6;          // Toque rápido só vira a personagem; segurar depois disso anda.
+const HERO_SCALE = 1.2;        // Quadro 48×56 → unidades de mundo (personagem com ~58 de altura).
 const KEY_HEIGHT = 36, KEY_HOVER = 8, INTERACT_RADIUS = 64;
 const KEYS = [
   {id:'geometria',label:'Geometria',x:2060,y:390,img:'assets/hud/chave_geometria.png',color:'#a855f7'},

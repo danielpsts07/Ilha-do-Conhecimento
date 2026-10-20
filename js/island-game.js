@@ -5,17 +5,22 @@ window.GameIsland = (() => {
   const screen=$('#island-screen'),canvas=$('#island-canvas');
   const world=IslandWorld.create();
   const renderer=IslandRenderer.create(canvas,$('#island-minimap'),$('#island-map'),world);
-  const player={...world.spawn,facing:'down',moving:false},camera={x:0,y:0};
+  // dir: 0 baixo, 1 esquerda, 2 direita, 3 cima (mesma ordem das linhas da folha).
+  const DIRS=['down','left','right','up'],DX=[0,-1,1,0],DY=[1,0,0,-1];
+  const player={...world.spawn,facing:'down',dir:0,moving:false,frame:HeroAnimation.IDLE,steps:0,idle:0,prog:0,dur:0,walk:0,turn:0,was:false,fromX:0,fromY:0,toX:0,toY:0},camera={x:0,y:0};
   const dev=world.devScreen=window.DevPuzzleScreen?.create(canvas,world,clearInput);
-  const visited=new Set(['center']),keys=new Set(),pointers=new Map();
+  // held guarda a ordem das direções seguradas: a última pressionada manda (como nos Pokémon 2D).
+  const visited=new Set(['center']),held=[],pointers=new Map();
   const info=$('#island-info-dialog'),pause=$('#island-pause-dialog'),map=$('#island-map-dialog');
   const dialogs=Array.from(document.querySelectorAll('dialog'));
   const directionKeys={w:'up',a:'left',s:'down',d:'right',arrowup:'up',arrowleft:'left',arrowdown:'down',arrowright:'right'};
   const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
   // Preferências do livro de configurações: "Menos animações" e velocidade da caminhada.
   const calmMotion=()=>reducedMotion.matches||Boolean(window.GameSettings?.calm);
-  const walkSpeed=()=>210*(window.GameSettings?.walkSpeed||1);
-  let active=false,loaded=false,frame=0,lastTime=0,near=null,currentRegion='center',dialogTrigger=null,foundCat=false;
+  // Devagar 23, Normal 16, Rápido 12 ticks por passo.
+  const ticksPerTile=()=>Math.round(TICKS_PER_TILE/(window.GameSettings?.walkSpeed||1));
+  const TICK_MS=1000/TICK_HZ;
+  let active=false,loaded=false,frame=0,lastTime=0,acc=0,near=null,currentRegion='center',dialogTrigger=null,foundCat=false;
   const inChallenge=()=>Boolean(window.PuzzleGame?.active||window.GameRescue?.active);
   const blocked=()=>!loaded||document.hidden||inChallenge()||dev?.active||dialogs.some(dialog=>dialog.open);
   function updateProgress() {
@@ -37,7 +42,61 @@ window.GameIsland = (() => {
     clearInput();screen.hidden=false;renderer.resize();updateCamera(true);lastTime=0;
     updateProgress();(trigger||canvas).focus();
   }
-  function clearInput(){keys.clear();pointers.clear();player.moving=false;resetJoystick();}
+  function clearInput(){
+    held.length=0;pointers.clear();resetJoystick();
+    // Para no ponto atual do passo: o mapa não é uma grade fixa, então não há salto.
+    Object.assign(player,{moving:false,prog:0,walk:0,turn:0,was:false,steps:0,idle:0,frame:HeroAnimation.IDLE});
+  }
+  function press(id,dir){release(id);held.push({id,dir});}
+  function release(id){const i=held.findIndex(entry=>entry.id===id);if(i>-1)held.splice(i,1);}
+  function wantedDir() {
+    // Joystick: direção dominante do vetor (4 direções, sem diagonal).
+    for(const value of pointers.values()) {
+      if(!value||(!value.x&&!value.y))continue;
+      return Math.abs(value.x)>Math.abs(value.y)?(value.x>0?2:1):(value.y>0?0:3);
+    }
+    return held.length?held[held.length-1].dir:null;
+  }
+  // Procura o passo: inteiro se livre; senão contorna cantos de lado; senão anda até a parede.
+  function pathFree(x0,y0,x1,y1) {
+    const n=Math.max(1,Math.ceil(Math.hypot(x1-x0,y1-y0)));
+    for(let i=1;i<=n;i++)if(!IslandWorld.isWalkable(world,x0+(x1-x0)*i/n,y0+(y1-y0)*i/n))return false;
+    return true;
+  }
+  function findStep(dir) {
+    const {x,y}=player,dx=DX[dir],dy=DY[dir],px=-dy,py=dx;
+    if(pathFree(x,y,x+dx*STEP_TILE,y+dy*STEP_TILE))return {x:x+dx*STEP_TILE,y:y+dy*STEP_TILE,len:1};
+    for(let o=2;o<=STEP_TILE/2;o+=2)for(const s of [1,-1]) {
+      const lx=x+px*o*s,ly=y+py*o*s;
+      if(pathFree(x,y,lx,ly)&&pathFree(lx,ly,lx+dx*STEP_TILE,ly+dy*STEP_TILE))return {x:lx+dx*STEP_TILE,y:ly+dy*STEP_TILE,len:1};
+    }
+    let free=0;while(free<STEP_TILE&&IslandWorld.isWalkable(world,x+dx*(free+1),y+dy*(free+1)))free++;
+    return free>=4?{x:x+dx*free,y:y+dy*free,len:free/STEP_TILE}:null;
+  }
+  // Um tick de 1/60 s, seguindo o teste de caminhada: virar parado e passo de 16 ticks.
+  function advance(want) {
+    const p=player;
+    if(!p.moving) {
+      if(want===null){p.walk=0;p.was=false;p.turn=0;p.steps=0;p.idle++;return;}
+      p.idle=0;
+      if(want!==p.dir&&!p.was){p.dir=want;p.facing=DIRS[want];p.turn=TURN_TICKS;p.walk=0;return;}
+      if(p.turn>0){p.turn--;if(p.turn>0)return;}
+      p.dir=want;p.facing=DIRS[want];
+      const step=findStep(want);
+      if(!step){p.walk++;p.was=true;return;} // bate na parede e anda no lugar
+      Object.assign(p,{moving:true,prog:0,dur:Math.max(1,Math.round(ticksPerTile()*step.len)),fromX:p.x,fromY:p.y,toX:step.x,toY:step.y});
+    }
+    p.prog++;p.was=true;p.walk=0;
+    const t=Math.min(1,p.prog/p.dur);
+    p.x=p.fromX+(p.toX-p.fromX)*t;p.y=p.fromY+(p.toY-p.fromY)*t;
+  }
+  function tick() {
+    if(world.spawnPending){Object.assign(player,world.spawn);world.spawnPending=false;}
+    const p=player;advance(wantedDir());
+    // O quadro sai antes de fechar o passo, para o último quadro do passo também aparecer.
+    p.frame=HeroAnimation.column(p,calmMotion());
+    if(p.moving&&p.prog>=p.dur){p.x=p.toX;p.y=p.toY;p.moving=false;p.prog=0;p.steps++;}
+  }
   function resetJoystick(){const stick=$('#joystick-stick'),joystick=$('#island-joystick');if(stick)stick.style.transform='translate(-50%,-50%)';if(joystick)joystick.classList.remove('is-active');}
   function updateCamera(snap,dt=0) {
     const tx=Math.max(0,Math.min(world.width-renderer.width,player.x-renderer.width/2));
@@ -68,25 +127,12 @@ window.GameIsland = (() => {
   function loop(time) {
     if(!active)return;
     if(inChallenge()) {clearInput();lastTime=0;frame=requestAnimationFrame(loop);return;}
-    const dt=lastTime?Math.min((time-lastTime)/1000,.05):0;lastTime=time;
-    if(blocked())clearInput();
+    const elapsed=lastTime?Math.min(time-lastTime,100):0,dt=elapsed/1000;lastTime=time;
+    if(blocked()){clearInput();acc=0;}
     else {
-      // Teclas e d-pad dão direções fixas; o joystick dá um vetor analógico {x,y}.
-      const dirs=new Set(Array.from(keys,key=>directionKeys[key]));
-      let dx=0,dy=0;
-      for(const value of pointers.values()) {
-        if(typeof value==='string')dirs.add(value);
-        else {dx+=value.x;dy+=value.y;}
-      }
-      if(dirs.has('right'))dx+=1; if(dirs.has('left'))dx-=1;
-      if(dirs.has('down'))dy+=1; if(dirs.has('up'))dy-=1;
-      const length=Math.hypot(dx,dy),oldX=player.x,oldY=player.y;
-      if(length) {
-        player.facing=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
-        const magnitude=Math.min(1,length),speed=walkSpeed();
-        IslandWorld.movePlayer(world,player,dx/length*speed*magnitude*dt,dy/length*speed*magnitude*dt);
-      }
-      player.moving=Math.hypot(player.x-oldX,player.y-oldY)>.1;
+      // Passo fixo: a lógica roda exatamente 60 vezes por segundo, qualquer que seja a taxa da tela.
+      acc+=elapsed;
+      while(acc>=TICK_MS-1e-6){tick();acc-=TICK_MS;} // 1e-6 absorve o arredondamento de 1000/60
       updateLocation();updateNearby();
     }
     updateCamera(false,dt);renderer.draw(player,camera,near,time,calmMotion(),visited);
@@ -142,8 +188,9 @@ window.GameIsland = (() => {
     renderer.renderOverview(player,camera,visited,true);showDialog(map,trigger);
   }
   $('#island-interact').addEventListener('click',event=>interact(event.currentTarget));
-  $('#island-pause-button').addEventListener('click',event=>showDialog(pause,event.currentTarget));
-  $('#island-map-button').addEventListener('click',event=>openMap(event.currentTarget));
+  // Pausa (Esc) e mapa (M) seguem pelo teclado; os botões são opcionais no HUD imersivo.
+  $('#island-pause-button')?.addEventListener('click',event=>showDialog(pause,event.currentTarget));
+  $('#island-map-button')?.addEventListener('click',event=>openMap(event.currentTarget));
   $('#island-minimap-button').addEventListener('click',event=>openMap(event.currentTarget));
   $('#island-return-menu').addEventListener('click',stop);
   for(const dialog of [info,pause,map]) {
@@ -163,7 +210,7 @@ window.GameIsland = (() => {
     if(dev?.input(event))return;
     if(blocked())return;
     const direction=directionKeys[key];
-    if(direction){event.preventDefault();keys.add(key);}
+    if(direction){event.preventDefault();if(!event.repeat)press(key,DIRS.indexOf(direction));}
     else if(key==='e'){event.preventDefault();if(!event.repeat)interact();}
     else if(key==='m'){event.preventDefault();if(!event.repeat)openMap();}
     else if(key==='f3'){event.preventDefault();if(!event.repeat)renderer.toggleDebug();}
@@ -171,19 +218,20 @@ window.GameIsland = (() => {
   });
   document.addEventListener('keyup',event=>{
     const direction=directionKeys[event.key.toLowerCase()];
-    if(direction)keys.delete(event.key.toLowerCase());
+    if(direction)release(event.key.toLowerCase());
   });
   // Captura garante que soltar fora do botão também encerra a caminhada.
   document.querySelectorAll('[data-walk]').forEach(button=>{
     button.addEventListener('pointerdown',event=>{
       if(!active||blocked())return;
-      event.preventDefault();button.focus();button.setPointerCapture(event.pointerId);pointers.set(event.pointerId,button.dataset.walk);
+      event.preventDefault();button.focus();button.setPointerCapture(event.pointerId);press(`pointer-${event.pointerId}`,DIRS.indexOf(button.dataset.walk));
     });
-    for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,event=>pointers.delete(event.pointerId));
+    for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,event=>release(`pointer-${event.pointerId}`));
+    // Enter/Espaço no botão: segura o tempo de virar e dar um passo.
     button.addEventListener('click',event=>{
       if(event.detail!==0||!active||blocked())return;
-      const [dx,dy]={up:[0,-24],down:[0,24],left:[-24,0],right:[24,0]}[button.dataset.walk];
-      player.facing=button.dataset.walk;IslandWorld.movePlayer(world,player,dx,dy);updateLocation();updateNearby();
+      press('button-tap',DIRS.indexOf(button.dataset.walk));
+      setTimeout(()=>release('button-tap'),(TURN_TICKS+2)*TICK_MS);
     });
   });
   // Joystick analógico: arrastar o bastão dá um vetor {x,y} dentro de pointers.
@@ -214,7 +262,7 @@ window.GameIsland = (() => {
     });
   }
   window.addEventListener('blur',clearInput);
-  document.addEventListener('visibilitychange',()=>{clearInput();lastTime=0;});
+  document.addEventListener('visibilitychange',()=>{clearInput();lastTime=0;acc=0;});
   window.addEventListener('resize',()=>{if(active&&!inChallenge()){renderer.resize();updateCamera(true);}});
   renderer.ready.then(()=>{
     loaded=true;$('#island-loading').hidden=renderer.failed.length===0;

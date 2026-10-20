@@ -229,24 +229,11 @@ body.large-text { --ts: 1.18; }
   .index-right .index-menu { margin-top: 0; }
 }
 
-/* ---------- Joystick na ilha ---------- */
-.island-joystick { flex: none; place-items: center; width: 108px; height: 108px; touch-action: none; user-select: none; }
-.joystick-base { position: relative; width: 100px; height: 100px; border-radius: 50%; border: 2px solid #78836a; background: radial-gradient(circle at 50% 42%,#4f6a53,#324a3b 70%); box-shadow: inset 0 0 14px #16281f88,0 2px #142d23; }
-.joystick-base::after { content: ''; position: absolute; inset: 16px; border-radius: 50%; border: 2px dashed #ffffff22; }
-.joystick-stick { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(circle at 42% 36%,#f6e3b4,#d8b06a 72%,#b98f4e); border: 2px solid #8a6a3f; box-shadow: 0 3px 7px #10231c66; transition: transform .08s ease-out; }
-.island-joystick.is-active .joystick-stick { transition: none; box-shadow: 0 0 0 4px #ffe6a344,0 3px 7px #10231c66; }
-
 /* ---------- Preferências globais ---------- */
-.island-joystick { display: none; }
-body.touch-arrows .island-direction-pad { display: grid; }
-body.touch-arrows .island-joystick { display: none; }
-body.touch-joystick .island-direction-pad { display: none; }
-body.touch-joystick .island-joystick { display: grid; }
-body.touch-off .island-direction-pad, body.touch-off .island-joystick { display: none; }
+/* Joystick, setas e modos de toque da ilha ficam em css/island.css. */
 body.calm-motion *, body.calm-motion *::before, body.calm-motion *::after { animation: none !important; transition: none !important; }
-body.large-text .island-location p { font-size: 14px; }
-body.large-text .island-location h1 { font-size: 25px; }
-body.large-text .island-ui-button, body.large-text .island-interact { font-size: 14px; }
+body.large-text .island-place h1 { font-size: 26px; }
+body.large-text .island-ui-button, body.large-text .island-interact { font-size: 15px; }
 body.large-text .island-dialog p, body.large-text .message-dialog p { font-size: 17px; }
 body.large-text .puzzle-instruction { font-size: 18px; }
 body.large-text .asset-button { font-size: clamp(14px,1.45vw,18px); }
