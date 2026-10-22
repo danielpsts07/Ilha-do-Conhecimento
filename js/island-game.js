@@ -159,7 +159,23 @@ window.GameIsland = (() => {
   function interact(trigger) {
     if(active&&!blocked())updateNearby();
     const key=window.IslandKeys?.nearest(world,player);
-    if(key&&active&&!blocked()){dev.open(key);return;}
+    if(key&&active&&!blocked()){
+      dev.open(key);
+      if(key.id==='geometria') {
+        // A sobreposição existente pausa a ilha; só esta chave recebe a nova cena.
+        // close(true) é a mesma coleta do botão Simular conclusão e aciona o HUD.
+        let cancelled=false;
+        const unguard=()=>{document.removeEventListener('keydown',guard,true);document.removeEventListener('click',guard,true);};
+        const guard=event=>{event.preventDefault();event.stopImmediatePropagation();if(event.key==='Escape'){cancelled=true;unguard();dev.close();}};
+        document.addEventListener('keydown',guard,true);
+        document.addEventListener('click',guard,true);
+        window.loadGeometria().then(scene=>{
+          unguard();
+          if(!cancelled&&active&&dev.active)scene.open({onExit:complete=>dev.close(complete),debug:()=>renderer.debug,toggleDebug:()=>renderer.toggleDebug()});
+        }).catch(error=>{unguard();console.error('[Geometria]',error);if(!cancelled)dev.close();});
+      }
+      return;
+    }
     if(!near||!active||blocked())return;
     if(window.AdventureProgress?.regions.includes(near.id)&&window.PuzzleGame) {
       const region=near.id;
