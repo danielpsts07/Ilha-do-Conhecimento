@@ -38,3 +38,33 @@ const CHECKPOINTS = [
   {name:'Platô do deserto',x:1700,y:470}, {name:'Moinho',x:1880,y:915},
   {name:'Base da montanha',x:1290,y:925}
 ];
+// Espelho local do JSON: mantém o duplo clique em index.html sem fetch em file://.
+// Ao editar os dados para uso sem servidor, sincronize este bloco com data/geometria.json.
+const GEOMETRIA_LOCAL = {
+  metrics:{WIDTH:1280,HEIGHT:714,GAP_LEFT:410,GAP_RIGHT:866,CENTER_X:638,WALK_Y:260,SLOT_Y0:262,BOTTOM:610,TRAY_LEFT:5,TRAY_RIGHT:1275,TRAY_BOTTOM:702,TRAY_CELL:40,CHAR_H:150,WALK_SPEED:260},
+  background:'assets/puzzles/geometria/fundo.png',backgroundFallback:'assets/puzzles/geometria/fundo.jpeg',key:'assets/hud/chave_geometria.png',
+  pieces:{
+    '01':{matrix:['##.','.##'],sprite:'assets/puzzles/geometria/pecas/peca_01.png'},
+    '02':{matrix:['.#','.#','##'],sprite:'assets/puzzles/geometria/pecas/peca_02.png'},
+    '03':{matrix:['###','.#.'],sprite:'assets/puzzles/geometria/pecas/peca_03.png'},
+    '04':{matrix:['#.','##'],sprite:'assets/puzzles/geometria/pecas/peca_04.png'},
+    '05':{matrix:['..#','.##','##.'],sprite:'assets/puzzles/geometria/pecas/peca_05.png'},
+    '06':{matrix:['.#.','###','.#.'],sprite:'assets/puzzles/geometria/pecas/peca_06.png'}
+  },
+  cycles:[
+    {cols:4,rows:3,pieces:['02','04','05'],solution:[['02','02','05','05'],['02','05','05','04'],['02','05','04','04']]},
+    {cols:5,rows:3,pieces:['01','02','03','04'],solution:[['01','01','02','02','02'],['04','01','01','03','02'],['04','04','03','03','03']]},
+    {cols:5,rows:4,pieces:['01','02','03','04','05'],solution:[['01','01','02','02','02'],['03','01','01','05','02'],['03','03','05','05','04'],['03','05','05','04','04']]}
+  ]
+};
+let geometriaLoading;
+window.loadGeometria = () => geometriaLoading ||= (async()=>{
+  let data=GEOMETRIA_LOCAL;
+  if(window.location.protocol!=='file:') {
+    const response=await fetch('data/geometria.json');if(!response.ok)throw Error('Não foi possível abrir data/geometria.json');data=await response.json();
+  }
+  for(const src of ['js/polyomino.js','js/geometria-puzzle.js'])await new Promise((resolve,reject)=>{
+    const script=document.createElement('script');script.src=src;script.onload=resolve;script.onerror=()=>reject(Error(`Falha ao carregar ${src}`));document.head.appendChild(script);
+  });
+  await window.GeometriaPuzzle.prepare(data);return window.GeometriaPuzzle;
+})().catch(error=>{geometriaLoading=null;throw error;});
