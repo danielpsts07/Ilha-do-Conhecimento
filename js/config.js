@@ -68,3 +68,17 @@ window.loadGeometria = () => geometriaLoading ||= (async()=>{
   });
   await window.GeometriaPuzzle.prepare(data);return window.GeometriaPuzzle;
 })().catch(error=>{geometriaLoading=null;throw error;});
+
+let memoryMazeLoading;
+window.loadMemoryMaze = () => memoryMazeLoading ||= (async()=>{
+  for(const src of ['js/maze-triggers.js','js/memory-maze-game.js']) {
+    if(!document.querySelector(`script[src="${src}"]`)) {
+      await new Promise((resolve,reject)=>{
+        const script=document.createElement('script');script.src=src;script.onload=resolve;script.onerror=()=>reject(Error(`Falha ao carregar ${src}`));document.head.appendChild(script);
+      });
+    }
+  }
+  await window.MemoryMazeGame.prepare();
+  return window.MemoryMazeGame;
+})().catch(error=>{memoryMazeLoading=null;throw error;});
+
