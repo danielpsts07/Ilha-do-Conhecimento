@@ -1,0 +1,7 @@
+{
+  "fases": [
+    {"tipo":"completar","titulo":"Pedido","numero":5,"texto":"sacos no moinho","item":"saco_trigo","alvo":5,"ja_no_moinho":2,"na_mesa":4},
+    {"tipo":"retirar","titulo":"O carrinho leva","numero":6,"texto":"sacos","item":"saco_trigo","limite":6,"no_carrinho":8},
+    {"tipo":"repartir","titulo":"Reparta","numero":12,"texto":"sacos igualmente","item":"saco_farinha","total":12,"carrocas":["vermelha","azul","verde"],"celulas":6}
+  ]
+}
