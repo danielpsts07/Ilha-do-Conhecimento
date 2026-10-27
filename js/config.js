@@ -108,3 +108,24 @@ window.loadOperacoes = () => operacoesLoading ||= (async()=>{
   await window.OperacoesPuzzle.prepare(data,layout);return window.OperacoesPuzzle;
 })().catch(error=>{operacoesLoading=null;throw error;});
 
+// Balança: espelhos locais mantêm index.html funcional também em file://.
+window.MOSTRAR_PESOS = false;
+const ALGEBRA_LOCAL = {fases:[
+  {tipo:'equilibrar',missao:'Deixe os dois lados equilibrados!',peso_caixa:null,esq:['rubi','rubi','rubi'],dir:['rubi'],bandeja:['rubi'],caixa_na_bandeja:false},
+  {tipo:'equilibrar',missao:'Quanto pesa a caixa misteriosa?',peso_caixa:3,esq:['caixa_misteriosa'],dir:[],bandeja:['rubi','safira','esmeralda','topazio'],caixa_na_bandeja:false},
+  {tipo:'equilibrar',missao:'Equilibre a balança!',peso_caixa:2,esq:['caixa_misteriosa','safira','rubi'],dir:['caixa_misteriosa','topazio'],bandeja:['rubi','safira','esmeralda','topazio'],caixa_na_bandeja:false}
+]};
+const ALGEBRA_LAYOUT_LOCAL = {
+  escala_jogo:.5,pesos:{rubi:1,safira:2,esmeralda:3,topazio:5},bandeja:{slots:[[147,138],[312,138],[479,138],[645,138],[812,138]]},
+  coluna:{topo_cap:[117.1,2]},prato:{anel_esq:[23.8,57.4],anel_dir:[382.3,57.5],centro_itens:[203.1,82.5]},
+  travessa_frames:{n:31,colunas:8,w:353,h:160,meia_dist_ganchos:153.6},
+  montagem_validada:{base_da_coluna:[512,378],pivo_acima_do_topo_px:10,queda_da_corrente_px:105,grade_prato:{colunas_x:[-39,-13,13,39],linhas_y:[-6,6]}}
+};
+let algebraLoading;
+window.loadAlgebra = () => algebraLoading ||= (async()=>{
+  let data=ALGEBRA_LOCAL,layout=ALGEBRA_LAYOUT_LOCAL;
+  if(window.location.protocol!=='file:')[data,layout]=await Promise.all(['data/algebra.json','assets/puzzles/algebra/layout.json'].map(async src=>{const response=await fetch(src);if(!response.ok)throw Error(`Falha ao abrir ${src}`);return response.json();}));
+  for(const src of ['js/balanca.js','js/algebra-puzzle.js'])if(!document.querySelector(`script[src="${src}"]`))await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=src;script.onload=resolve;script.onerror=()=>{script.remove();reject(Error(`Falha ao carregar ${src}`));};document.head.appendChild(script);});
+  await window.AlgebraPuzzle.prepare(data,layout);return window.AlgebraPuzzle;
+})().catch(error=>{algebraLoading=null;throw error;});
+

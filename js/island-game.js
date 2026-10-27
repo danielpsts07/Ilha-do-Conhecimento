@@ -161,6 +161,17 @@ window.GameIsland = (() => {
     const key=window.IslandKeys?.nearest(world,player);
     if(key&&active&&!blocked()){
       dev.open(key);
+      if(key.id==='algebra') {
+        // Mantém a pausa e a mesma coleta da tela DEV; demais chaves seguem intactas.
+        let cancelled=false;
+        const unguard=()=>{document.removeEventListener('keydown',guard,true);document.removeEventListener('click',guard,true);};
+        const guard=event=>{event.preventDefault();event.stopImmediatePropagation();if(event.key==='Escape'){cancelled=true;unguard();dev.close();}};
+        document.addEventListener('keydown',guard,true);document.addEventListener('click',guard,true);
+        window.loadAlgebra().then(scene=>{
+          unguard();if(!cancelled&&active&&dev.active)scene.open({onExit:complete=>dev.close(complete),debug:()=>renderer.debug,toggleDebug:()=>renderer.toggleDebug()});
+        }).catch(error=>{unguard();console.error('[Álgebra]',error);if(!cancelled)dev.close();});
+        return;
+      }
       if(key.id==='operacoes') {
         let cancelled=false;
         const unguard=()=>{document.removeEventListener('keydown',guard,true);document.removeEventListener('click',guard,true);};
