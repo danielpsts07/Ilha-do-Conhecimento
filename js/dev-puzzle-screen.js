@@ -25,6 +25,7 @@ window.DevPuzzleScreen = (() => {
       canvas.setAttribute('aria-label',`Puzzle de ${key.label}. Tela de desenvolvimento. Escape: voltar. Enter: simular conclusão.`);
     }
     function input(event) {
+      if(window.MemoryMazeGame?.active)return true;
       if(!current)return false;
       event.preventDefault();if(event.repeat)return true;
       const key=event.key.toLowerCase();

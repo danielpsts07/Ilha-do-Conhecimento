@@ -21,6 +21,17 @@ window.MemoryMazeGame = (() => {
   const PLAYER_SPEED = 220; // pixels por segundo
   const PLAYER_RADIUS = 18;
 
+  /* Regras atuais (design 1376×768): fases 1/2/3 têm 2/3/4 caminhos e pedestais.
+     São 6 runas; cada tentativa sorteia 3 distintas, uma por fase, exibidas por 4s.
+     Errar reinicia a fase 1, sorteia outra sequência e reabre a memorização de 4s.
+     Os 3 corações do HUD são decorativos; não há vidas nem limite de tentativas.
+     Acertar avança com fade; após a terceira runa, entra na câmara da chave.
+     Movimento: 220 px/s, diagonal normalizada, círculo de raio 18 contra paredes
+     retangulares (2 passagens), limites da tela e bloqueio final de raio 28.
+     Spawn: fases 1–3 (688,670); câmara (688,660), sempre olhando para cima.
+     Chave: E/Enter/Espaço a até 65 de (688,425); comemoração de 2,4s ativa portal.
+     Portal: entrar a até 50 de (688,145) após ativá-lo conclui e retorna à ilha. */
+
   // Estado global do GameManager acessível externamente
   const gameManager = {
     hasLogicKey: false,
@@ -44,6 +55,7 @@ window.MemoryMazeGame = (() => {
   // Áudio Sintetizado Web Audio
   let audioCtx = null;
   function getAudioContext() {
+    if (getVolume() === 0) return null;
     if (!audioCtx) {
       const Audio = window.AudioContext || window.webkitAudioContext;
       if (Audio) audioCtx = new Audio();
@@ -55,7 +67,8 @@ window.MemoryMazeGame = (() => {
   }
 
   function getVolume() {
-    const vol = window.GameSettings?.soundVolume ?? 70;
+    if (window.GameSettings?.get('mute')) return 0;
+    const vol = window.GameSettings?.get('sound') ?? 70;
     return (vol / 100) * 0.22;
   }
 
@@ -198,6 +211,7 @@ window.MemoryMazeGame = (() => {
     if (activeInstance) {
       activeInstance.close();
     }
+    gameManager.hasLogicKey = false;
 
     // Garante que o carregamento esteja em andamento
     if (!assets.ready) {
@@ -273,11 +287,13 @@ window.MemoryMazeGame = (() => {
     let fade = { alpha: 0, target: 0, speed: 3.0, callback: null };
     let banner = { show: false, text: '', subtext: '' };
     let keyCollected = false;
+    let keyHoldTimer = 0;
     let portalActive = false;
     let isTransitioning = false;
     let closed = false;
     let animationFrame = 0;
     let lastTime = 0;
+    let debug = false, debugFps = 0, debugSequence = '';
 
     /* -------------------------------------------------------------------------
        SORTEIO DA SEQUÊNCIA ALVO (3 Runas sem repetição)
@@ -285,6 +301,7 @@ window.MemoryMazeGame = (() => {
     function drawNewTargetSequence() {
       const runes = MazeTriggerSystem.RUNES;
       targetSequence = MazeTriggerSystem.shuffle(runes).slice(0, 3);
+      debugSequence = targetSequence.map(id => MazeTriggerSystem.RUNE_INFO[id].label).join(' → ');
       console.info(`[Labirinto] Nova targetSequence:`, targetSequence);
     }
 
@@ -400,7 +417,6 @@ window.MemoryMazeGame = (() => {
     function collectKey() {
       if (keyCollected) return;
       keyCollected = true;
-      gameManager.hasLogicKey = true;
       player.canMove = false;
       player.moving = false;
       state = 5; // ESTADO KEY_HOLD
@@ -430,7 +446,8 @@ window.MemoryMazeGame = (() => {
       // Ativa animação do portal roxo no norte
       portalActive = true;
 
-      setTimeout(() => {
+      keyHoldTimer = setTimeout(() => {
+        keyHoldTimer = 0;
         if (closed) return;
         banner.show = false;
         state = 4;
@@ -460,9 +477,15 @@ window.MemoryMazeGame = (() => {
       if (closed) return;
       closed = true;
       cancelAnimationFrame(animationFrame);
+      clearTimeout(keyHoldTimer);
+      keyHoldTimer = 0;
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      document.removeEventListener('keydown', onDebugKey, true);
+      document.removeEventListener('keyup', onDebugKey, true);
       window.removeEventListener('resize', resize);
+      window.removeEventListener('blur', clearInput);
+      document.removeEventListener('visibilitychange', clearInput);
 
       if (host.parentNode) {
         host.parentNode.removeChild(host);
@@ -471,6 +494,9 @@ window.MemoryMazeGame = (() => {
 
       if (won) {
         gameManager.hasLogicKey = true;
+      } else {
+        keyCollected = false;
+        gameManager.hasLogicKey = false;
       }
       if (typeof options.onExit === 'function') {
         options.onExit(won);
@@ -480,6 +506,18 @@ window.MemoryMazeGame = (() => {
     /* -------------------------------------------------------------------------
        TECLADO E INPUTS
        ------------------------------------------------------------------------- */
+    function onDebugKey(e) {
+      const k = e.key.toLowerCase();
+      if (k !== 'f3' && k !== 'n') return;
+      e.preventDefault();
+      e.stopImmediatePropagation(); // Captura antes de DevPuzzleScreen/ilha.
+      if (e.type === 'keyup' || e.repeat || e.ctrlKey || e.altKey || e.metaKey) return;
+      if (k === 'f3') debug = !debug;
+      else if (debug && state >= 1 && state <= 3 && !isTransitioning) goToPhase(state + 1);
+    }
+    document.addEventListener('keydown', onDebugKey, true);
+    document.addEventListener('keyup', onDebugKey, true);
+
     function onKeyDown(e) {
       if (e.repeat) return;
       const k = e.key.toLowerCase();
@@ -512,6 +550,12 @@ window.MemoryMazeGame = (() => {
 
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    function clearInput() {
+      keysDown.up = keysDown.down = keysDown.left = keysDown.right = false;
+      player.moving = false;
+    }
+    window.addEventListener('blur', clearInput);
+    document.addEventListener('visibilitychange', clearInput);
 
     // Redimensionamento responsivo
     function resize() {
@@ -549,6 +593,7 @@ window.MemoryMazeGame = (() => {
           state = 1;
           player.canMove = true;
         }
+        updateFade(dt);
         return;
       }
 
@@ -667,6 +712,10 @@ window.MemoryMazeGame = (() => {
       }
 
       // Fade de tela
+      updateFade(dt);
+    }
+
+    function updateFade(dt) {
       if (fade.alpha !== fade.target) {
         const diff = fade.target - fade.alpha;
         const step = Math.sign(diff) * fade.speed * dt;
@@ -768,6 +817,54 @@ window.MemoryMazeGame = (() => {
         ctx.fillRect(0, 0, DESIGN_W, DESIGN_H);
       }
 
+      if (debug) drawDebug();
+      ctx.restore();
+    }
+
+    // Somente leitura: reutiliza configurações/rodada; sem criar objetos por frame.
+    function drawDebug() {
+      const phase = Math.max(1, Math.min(4, state));
+      const config = MazeTriggerSystem.PHASE_CONFIGS[phase];
+      ctx.save();
+      ctx.lineWidth = 2;
+      ctx.fillStyle = '#ff000044';
+      for (let i = 0; i < config.walls.length; i++) {
+        const w = config.walls[i];
+        ctx.fillRect(w.x, w.y, w.w, w.h);
+      }
+      ctx.strokeStyle = '#ff000088'; // Limites aplicados ao centro da personagem.
+      ctx.strokeRect(PLAYER_RADIUS, PLAYER_RADIUS, DESIGN_W - 2 * PLAYER_RADIUS, DESIGN_H - 10 - PLAYER_RADIUS);
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      if (phase <= 3 && currentRound) {
+        for (let i = 0; i < currentRound.activePaths.length; i++) {
+          const p = currentRound.activePaths[i], t = p.trigger;
+          ctx.fillStyle = '#ffff0033'; ctx.strokeStyle = '#ffff00';
+          ctx.fillRect(t.xMin, t.yMin, t.xMax - t.xMin, t.yMax - t.yMin);
+          ctx.strokeRect(t.xMin, t.yMin, t.xMax - t.xMin, t.yMax - t.yMin);
+          ctx.fillStyle = p.runeId === targetSequence[phase - 1] ? '#00ff00' : '#ffff00';
+          ctx.fillText(p.rune.label, t.xMin + 4, t.yMin + 4);
+        }
+      } else {
+        const kp = config.keyPedestal, portal = config.portal;
+        ctx.fillStyle = '#ff000044';
+        ctx.beginPath(); ctx.arc(kp.x, kp.y + 10, 28, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#00ffff';
+        ctx.beginPath(); ctx.arc(kp.x, kp.y, 65, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(portal.x, portal.y, 50, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.strokeStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(player.x, player.y, PLAYER_RADIUS, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeRect(player.x - PLAYER_RADIUS, player.y - PLAYER_RADIUS, PLAYER_RADIUS * 2, PLAYER_RADIUS * 2);
+      ctx.beginPath();
+      ctx.moveTo(config.spawn.x - 8, config.spawn.y); ctx.lineTo(config.spawn.x + 8, config.spawn.y);
+      ctx.moveTo(config.spawn.x, config.spawn.y - 8); ctx.lineTo(config.spawn.x, config.spawn.y + 8); ctx.stroke();
+      ctx.fillStyle = '#000000dd'; ctx.fillRect(8, DESIGN_H - 104, 620, 96);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(`F3 | ${config.name}${state === 0 ? ' (memorização)' : ''} | Passo ${Math.min(phase, 3)}/3${phase === 4 ? ' concluído' : ''}`, 16, DESIGN_H - 96);
+      ctx.fillText(`Sequência: ${debugSequence}`, 16, DESIGN_H - 74);
+      ctx.fillText(`Posição: (${player.x.toFixed(1)}, ${player.y.toFixed(1)}) | FPS: ${Math.round(debugFps)}`, 16, DESIGN_H - 52);
+      ctx.fillText('N: próxima fase (após memorização/fade) | Verde: runa CORRETA', 16, DESIGN_H - 30);
       ctx.restore();
     }
 
@@ -1204,6 +1301,7 @@ window.MemoryMazeGame = (() => {
     function loop(time) {
       if (closed) return;
       const dt = lastTime ? Math.min(0.1, (time - lastTime) / 1000) : 0;
+      if (debug && lastTime && time > lastTime) debugFps = 1000 / (time - lastTime);
       lastTime = time;
 
       update(dt);
