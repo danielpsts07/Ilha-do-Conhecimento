@@ -506,14 +506,75 @@ window.MemoryMazeGame = (() => {
     /* -------------------------------------------------------------------------
        TECLADO E INPUTS
        ------------------------------------------------------------------------- */
+    let exportingLayouts = false;
+    function downloadBlob(blob, name) {
+      const url = URL.createObjectURL(blob), link = document.createElement('a');
+      link.href = url; link.download = name;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    }
+    async function exportLayouts() {
+      if (exportingLayouts || closed || !debug) return;
+      exportingLayouts = true;
+      const round = currentRound;
+      try {
+        for (let phase = 1; phase <= 3; phase++) {
+          const config = MazeTriggerSystem.PHASE_CONFIGS[phase];
+          const paths = round?.phaseNumber === phase ? round.activePaths : config.paths;
+          const sheet = document.createElement('canvas');
+          sheet.width = DESIGN_W; sheet.height = DESIGN_H;
+          const pen = sheet.getContext('2d'), image = pen.createImageData(DESIGN_W, DESIGN_H);
+          pen.imageSmoothingEnabled = false;
+          // Cada pixel representa seu centro: a mesma colisão e raio do jogo
+          // decidem se ele é livre (bege) ou bloqueado (verde), inclusive bordas.
+          for (let y = 0; y < DESIGN_H; y++) for (let x = 0; x < DESIGN_W; x++) {
+            const p = MazeTriggerSystem.resolveWallCollision(phase, x + 0.5, y + 0.5, PLAYER_RADIUS);
+            const free = p.x === x + 0.5 && p.y === y + 0.5, i = (y * DESIGN_W + x) * 4;
+            image.data[i] = free ? 224 : 31; image.data[i + 1] = free ? 201 : 90;
+            image.data[i + 2] = free ? 143 : 31; image.data[i + 3] = 255;
+          }
+          pen.putImageData(image, 0, 0);
+          // Molduras internas de 4 px; o interior conserva as colisões sobrepostas.
+          pen.fillStyle = '#ff7a00';
+          for (const path of paths) {
+            const t = path.trigger, w = t.xMax - t.xMin, h = t.yMax - t.yMin;
+            pen.fillRect(t.xMin, t.yMin, w, 4); pen.fillRect(t.xMin, t.yMax - 4, w, 4);
+            pen.fillRect(t.xMin, t.yMin + 4, 4, h - 8); pen.fillRect(t.xMax - 4, t.yMin + 4, 4, h - 8);
+          }
+          pen.fillStyle = '#ff00ff';
+          for (const path of paths) pen.fillRect(path.pedestal.x - 20, path.pedestal.y - 20, 40, 40);
+          // Círculo de DIÂMETRO 24 px rasterizado sem antialiasing, como os retângulos.
+          const spawn = config.spawn;
+          pen.fillStyle = '#00e5ff';
+          for (let y = spawn.y - 12; y < spawn.y + 12; y++) for (let x = spawn.x - 12; x < spawn.x + 12; x++) {
+            if ((x + 0.5 - spawn.x) ** 2 + (y + 0.5 - spawn.y) ** 2 <= 144) pen.fillRect(x, y, 1, 1);
+          }
+          // Runas não são fixas: preserva a rodada ativa; null significa sem atribuição.
+          const layout = {
+            fase: phase, nome: config.name, runas_disponiveis: MazeTriggerSystem.RUNES,
+            pedestais: paths.map(p => ({runa: p.runeId ?? null, x: p.pedestal.x, y: p.pedestal.y})),
+            saidas: paths.map(p => ({runa: p.runeId ?? null, x: p.trigger.xMin, y: p.trigger.yMin,
+              w: p.trigger.xMax - p.trigger.xMin, h: p.trigger.yMax - p.trigger.yMin})),
+            spawn: {x: spawn.x, y: spawn.y}, tamanho: [DESIGN_W, DESIGN_H]
+          };
+          const png = await new Promise(resolve => sheet.toBlob(resolve, 'image/png'));
+          if (closed) return;
+          if (!png) throw new Error('Não foi possível gerar o PNG da planta.');
+          downloadBlob(png, `labirinto_fase${phase}_planta.png`);
+          downloadBlob(new Blob([JSON.stringify(layout, null, 2)], {type: 'application/json'}), `labirinto_fase${phase}_layout.json`);
+        }
+      } finally { exportingLayouts = false; }
+    }
+
     function onDebugKey(e) {
       const k = e.key.toLowerCase();
-      if (k !== 'f3' && k !== 'n') return;
+      if (k !== 'f3' && k !== 'n' && k !== 'g') return;
       e.preventDefault();
       e.stopImmediatePropagation(); // Captura antes de DevPuzzleScreen/ilha.
       if (e.type === 'keyup' || e.repeat || e.ctrlKey || e.altKey || e.metaKey) return;
       if (k === 'f3') debug = !debug;
-      else if (debug && state >= 1 && state <= 3 && !isTransitioning) goToPhase(state + 1);
+      else if (k === 'n' && debug && state >= 1 && state <= 3 && !isTransitioning) goToPhase(state + 1);
+      else if (k === 'g' && debug) exportLayouts().catch(error => console.error('[Labirinto] Exportação:', error));
     }
     document.addEventListener('keydown', onDebugKey, true);
     document.addEventListener('keyup', onDebugKey, true);
