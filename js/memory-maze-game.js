@@ -26,8 +26,8 @@ window.MemoryMazeGame = (() => {
      Errar reinicia a fase 1, sorteia outra sequência e reabre a memorização de 4s.
      Os 3 corações do HUD são decorativos; não há vidas nem limite de tentativas.
      Acertar avança com fade; após a terceira runa, entra na câmara da chave.
-     Movimento: 220 px/s, diagonal normalizada, círculo de raio 18 contra paredes
-     retangulares (2 passagens), limites da tela e bloqueio final de raio 28.
+     Movimento: 220 px/s, diagonal normalizada; pés 36x36 nas máscaras das fases.
+     A câmara mantém círculo de raio 18, paredes e bloqueio final de raio 28.
      Spawn: fases 1–3 (688,670); câmara (688,660), sempre olhando para cima.
      Chave: E/Enter/Espaço a até 65 de (688,425); comemoração de 2,4s ativa portal.
      Portal: entrar a até 50 de (688,145) após ativá-lo conclui e retorna à ilha. */
@@ -176,9 +176,9 @@ window.MemoryMazeGame = (() => {
   function prepare() {
     return preparePromise ||= (async () => {
       const [bg1, bg2, bg3, bgChamber, runeSheet, pedestal, heroSheet, keyImg, catFace] = await Promise.all([
-        loadImage('assets/puzzles/labirinto/fase1_bg.jpg'),
-        loadImage('assets/puzzles/labirinto/fase2_bg.jpg'),
-        loadImage('assets/puzzles/labirinto/fase3_bg.jpg'),
+        loadImage('assets/puzzles/labirinto/fase1_v2.webp'),
+        loadImage('assets/puzzles/labirinto/fase2_v2.webp'),
+        loadImage('assets/puzzles/labirinto/fase3_v2.webp'),
         loadImage('assets/puzzles/labirinto/camara_chave_bg.jpg'),
         loadImage('assets/puzzles/labirinto/runas_sheet.jpg'),
         loadImage('assets/puzzles/labirinto/pedestal_pixel.png'),
@@ -197,6 +197,7 @@ window.MemoryMazeGame = (() => {
       assets.keyImg = keyImg;
       assets.catFace = catFace;
 
+      await MazeTriggerSystem.prepareMasks(PLAYER_RADIUS);
       assets.ready = true;
       return true;
     })();
@@ -525,11 +526,12 @@ window.MemoryMazeGame = (() => {
           sheet.width = DESIGN_W; sheet.height = DESIGN_H;
           const pen = sheet.getContext('2d'), image = pen.createImageData(DESIGN_W, DESIGN_H);
           pen.imageSmoothingEnabled = false;
+          // Marcadores em pixels inteiros; o JSON conserva as coordenadas exatas.
+          const rect = (x,y,w,h) => pen.fillRect(Math.round(x),Math.round(y),Math.round(x+w)-Math.round(x),Math.round(y+h)-Math.round(y));
           // Cada pixel representa seu centro: a mesma colisão e raio do jogo
           // decidem se ele é livre (bege) ou bloqueado (verde), inclusive bordas.
           for (let y = 0; y < DESIGN_H; y++) for (let x = 0; x < DESIGN_W; x++) {
-            const p = MazeTriggerSystem.resolveWallCollision(phase, x + 0.5, y + 0.5, PLAYER_RADIUS);
-            const free = p.x === x + 0.5 && p.y === y + 0.5, i = (y * DESIGN_W + x) * 4;
+            const free = MazeTriggerSystem.fits(phase, x + 0.5, y + 0.5, PLAYER_RADIUS), i = (y * DESIGN_W + x) * 4;
             image.data[i] = free ? 224 : 31; image.data[i + 1] = free ? 201 : 90;
             image.data[i + 2] = free ? 143 : 31; image.data[i + 3] = 255;
           }
@@ -538,11 +540,11 @@ window.MemoryMazeGame = (() => {
           pen.fillStyle = '#ff7a00';
           for (const path of paths) {
             const t = path.trigger, w = t.xMax - t.xMin, h = t.yMax - t.yMin;
-            pen.fillRect(t.xMin, t.yMin, w, 4); pen.fillRect(t.xMin, t.yMax - 4, w, 4);
-            pen.fillRect(t.xMin, t.yMin + 4, 4, h - 8); pen.fillRect(t.xMax - 4, t.yMin + 4, 4, h - 8);
+            rect(t.xMin, t.yMin, w, 4); rect(t.xMin, t.yMax - 4, w, 4);
+            rect(t.xMin, t.yMin + 4, 4, h - 8); rect(t.xMax - 4, t.yMin + 4, 4, h - 8);
           }
           pen.fillStyle = '#ff00ff';
-          for (const path of paths) pen.fillRect(path.pedestal.x - 20, path.pedestal.y - 20, 40, 40);
+          for (const path of paths) rect(path.pedestal.x - 20, path.pedestal.y - 20, 40, 40);
           // Círculo de DIÂMETRO 24 px rasterizado sem antialiasing, como os retângulos.
           const spawn = config.spawn;
           pen.fillStyle = '#00e5ff';
@@ -693,13 +695,15 @@ window.MemoryMazeGame = (() => {
 
           const newX = player.x + vx * PLAYER_SPEED * dt;
           const newY = player.y + vy * PLAYER_SPEED * dt;
-          const resolved = MazeTriggerSystem.resolveWallCollision(state, newX, newY, PLAYER_RADIUS);
+          const resolved = state <= 3
+            ? MazeTriggerSystem.moveOnMask(state, player.x, player.y, newX, newY, PLAYER_RADIUS)
+            : MazeTriggerSystem.resolveWallCollision(state, newX, newY, PLAYER_RADIUS);
           player.x = resolved.x;
           player.y = resolved.y;
 
           // Verificação dos gatilhos de corredor nas Fases 1, 2 e 3
           if (state >= 1 && state <= 3 && currentRound) {
-            const hit = MazeTriggerSystem.checkTriggers(currentRound.activePaths, player.x, player.y);
+            const hit = MazeTriggerSystem.checkTriggers(currentRound.activePaths, player.x, player.y, PLAYER_RADIUS);
             if (hit) {
               if (hit.isCorrect) {
                 soundSuccess();
@@ -817,7 +821,10 @@ window.MemoryMazeGame = (() => {
       else if (state >= 4) bg = assets.bgChamber;
 
       if (bg) {
+        ctx.save();
+        if (state <= 3) ctx.imageSmoothingEnabled = true;
         ctx.drawImage(bg, 0, 0, DESIGN_W, DESIGN_H);
+        ctx.restore();
       } else {
         ctx.fillStyle = '#1c381c';
         ctx.fillRect(0, 0, DESIGN_W, DESIGN_H);
@@ -826,10 +833,13 @@ window.MemoryMazeGame = (() => {
       // 2. Pedestais e Runas Flutuantes nas Fases 1, 2 e 3
       if (state >= 1 && state <= 3 && currentRound) {
         const tSec = time / 1000;
-        currentRound.activePaths.forEach(path => {
+        let heroDrawn = false;
+        for (const path of currentRound.drawPaths) {
           const ped = path.pedestal;
+          if (!heroDrawn && player.y < ped.y) { drawPlayer(ctx, time); heroDrawn = true; }
           drawPedestalAndRune(ctx, ped.x, ped.y, path.rune, tSec);
-        });
+        }
+        if (!heroDrawn) drawPlayer(ctx, time);
       }
 
       // 3. Pedestal Central, Chave e Portal na Câmara Final (Estado 4 & 5)
@@ -854,7 +864,7 @@ window.MemoryMazeGame = (() => {
       }
 
       // 4. Personagem
-      drawPlayer(ctx, time);
+      if (state < 1 || state > 3) drawPlayer(ctx, time);
 
       // 5. Partículas
       drawParticles(ctx);
@@ -888,18 +898,24 @@ window.MemoryMazeGame = (() => {
       const config = MazeTriggerSystem.PHASE_CONFIGS[phase];
       ctx.save();
       ctx.lineWidth = 2;
-      ctx.fillStyle = '#ff000044';
-      for (let i = 0; i < config.walls.length; i++) {
-        const w = config.walls[i];
-        ctx.fillRect(w.x, w.y, w.w, w.h);
+      if (phase <= 3) {
+        const overlay = MazeTriggerSystem.maskOverlays[phase];
+        if (overlay) ctx.drawImage(overlay, 0, 0, 1024 * MazeTriggerSystem.K, 572 * MazeTriggerSystem.K);
+      } else {
+        ctx.fillStyle = '#ff000044';
+        for (let i = 0; i < config.walls.length; i++) {
+          const w = config.walls[i];
+          ctx.fillRect(w.x, w.y, w.w, w.h);
+        }
+        ctx.strokeStyle = '#ff000088'; // Limites aplicados ao centro da personagem.
+        ctx.strokeRect(PLAYER_RADIUS, PLAYER_RADIUS, DESIGN_W - 2 * PLAYER_RADIUS, DESIGN_H - 10 - PLAYER_RADIUS);
       }
-      ctx.strokeStyle = '#ff000088'; // Limites aplicados ao centro da personagem.
-      ctx.strokeRect(PLAYER_RADIUS, PLAYER_RADIUS, DESIGN_W - 2 * PLAYER_RADIUS, DESIGN_H - 10 - PLAYER_RADIUS);
       ctx.font = 'bold 14px monospace';
       ctx.textAlign = 'left'; ctx.textBaseline = 'top';
       if (phase <= 3 && currentRound) {
         for (let i = 0; i < currentRound.activePaths.length; i++) {
           const p = currentRound.activePaths[i], t = p.trigger;
+          ctx.fillStyle = '#ff00ff'; ctx.fillRect(p.pedestal.x - 3, p.pedestal.y - 3, 6, 6);
           ctx.fillStyle = '#ffff0033'; ctx.strokeStyle = '#ffff00';
           ctx.fillRect(t.xMin, t.yMin, t.xMax - t.xMin, t.yMax - t.yMin);
           ctx.strokeRect(t.xMin, t.yMin, t.xMax - t.xMin, t.yMax - t.yMin);
@@ -915,7 +931,7 @@ window.MemoryMazeGame = (() => {
         ctx.beginPath(); ctx.arc(portal.x, portal.y, 50, 0, Math.PI * 2); ctx.stroke();
       }
       ctx.strokeStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(player.x, player.y, PLAYER_RADIUS, 0, Math.PI * 2); ctx.stroke();
+      if (phase === 4) { ctx.beginPath(); ctx.arc(player.x, player.y, PLAYER_RADIUS, 0, Math.PI * 2); ctx.stroke(); }
       ctx.strokeRect(player.x - PLAYER_RADIUS, player.y - PLAYER_RADIUS, PLAYER_RADIUS * 2, PLAYER_RADIUS * 2);
       ctx.beginPath();
       ctx.moveTo(config.spawn.x - 8, config.spawn.y); ctx.lineTo(config.spawn.x + 8, config.spawn.y);
@@ -944,10 +960,10 @@ window.MemoryMazeGame = (() => {
     }
 
     function drawPedestalAndRune(ctx, x, y, rune, tSec) {
-      drawPedestal(ctx, x, y);
+      drawPedestal(ctx, x, y - 16); // Base do sprite de 72 px coincide com os pés.
 
       if (!rune) return;
-      const hoverY = y - 72 + Math.sin(tSec * 3.2) * 5;
+      const hoverY = y - 88 + Math.sin(tSec * 3.2) * 5;
 
       ctx.save();
       ctx.shadowColor = rune.color;

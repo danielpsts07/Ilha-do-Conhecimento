@@ -2,7 +2,7 @@
    SISTEMA DE GATILHOS E COLISÃO DO LABIRINTO DA MEMÓRIA (MazeTriggerSystem)
    Projeto: Ilha do Conhecimento
    Responsabilidade:
-   - Definição geométrica das sebes verdes (paredes de colisão) em cada fase.
+   - Máscaras de colisão das três fases; geometria original da câmara final.
    - Posição e renderização dos pedestais de pedra cinzenta e lajetas.
    - Distribuição dinâmica da runa correta e distratores em cada fase.
    - Detecção de passagem/entrada nos corredores para acionar avanços ou reset.
@@ -83,127 +83,24 @@ window.MazeTriggerSystem = (() => {
   /* -------------------------------------------------------------------------
      CONFIGURAÇÃO DAS FASES (Geometria, Paredes, Pedestais e Gatilhos)
      ------------------------------------------------------------------------- */
+  const K = DESIGN_W / 1024, masks = [], maskOverlays = [];
+  // Arte -> design: x*K, y*K; consulta inversa usa floor(x/K), floor(y/K).
+  function path(id,label,x,y,w,h,px,py) {
+    return {id,label,pedestal:{x:px*K,y:py*K},trigger:{xMin:x*K,xMax:(x+w)*K,yMin:y*K,yMax:(y+h)*K}};
+  }
   const PHASE_CONFIGS = {
-    // FASE 1: BIFURCAÇÃO (2 CAMINHOS: Esquerda e Direita)
-    1: {
-      name: 'Fase 1: Bifurcação',
-      spawn: { x: 688, y: 670, dir: 'up' },
-      pedestalY: 480,
-      paths: [
-        {
-          id: 'left',
-          label: 'Caminho da Esquerda',
-          pedestal: { x: 280, y: 480 },
-          trigger: { xMin: 0, xMax: 170, yMin: 360, yMax: 540 }
-        },
-        {
-          id: 'right',
-          label: 'Caminho da Direita',
-          pedestal: { x: 1096, y: 480 },
-          trigger: { xMin: 1210, xMax: 1376, yMin: 360, yMax: 540 }
-        }
-      ],
-      walls: [
-        // Sebes inferiores do corredor de entrada
-        { x: 0, y: 520, w: 610, h: 248 },
-        { x: 766, y: 520, w: 610, h: 248 },
-        // Parede central bloqueando a frente
-        { x: 380, y: 0, w: 616, h: 420 },
-        // Sebes superiores das alas laterais
-        { x: 0, y: 0, w: 380, h: 360 },
-        { x: 996, y: 0, w: 380, h: 360 }
-      ]
-    },
-
-    // FASE 2: TRIFURCAÇÃO (3 CAMINHOS: Esquerda, Frente/Centro, Direita)
-    2: {
-      name: 'Fase 2: Trifurcação',
-      spawn: { x: 688, y: 670, dir: 'up' },
-      pedestalY: 480,
-      paths: [
-        {
-          id: 'left',
-          label: 'Caminho da Esquerda',
-          pedestal: { x: 280, y: 480 },
-          trigger: { xMin: 0, xMax: 170, yMin: 360, yMax: 540 }
-        },
-        {
-          id: 'center',
-          label: 'Caminho da Frente',
-          pedestal: { x: 570, y: 290 },
-          trigger: { xMin: 600, xMax: 776, yMin: 0, yMax: 140 }
-        },
-        {
-          id: 'right',
-          label: 'Caminho da Direita',
-          pedestal: { x: 1096, y: 480 },
-          trigger: { xMin: 1210, xMax: 1376, yMin: 360, yMax: 540 }
-        }
-      ],
-      walls: [
-        // Sebes inferiores do corredor de entrada
-        { x: 0, y: 520, w: 610, h: 248 },
-        { x: 766, y: 520, w: 610, h: 248 },
-        // Blocos divisores entre corredor central e alas laterais
-        { x: 380, y: 150, w: 230, h: 270 },
-        { x: 766, y: 150, w: 230, h: 270 },
-        // Sebes superiores das alas laterais
-        { x: 0, y: 0, w: 380, h: 360 },
-        { x: 996, y: 0, w: 380, h: 360 },
-        // Paredes que fecham o topo fora do corredor central
-        { x: 0, y: 0, w: 600, h: 150 },
-        { x: 776, y: 0, w: 600, h: 150 }
-      ]
-    },
-
-    // FASE 3: QUADRIFURCAÇÃO (4 CAMINHOS: Esquerda, Frente-Esquerda, Frente-Direita, Direita)
-    3: {
-      name: 'Fase 3: Quadrifurcação',
-      spawn: { x: 688, y: 670, dir: 'up' },
-      paths: [
-        {
-          id: 'left',
-          label: 'Caminho da Esquerda',
-          pedestal: { x: 260, y: 480 },
-          trigger: { xMin: 0, xMax: 170, yMin: 360, yMax: 540 }
-        },
-        {
-          id: 'center-left',
-          label: 'Caminho Frente-Esquerda',
-          pedestal: { x: 450, y: 300 },
-          trigger: { xMin: 460, xMax: 610, yMin: 0, yMax: 140 }
-        },
-        {
-          id: 'center-right',
-          label: 'Caminho Frente-Direita',
-          pedestal: { x: 926, y: 300 },
-          trigger: { xMin: 766, xMax: 916, yMin: 0, yMax: 140 }
-        },
-        {
-          id: 'right',
-          label: 'Caminho da Direita',
-          pedestal: { x: 1116, y: 480 },
-          trigger: { xMin: 1210, xMax: 1376, yMin: 360, yMax: 540 }
-        }
-      ],
-      walls: [
-        // Sebes inferiores do corredor de entrada
-        { x: 0, y: 520, w: 610, h: 248 },
-        { x: 766, y: 520, w: 610, h: 248 },
-        // Pilar central dividindo os dois corredores frontais
-        { x: 620, y: 150, w: 136, h: 270 },
-        // Blocos laterais separando as alas
-        { x: 270, y: 150, w: 180, h: 270 },
-        { x: 926, y: 150, w: 180, h: 270 },
-        // Sebes superiores das alas
-        { x: 0, y: 0, w: 380, h: 360 },
-        { x: 996, y: 0, w: 380, h: 360 },
-        // Paredes no topo fora dos corredores abertos
-        { x: 0, y: 0, w: 460, h: 140 },
-        { x: 610, y: 0, w: 156, h: 140 },
-        { x: 916, y: 0, w: 460, h: 140 }
-      ]
-    },
+    1: {name: 'Fase 1: Bifurcação', spawn: {x: 688, y: 670, dir: 'up'}, paths: [
+      path('left', 'Caminho da Esquerda', 298,220,52,42,322,252),
+      path('right', 'Caminho da Direita', 690,220,47,42,714,250)]},
+    2: {name: 'Fase 2: Trifurcação', spawn: {x: 688, y: 670, dir: 'up'}, paths: [
+      path('left', 'Caminho da Esquerda', 298,220,52,42,322,252),
+      path('center', 'Caminho da Frente', 490,106,60,34,520,100),
+      path('right', 'Caminho da Direita', 690,220,47,42,714,250)]},
+    3: {name: 'Fase 3: Quadrifurcação', spawn: {x: 688, y: 670, dir: 'up'}, paths: [
+      path('left', 'Caminho da Esquerda', 300,222,58,40,318,252),
+      path('center-left', 'Caminho Frente-Esquerda', 370,106,66,34,402,100),
+      path('center-right', 'Caminho Frente-Direita', 604,106,58,34,632,100),
+      path('right', 'Caminho da Direita', 668,222,67,36,722,250)]},
 
     // CÂMARA FINAL: CLAREIRA CIRCULAR COM CHAVE E PORTAL MÍSTICO
     4: {
@@ -260,13 +157,61 @@ window.MazeTriggerSystem = (() => {
       activePaths,
       correctPathIndex,
       correctRuneId,
-      walls: config.walls
+      drawPaths: [...activePaths].sort((a,b) => a.pedestal.y - b.pedestal.y)
     };
   }
 
+  function walkable(phase,x,y) {
+    const u=Math.floor(x/K),v=Math.floor(y/K);
+    return x>=0&&y>=0&&x<DESIGN_W&&y<DESIGN_H&&u<1024&&v<572&&Boolean(masks[phase]?.[v*1024+u]);
+  }
+  function fits(phase,x,y,r=18) {
+    return walkable(phase,x-r,y-r)&&walkable(phase,x+r,y-r)&&walkable(phase,x-r,y+r)&&walkable(phase,x+r,y+r);
+  }
+  // Mesma caixa de pés 36x36 do F3: testa os quatro cantos, X antes de Y.
+  // Subpassos de até 1 px evitam atravessar uma borda entre dois frames.
+  function moveOnMask(phase,x,y,nx,ny,r=18) {
+    let a=x,b=y,n=Math.ceil(Math.abs(nx-x));
+    for(let i=1;i<=n;i++){const t=x+(nx-x)*i/n;if(!fits(phase,t,b,r))break;a=t;}
+    n=Math.ceil(Math.abs(ny-y));
+    for(let i=1;i<=n;i++){const t=y+(ny-y)*i/n;if(!fits(phase,a,t,r))break;b=t;}
+    return {x:a,y:b};
+  }
+  function selfTest(phase,r) {
+    const c=PHASE_CONFIGS[phase],seen=new Uint8Array(DESIGN_W*DESIGN_H),q=new Int32Array(seen.length),hits=new Set();let head=0,tail=0;
+    function add(x,y){const i=y*DESIGN_W+x;if(!seen[i]&&fits(phase,x,y,r)){seen[i]=1;q[tail++]=i;}}
+    // BFS de 4 px com os 16 alinhamentos da célula inicial, ligados ao spawn.
+    for(let dy=0;dy<4;dy++)for(let dx=0;dx<4;dx++){const x=c.spawn.x+dx,y=c.spawn.y+dy,p=moveOnMask(phase,c.spawn.x,c.spawn.y,x,y,r);if(p.x===x&&p.y===y)add(x,y);}
+    while(head<tail){const i=q[head++],x=i%DESIGN_W,y=Math.floor(i/DESIGN_W);
+      for(const path of c.paths){const t=path.trigger;if(x+r>=t.xMin&&x-r<=t.xMax&&y+r>=t.yMin&&y-r<=t.yMax)hits.add(path.id);}
+      for(const [dx,dy] of [[4,0],[-4,0],[0,4],[0,-4]]){const nx=x+dx,ny=y+dy;if(seen[ny*DESIGN_W+nx])continue;const p=moveOnMask(phase,x,y,nx,ny,r);if(p.x===nx&&p.y===ny)add(nx,ny);}
+    }
+    const failures=[];
+    if(!fits(phase,c.spawn.x,c.spawn.y,r))failures.push('spawn');
+    for(const path of c.paths){const t=path.trigger;let free=0,total=0;
+      for(let y=Math.ceil(t.yMin);y<t.yMax;y++)for(let x=Math.ceil(t.xMin);x<t.xMax;x++){total++;if(walkable(phase,x,y))free++;}
+      if(free/total<.6)failures.push(path.label+' (cobertura)');if(!hits.has(path.id))failures.push(path.label+' (BFS)');
+    }
+    console[failures.length?'warn':'info'](`[Labirinto] Fase ${phase}: ${failures.length?failures.join(', '):'OK'}`);
+  }
+  let maskPromise;
+  function prepareMasks(r=18) {
+    return maskPromise ||= Promise.all([1,2,3].map(phase=>new Promise((resolve,reject)=>{
+      const img=new Image();img.onerror=()=>reject(Error(`Máscara da fase ${phase} não carregou.`));
+      img.onload=()=>{try{
+        if(img.naturalWidth!==1024||img.naturalHeight!==572)throw Error('Máscara precisa ter 1024x572.');
+        const c=document.createElement('canvas');c.width=1024;c.height=572;const pen=c.getContext('2d');pen.drawImage(img,0,0);
+        const pixels=pen.getImageData(0,0,1024,572),mask=masks[phase]=new Uint8Array(1024*572);
+        for(let i=0;i<mask.length;i++){mask[i]=pixels.data[i*4+3]>40?1:0;pixels.data[i*4]=0;pixels.data[i*4+1]=255;pixels.data[i*4+2]=0;pixels.data[i*4+3]=mask[i]?80:0;}
+        const overlay=maskOverlays[phase]=document.createElement('canvas');overlay.width=1024;overlay.height=572;overlay.getContext('2d').putImageData(pixels,0,0);
+        c.width=c.height=0;selfTest(phase,r);resolve();
+      }catch(error){reject(error);}};img.src=`assets/puzzles/labirinto/fase${phase}_mascara.png`;
+    })));
+  }
+
   /* -------------------------------------------------------------------------
-     COLISÃO CONTRA SEBES (Sliding Box-Circle Collision)
-     Mantém a personagem dentro dos caminhos andáveis de forma suave
+     COLISÃO ORIGINAL DA CÂMARA (Sliding Box-Circle Collision)
+     Preservada para a fase 4; as fases 1–3 usam moveOnMask.
      ------------------------------------------------------------------------- */
   function resolveWallCollision(phaseNumber, px, py, radius = 16) {
     const config = PHASE_CONFIGS[phaseNumber];
@@ -323,11 +268,11 @@ window.MazeTriggerSystem = (() => {
      VERIFICAÇÃO DE GATILHOS DE CORREDOR
      Checa se a jogadora entrou em alguma zona de gatilho
      ------------------------------------------------------------------------- */
-  function checkTriggers(activePaths, px, py) {
+  function checkTriggers(activePaths, px, py, radius = 18) {
     if (!activePaths) return null;
     for (const p of activePaths) {
       const t = p.trigger;
-      if (px >= t.xMin && px <= t.xMax && py >= t.yMin && py <= t.yMax) {
+      if (px + radius >= t.xMin && px - radius <= t.xMax && py + radius >= t.yMin && py - radius <= t.yMax) {
         return {
           pathIndex: p.pathIndex,
           isCorrect: p.isCorrect,
@@ -363,7 +308,7 @@ window.MazeTriggerSystem = (() => {
     RUNE_INFO,
     DESIGN_W,
     DESIGN_H,
-    PHASE_CONFIGS,
+    PHASE_CONFIGS, K, maskOverlays, prepareMasks, walkable, fits, moveOnMask,
     shuffle,
     setupPhase,
     resolveWallCollision,
