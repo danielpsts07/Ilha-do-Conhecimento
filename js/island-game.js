@@ -137,6 +137,7 @@ window.GameIsland = (() => {
       updateLocation();updateNearby();
     }
     updateCamera(false,dt);renderer.draw(player,camera,near,time,calmMotion(),visited);
+    if(loaded)window.preloadPuzzles?.(()=>active&&!blocked());
     frame=requestAnimationFrame(loop);
   }
   function start() {
@@ -161,68 +162,15 @@ window.GameIsland = (() => {
     if(active&&!blocked())updateNearby();
     const key=window.IslandKeys?.nearest(world,player);
     if(key&&active&&!blocked()){
-      dev.open(key);
-      if(key.id==='algebra') {
-        // Mantém a pausa e a mesma coleta da tela DEV; demais chaves seguem intactas.
-        let cancelled=false;
-        const unguard=()=>{document.removeEventListener('keydown',guard,true);document.removeEventListener('click',guard,true);};
-        const guard=event=>{event.preventDefault();event.stopImmediatePropagation();if(event.key==='Escape'){cancelled=true;unguard();dev.close();}};
-        document.addEventListener('keydown',guard,true);document.addEventListener('click',guard,true);
-        window.loadAlgebra().then(scene=>{
-          unguard();if(!cancelled&&active&&dev.active)scene.open({onExit:complete=>dev.close(complete),debug:()=>renderer.debug,toggleDebug:()=>renderer.toggleDebug()});
-        }).catch(error=>{unguard();console.error('[Álgebra]',error);if(!cancelled)dev.close();});
-        return;
-      }
-      if(key.id==='operacoes') {
-        let cancelled=false;
-        const unguard=()=>{document.removeEventListener('keydown',guard,true);document.removeEventListener('click',guard,true);};
-        const guard=event=>{event.preventDefault();event.stopImmediatePropagation();if(event.key==='Escape'){cancelled=true;unguard();dev.close();}};
-        document.addEventListener('keydown',guard,true);document.addEventListener('click',guard,true);
-        window.loadOperacoes().then(scene=>{
-          unguard();if(!cancelled&&active&&dev.active)scene.open({onExit:complete=>dev.close(complete),debug:()=>renderer.debug,toggleDebug:()=>renderer.toggleDebug()});
-        }).catch(error=>{unguard();console.error('[Operações]',error);if(!cancelled)dev.close();});
-        return;
-      }
-      if(key.id==='logica') {
-        let cancelled=false;
-        const unguard=()=>{document.removeEventListener('keydown',guard,true);document.removeEventListener('click',guard,true);};
-        const guard=event=>{event.preventDefault();event.stopImmediatePropagation();if(event.key==='Escape'){cancelled=true;unguard();dev.close();}};
-        document.addEventListener('keydown',guard,true);
-        document.addEventListener('click',guard,true);
-        window.loadMemoryMaze().then(scene=>{
-          unguard();
-          if(!cancelled&&active&&dev.active) {
-            scene.open({
-              onExit: won=>{
-                dev.close(won);
-                if(won) {
-                  if(window.AdventureProgress) AdventureProgress.award('forest');
-                  world.keyState.keys['logica']=true;
-                  player.x = 630 * WORLD_SCALE;
-                  player.y = 650 * WORLD_SCALE;
-                  updateProgress();
-                  updateCamera(true);
-                  $('#island-announcement').textContent = 'Chave da Memória conquistada!';
-                }
-              }
-            });
-          }
-        }).catch(error=>{unguard();console.error('[Labirinto]',error);if(!cancelled)dev.close();});
-        return;
-      }
-      if(key.id==='geometria') {
-        // A sobreposição existente pausa a ilha; só esta chave recebe a nova cena.
-        // close(true) é a mesma coleta do botão Simular conclusão e aciona o HUD.
-        let cancelled=false;
-        const unguard=()=>{document.removeEventListener('keydown',guard,true);document.removeEventListener('click',guard,true);};
-        const guard=event=>{event.preventDefault();event.stopImmediatePropagation();if(event.key==='Escape'){cancelled=true;unguard();dev.close();}};
-        document.addEventListener('keydown',guard,true);
-        document.addEventListener('click',guard,true);
-        window.loadGeometria().then(scene=>{
-          unguard();
-          if(!cancelled&&active&&dev.active)scene.open({onExit:complete=>dev.close(complete),debug:()=>renderer.debug,toggleDebug:()=>renderer.toggleDebug()});
-        }).catch(error=>{unguard();console.error('[Geometria]',error);if(!cancelled)dev.close();});
-      }
+      const load=window.PuzzleScenes?.[key.id];
+      if(!load){dev.open(key);return;}
+      dev.openScene(key,load,{debug:()=>renderer.debug,toggleDebug:()=>renderer.toggleDebug(),onExit:won=>{
+        if(won&&key.id==='logica') {
+          if(window.AdventureProgress)AdventureProgress.award('forest');
+          world.keyState.keys.logica=true;player.x=630*WORLD_SCALE;player.y=650*WORLD_SCALE;
+          updateProgress();updateCamera(true);$('#island-announcement').textContent='Chave da Memória conquistada!';
+        }
+      }});
       return;
     }
     if(!near||!active||blocked())return;
@@ -242,10 +190,12 @@ window.GameIsland = (() => {
     if(near.id==='montanha') {
       const state=world.keyState ||= {keys:{}},missing=KEYS.filter(k=>!state.keys[k.id]).length;
       if(missing){const message=`A cela tem 4 cadeados! Faltam ${missing} chaves.`;dev.announce(message);$('#island-announcement').textContent=message;return;}
-      foundCat=true;dev.open(near);
-      window.loadFinal().then(scene=>{
-        if(active&&dev.id==='montanha')dev.transition(()=>scene.open({state,debug:()=>renderer.debug,toggleDebug:()=>renderer.toggleDebug(),onExit:(_won,message)=>{dev.close();if(message){dev.announce(message);$('#island-announcement').textContent=message;}}}));
-      }).catch(error=>{console.error('[Finale]',error);if(dev.id==='montanha'){dev.close();dev.announce('Não foi possível abrir o topo. Tente novamente.');}});
+      foundCat=true;
+      const load=window.PuzzleScenes?.montanha;
+      if(!load){dev.open(near);return;}
+      dev.openScene(near,load,{state,debug:()=>renderer.debug,toggleDebug:()=>renderer.toggleDebug(),onExit:(_won,message)=>{
+        if(message){dev.announce(message);$('#island-announcement').textContent=message;}
+      }});
       return;
     }
     $('#island-info-title').textContent=near.title;$('#island-info-chapter').textContent=near.chapter;
@@ -273,7 +223,7 @@ window.GameIsland = (() => {
   document.addEventListener('keydown',event=>{
     if(!active||event.defaultPrevented||event.ctrlKey||event.altKey||event.metaKey)return;
     const key=event.key.toLowerCase();
-    if(key==='k'&&renderer.debug&&!event.repeat&&!document.hidden&&!inChallenge()&&!dialogs.some(dialog=>dialog.open)) {
+    if(key==='k'&&renderer.debug&&!event.repeat&&!blocked()) {
       event.preventDefault();window.IslandKeys?.reset(world);updateNearby();return;
     }
     if(dev?.input(event))return;

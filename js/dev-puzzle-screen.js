@@ -3,18 +3,72 @@ window.DevPuzzleScreen = (() => {
   'use strict';
   function create(canvas,world,clearInput) {
     let current=null,selected=0,hover=-1,buttons=[],notice='',until=0,opened=0,pending=null;
+    let sceneActive=false,busy=false,veil=null;
+    const down=new Set(),quarantined=new Set();
+    function guard(event) {
+      if(event.type==='focusin'){if(busy&&event.target!==veil)veil.focus();return;}
+      const key=event.key?.toLowerCase(),blocked=busy||quarantined.has(key);
+      if(event.type==='keydown'){down.add(key);if(busy)quarantined.add(key);}
+      if(event.type==='keyup'){down.delete(key);quarantined.delete(key);}
+      if(blocked){event.preventDefault();event.stopImmediatePropagation();}
+    }
+    for(const type of ['keydown','keyup','pointerdown','pointerup','pointermove','click','dblclick','wheel','contextmenu','touchstart','touchmove','touchend','focusin'])window.addEventListener(type,guard,{capture:true,passive:false});
+    window.addEventListener('blur',()=>{down.clear();quarantined.clear();});
+    function transition(prepare,reveal,focus) {
+      busy=true;clearInput();for(const key of down)quarantined.add(key);
+      const overlay=veil=document.createElement('canvas'),ctx=overlay.getContext('2d'),start=performance.now();
+      overlay.style.cssText='position:fixed;inset:0;width:100%;height:100%;z-index:2147483647;touch-action:none;';
+      overlay.tabIndex=-1;overlay.setAttribute('role','status');overlay.setAttribute('aria-label','Transição');document.body.appendChild(overlay);overlay.focus();
+      return new Promise((resolve,reject)=>{
+        let done=false,ready=false,revealing=null,raf=0;
+        const finish=error=>{if(done)return;done=true;clearTimeout(deadline);cancelAnimationFrame(raf);overlay.remove();veil=null;busy=false;clearInput();(error?canvas:focus())?.focus();error?reject(error):resolve();};
+        const deadline=setTimeout(()=>finish(Error('Tempo limite de 10 s ao abrir o puzzle.')),10000);
+        function draw(time) {
+          overlay.width=window.innerWidth;overlay.height=window.innerHeight;
+          const alpha=revealing===null?Math.min(1,(time-start)/250):Math.max(0,1-(time-revealing)/250);
+          ctx.fillStyle=`rgba(7,17,29,${alpha})`;ctx.fillRect(0,0,overlay.width,overlay.height);
+          if(!ready&&time-start>250){overlay.setAttribute('aria-label','Carregando…');ctx.fillStyle='#fff5d7';ctx.font='16px monospace';ctx.textAlign='center';ctx.fillText('Carregando'+'.'.repeat(1+Math.floor(time/300)%3),overlay.width/2,overlay.height/2);}
+          if(revealing!==null&&time-revealing>=250)finish();else raf=requestAnimationFrame(draw);
+        }
+        raf=requestAnimationFrame(draw);
+        Promise.all([Promise.resolve().then(prepare).then(value=>{ready=true;return value;}),new Promise(r=>setTimeout(r,250))]).then(([value])=>{
+          if(done)return;clearTimeout(deadline);reveal(value);
+          // A cena agenda seu desenho em open(); dois RAFs também permitem que ele seja apresentado.
+          requestAnimationFrame(()=>requestAnimationFrame(()=>{if(!done)revealing=performance.now();}));
+        }).catch(finish);
+      });
+    }
+    async function openScene(key,load,options) {
+      if(sceneActive||busy||current)return;sceneActive=true;let host,closing=false;
+      try {
+        await transition(load,scene=>{
+          scene.open({...options,onExit:(won,...args)=>{
+            if(closing)return;closing=true;
+            // close() já removeu a cena: conserva seu último quadro durante o fade, sem reabri-la.
+            host.inert=true;document.body.appendChild(host);
+            transition(()=>null,()=>{host.remove();if(won&&key.id!=='montanha')award(key);options.onExit?.(won,...args);},()=>canvas)
+              .catch(error=>console.error('[Transição]',error)).finally(()=>{host.remove();sceneActive=false;});
+          }});
+          host=document.body.lastElementChild;
+        },()=>host?.querySelector('canvas')||canvas);
+      } catch(error) {
+        sceneActive=false;host?.remove();const message='Não foi possível abrir o puzzle. Tente de novo.';
+        announce(message);document.querySelector('#island-announcement').textContent=message;console.error(`[Puzzle ${key.id}]`,error);
+      }
+    }
     function announce(message,duration=2500){notice=message;until=performance.now()+duration;}
     const hit=event=>{
       const box=canvas.getBoundingClientRect(),x=event.clientX-box.left,y=event.clientY-box.top;
       return buttons.findIndex(b=>x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h);
     };
+    function award(key) {
+      const state=world.keyState;state.keys[key.id]=true;
+      notice=`Chave de ${key.label} obtida! (${KEYS.filter(k=>state.keys[k.id]).length}/4)`;
+      until=performance.now()+2000;
+    }
     function close(complete=false) {
       if(!current)return;
-      if(complete) {
-        const state=world.keyState;state.keys[current.id]=true;
-        notice=`Chave de ${current.label} obtida! (${KEYS.filter(k=>state.keys[k.id]).length}/4)`;
-        until=performance.now()+2000;
-      }
+      if(complete)award(current);
       current=null;pending=null;buttons=[];hover=-1;canvas.style.cursor='';clearInput();canvas.focus();
       canvas.setAttribute('aria-label','Ilha do Conhecimento. WASD ou setas para explorar, E para interagir.');
     }
@@ -26,6 +80,7 @@ window.DevPuzzleScreen = (() => {
       canvas.setAttribute('aria-label',key.id==='montanha'?'Abrindo o topo da montanha. Escape: voltar.':`Puzzle de ${key.label}. Tela de desenvolvimento. Escape: voltar. Enter: simular conclusão.`);
     }
     function input(event) {
+      if(sceneActive||busy)return true;
       if(window.FinalPuzzle?.active||window.MemoryMazeGame?.active)return true;
       if(!current)return false;
       event.preventDefault();if(event.repeat)return true;
@@ -63,7 +118,7 @@ window.DevPuzzleScreen = (() => {
       }
       ctx.restore();
     }
-    return {open,close,input,draw,announce,transition(run){if(current?.id==='montanha')pending=run;},get active(){return Boolean(current);},get id(){return current?.id;}};
+    return {open,openScene,close,input,draw,announce,get active(){return Boolean(current)||sceneActive||busy;},get id(){return current?.id;}};
   }
   return {create};
 })();

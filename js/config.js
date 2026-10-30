@@ -64,7 +64,7 @@ window.loadGeometria = () => geometriaLoading ||= (async()=>{
     const response=await fetch('data/geometria.json');if(!response.ok)throw Error('Não foi possível abrir data/geometria.json');data=await response.json();
   }
   for(const src of ['js/polyomino.js','js/geometria-puzzle.js'])await new Promise((resolve,reject)=>{
-    const script=document.createElement('script');script.src=src;script.onload=resolve;script.onerror=()=>reject(Error(`Falha ao carregar ${src}`));document.head.appendChild(script);
+    const script=document.createElement('script');script.src=src;script.onload=resolve;script.onerror=()=>{script.remove();reject(Error(`Falha ao carregar ${src}`));};document.head.appendChild(script);
   });
   await window.GeometriaPuzzle.prepare(data);return window.GeometriaPuzzle;
 })().catch(error=>{geometriaLoading=null;throw error;});
@@ -78,7 +78,7 @@ window.loadMemoryMaze = () => memoryMazeLoading ||= (async()=>{
   for(const src of ['js/labirinto-logica.js','js/labirinto-puzzle.js']) {
     if(!document.querySelector(`script[src="${src}"]`)) {
       await new Promise((resolve,reject)=>{
-        const script=document.createElement('script');script.src=src;script.onload=resolve;script.onerror=()=>reject(Error(`Falha ao carregar ${src}`));document.head.appendChild(script);
+        const script=document.createElement('script');script.src=src;script.onload=resolve;script.onerror=()=>{script.remove();reject(Error(`Falha ao carregar ${src}`));};document.head.appendChild(script);
       });
     }
   }
@@ -160,3 +160,22 @@ window.loadFinal = () => finalLoading ||= (async()=>{
   });
   await window.FinalPuzzle.prepare(data);return window.FinalPuzzle;
 })().catch(error=>{finalLoading=null;throw error;});
+
+// Registro único: abertura e pré-carga compartilham as Promises dos carregadores.
+window.PuzzleScenes={logica:()=>window.loadMemoryMaze(),algebra:()=>window.loadAlgebra(),geometria:()=>window.loadGeometria(),operacoes:()=>window.loadOperacoes(),montanha:()=>window.loadFinal()};
+let puzzlePreloadStarted=false;
+window.preloadPuzzles=canLoad=>{
+  if(puzzlePreloadStarted)return;puzzlePreloadStarted=true;
+  const queue=Object.entries(window.PuzzleScenes);
+  function next() {
+    if(!queue.length)return;
+    const run=()=>{
+      if(!canLoad()){next();return;}
+      const [id,load]=queue.shift(),start=performance.now();
+      Promise.resolve().then(load).then(()=>console.info(`puzzle ${id} pronto em ${Math.round(performance.now()-start)} ms`))
+        .catch(error=>console.error(`[Pré-carga ${id}]`,error)).finally(next);
+    };
+    setTimeout(()=>window.requestIdleCallback?window.requestIdleCallback(run,{timeout:1000}):run(),300);
+  }
+  next();
+};
