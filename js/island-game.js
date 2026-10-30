@@ -117,8 +117,9 @@ window.GameIsland = (() => {
   }
   function updateNearby() {
     const key=window.IslandKeys?.nearest(world,player);
-    if(key){near=key;$('#island-interact').disabled=false;$('#island-interact-label').textContent='E — Interagir';return;}
-    const next=world.points.filter(point=>Math.hypot(point.x-player.x,point.y-player.y)<112).sort((a,b)=>Math.hypot(a.x-player.x,a.y-player.y)-Math.hypot(b.x-player.x,b.y-player.y))[0]||null;
+    if(key){world.mountainNearby=false;near=key;$('#island-interact').disabled=false;$('#island-interact-label').textContent='E — Interagir';return;}
+    const next=world.points.filter(point=>Math.hypot(point.x-player.x,point.y-player.y)<(point.radius||112)).sort((a,b)=>Math.hypot(a.x-player.x,a.y-player.y)-Math.hypot(b.x-player.x,b.y-player.y))[0]||null;
+    world.mountainNearby=next?.id==='montanha';
     if(next===near)return;
     near=next;$('#island-interact').disabled=!near;
     $('#island-interact-label').textContent=near?near.action:'Aproxime-se de uma placa';
@@ -238,9 +239,13 @@ window.GameIsland = (() => {
       });
       return;
     }
-    if(near.id==='mountain'&&window.GameRescue) {
-      foundCat=true;clearInput();screen.hidden=true;GameAudio.click();
-      window.GameRescue.open({onProgress:updateProgress,onExit(){returnFromChallenge(trigger);},onMenu:stop});
+    if(near.id==='montanha') {
+      const state=world.keyState ||= {keys:{}},missing=KEYS.filter(k=>!state.keys[k.id]).length;
+      if(missing){const message=`A cela tem 4 cadeados! Faltam ${missing} chaves.`;dev.announce(message);$('#island-announcement').textContent=message;return;}
+      foundCat=true;dev.open(near);
+      window.loadFinal().then(scene=>{
+        if(active&&dev.id==='montanha')dev.transition(()=>scene.open({state,debug:()=>renderer.debug,toggleDebug:()=>renderer.toggleDebug(),onExit:(_won,message)=>{dev.close();if(message){dev.announce(message);$('#island-announcement').textContent=message;}}}));
+      }).catch(error=>{console.error('[Finale]',error);if(dev.id==='montanha'){dev.close();dev.announce('Não foi possível abrir o topo. Tente novamente.');}});
       return;
     }
     $('#island-info-title').textContent=near.title;$('#island-info-chapter').textContent=near.chapter;
@@ -273,6 +278,12 @@ window.GameIsland = (() => {
     }
     if(dev?.input(event))return;
     if(blocked())return;
+    if(key==='u'&&renderer.debug&&!event.repeat){
+      event.preventDefault();world.keyState ||= {keys:{}};
+      for(const id of ['logica','algebra','geometria','operacoes'])world.keyState.keys[id]=true;
+      for(const id of window.AdventureProgress?.regions||[])AdventureProgress.award(id);
+      updateProgress();dev.announce('[DEV] As 4 chaves foram concedidas.');return;
+    }
     const direction=directionKeys[key];
     if(direction){event.preventDefault();if(!event.repeat)press(key,DIRS.indexOf(direction));}
     else if(key==='e'){event.preventDefault();if(!event.repeat)interact();}

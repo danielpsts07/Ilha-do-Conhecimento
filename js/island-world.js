@@ -26,7 +26,7 @@ window.IslandWorld = (() => {
     {id:'village', x:26, y:54, title:'Vila do Conhecimento', chapter:'ÁLGEBRA INICIAL', text:'As casinhas desta vila guardam números misteriosos. Descubra o número que falta para conquistar a chave azul.', note:'Três desafios na biblioteca. Escolha o número que completa cada conta.', action:'Entrar na biblioteca'},
     {id:'ruins', x:77, y:24, title:'Ruínas das Formas', chapter:'GEOMETRIA', text:'As peças destas ruínas guardam um segredo. Gire cada peça até encontrar o encaixe e conquistar a chave vermelha.', note:'Três desafios no pátio. Compare a peça com o encaixe e gire um quarto de volta.', action:'Entrar no pátio das formas'},
     {id:'farm', x:78, y:54, title:'Fazenda dos Números', chapter:'OPERAÇÕES', text:'O moinho gira e a horta cresce! Escolha a resposta das contas para conquistar a chave amarela.', note:'Três desafios no moinho. Use as pistas e tente quantas vezes quiser.', action:'Entrar no moinho'},
-    {id:'mountain', x:48, y:11, title:'Você encontrou seu gato!', chapter:'MONTANHA DO GATO', text:'Miau! Seu amigo está aqui, esperando por você. As quatro chaves abrem os cadeados para libertá-lo.', note:'Cada chave abre o cadeado correspondente. Volte às regiões para buscar as chaves que faltam.', action:'Ajudar o gato'}
+    {id:'mountain', x:48, y:11, image:[1288,478], title:'Você encontrou seu gato!', label:'Montanha do Gato', action:'E — Examinar a cela'}
   ];
   function noise(x,y,seed=0) {
     let n = Math.imul(x + seed * 71,374761393) ^ Math.imul(y + seed * 19,668265263);
@@ -153,7 +153,7 @@ window.IslandWorld = (() => {
       add(i%3?'fern':'flowers',tx,ty,i%3?32:38,i%3?27:32,{solid:false});
     }
     // O carregamento do JPEG define as dimensões reais; pontos antigos aguardam reposicionamento.
-    return {tile:TILE,cols:COLS,rows:ROWS,width:0,height:0,tiles,objects,regions,routes,points:points.map(p=>({...p,x:(p.x+.5)*TILE,y:(p.y+.5)*TILE})),spawn:{x:SPAWN.x*WORLD_SCALE,y:SPAWN.y*WORLD_SCALE},at};
+    return {tile:TILE,cols:COLS,rows:ROWS,width:0,height:0,tiles,objects,regions,routes,points:points.map(p=>p.id==='mountain'?{...p,id:'montanha',x:p.image[0]*WORLD_SCALE,y:p.image[1]*WORLD_SCALE,radius:90*WORLD_SCALE}:{...p,x:(p.x+.5)*TILE,y:(p.y+.5)*TILE}),spawn:{x:SPAWN.x*WORLD_SCALE,y:SPAWN.y*WORLD_SCALE},at};
   }
   async function buildCollision(world,map) {
     const mapW=map.naturalWidth,mapH=map.naturalHeight,C=COLLISION_CELL_SIZE;
