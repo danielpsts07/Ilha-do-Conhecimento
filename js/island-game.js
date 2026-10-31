@@ -288,7 +288,11 @@ window.GameIsland = (() => {
   }
   window.addEventListener('blur',clearInput);
   document.addEventListener('visibilitychange',()=>{clearInput();lastTime=0;acc=0;});
-  window.addEventListener('resize',()=>{if(active&&!inChallenge()){renderer.resize();updateCamera(true);}});
+  // Reajusta o canvas à janela: redimensionar, girar o aparelho ou barra do navegador mudar.
+  const refit=()=>{if(active&&!inChallenge()){renderer.resize();updateCamera(true);}};
+  window.addEventListener('resize',refit);
+  window.addEventListener('orientationchange',()=>{refit();setTimeout(refit,250);});
+  window.visualViewport?.addEventListener('resize',refit);
   renderer.ready.then(()=>{
     loaded=true;$('#island-loading').hidden=renderer.failed.length===0;
     if(active)updateCamera(true);

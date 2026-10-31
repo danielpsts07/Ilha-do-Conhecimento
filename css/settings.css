@@ -237,3 +237,9 @@ body.large-text .island-ui-button, body.large-text .island-interact { font-size:
 body.large-text .island-dialog p, body.large-text .message-dialog p { font-size: 17px; }
 body.large-text .puzzle-instruction { font-size: 18px; }
 body.large-text .asset-button { font-size: clamp(14px,1.45vw,18px); }
+
+
+/* Botão de tela cheia no sumário. */
+.index-fullscreen { --tone: #e79a83; }
+.index-fullscreen::after { display: none; }
+.index-fullscreen[aria-disabled="true"] { opacity: .75; cursor: default; }

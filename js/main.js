@@ -58,6 +58,8 @@
   }
   function openBook(kind,section) {
     if(message.open)message.close();
+    const pauseDialog=$('#island-pause-dialog');
+    if(pauseDialog?.open)pauseDialog.close(); // aberto pela pausa: o livro substitui a pausa
     settings.hidden=kind!=='settings';tutorial.hidden=kind!=='tutorial';
     book.setAttribute('aria-labelledby',kind==='settings'?'settings-title':'tutorial-title');
     if(kind==='tutorial')resetTutorial();
@@ -80,7 +82,8 @@
     message.showModal();
   }
   document.querySelectorAll('[data-open]').forEach(button=>button.addEventListener('click',()=>{
-    if(button.closest('dialog')!==book)trigger=button;
+    // Pela pausa, o foco volta à engrenagem da ilha (a pausa já terá fechado).
+    if(button.closest('dialog')!==book)trigger=button.id==='island-pause-settings'?($('#island-settings-button')||button):button;
     GameAudio.click();
     const kind=button.dataset.open;
     if(kind==='settings'||kind==='tutorial')openBook(kind,button.dataset.settingsStart);
@@ -104,15 +107,13 @@
   }
   function quitTab() {
     GameAudio.stopMusic();SettingsBook.refreshMusic(false);
-    window.close();
+    if(typeof window.close==='function')window.close();
+    $('#message-confirm').hidden=true;
+    $('#message-title').textContent='Até logo, explorador!';
+    $('#message-copy').textContent='Você pode fechar esta aba do navegador quando quiser.';
+    $('#message-back').textContent='Voltar';
     // Alguns navegadores só fecham abas abertas por script; mostramos um aviso se não fechar.
-    setTimeout(()=>{
-      $('#message-confirm').hidden=true;
-      $('#message-title').textContent='Até logo, explorador!';
-      $('#message-copy').textContent='Você pode fechar esta aba do navegador quando quiser.';
-      $('#message-back').textContent='Voltar';
-      if(!message.open)message.showModal();
-    },150);
+    setTimeout(()=>{if(!message.open)message.showModal();},150);
   }
   document.querySelectorAll('[data-close]').forEach(button=>button.addEventListener('click',()=>{GameAudio.click();button.closest('dialog').close();}));
   $('#settings-exit').addEventListener('click',()=>{GameAudio.click();openMessage();});
