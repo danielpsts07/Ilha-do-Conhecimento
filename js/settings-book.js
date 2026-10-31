@@ -1,4 +1,4 @@
-/* Livro de configurações: páginas, virada de folha e controles das preferências. */
+﻿/* Livro de configurações: páginas, virada de folha e controles das preferências. */
 window.SettingsBook = (() => {
   'use strict';
   const $ = selector => document.querySelector(selector);
@@ -233,6 +233,33 @@ window.SettingsBook = (() => {
     GameAudio.success(); cheer();
     $('#settings-reset-note').textContent = 'Pronto! Tudo voltou ao jeito do começo.';
   });
+
+  /* ---------- Tela cheia (só após clique; pode não existir, como no iPhone) ---------- */
+  const fsButton = $('#settings-fullscreen');
+  const fsRoot = document.documentElement || {};
+  const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+  const canFullscreen = Boolean(fsRoot.requestFullscreen || fsRoot.webkitRequestFullscreen);
+  function paintFullscreen() {
+    if (!fsButton) return;
+    const on = Boolean(fsElement());
+    fsButton.setAttribute('aria-pressed', String(on));
+    fsButton.setAttribute('aria-label', on ? 'Sair da tela cheia' : 'Ativar tela cheia');
+    fsButton.setAttribute('aria-disabled', String(!canFullscreen));
+    $('#settings-fullscreen-label').textContent = !canFullscreen ? 'Tela cheia indisponível' : on ? 'Sair da tela cheia' : 'Tela cheia';
+  }
+  if (fsButton) {
+    fsButton.addEventListener('click', async () => {
+      if (!canFullscreen) return;
+      try {
+        if (fsElement()) await (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+        else await (fsRoot.requestFullscreen || fsRoot.webkitRequestFullscreen).call(fsRoot);
+      } catch (error) { console.warn('Tela cheia não disponível', error); }
+      paintFullscreen();
+    });
+    document.addEventListener('fullscreenchange', paintFullscreen);
+    document.addEventListener('webkitfullscreenchange', paintFullscreen);
+    paintFullscreen();
+  }
 
   function paintAll() { paintAudio(); paintToggles(); paintSpeed(); paintTouch(); }
   settings.onChange(paintAll);
