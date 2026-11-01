@@ -171,8 +171,8 @@ window.preloadPuzzles=canLoad=>{
     if(!queue.length)return;
     const run=()=>{
       if(!canLoad()){next();return;}
-      const [id,load]=queue.shift(),start=performance.now();
-      Promise.resolve().then(load).then(()=>console.info(`puzzle ${id} pronto em ${Math.round(performance.now()-start)} ms`))
+      const [id,load]=queue.shift(),now=()=>typeof performance!=='undefined'?performance.now():Date.now(),start=now();
+      Promise.resolve().then(load).then(()=>console.info(`puzzle ${id} pronto em ${Math.round(now()-start)} ms`))
         .catch(error=>console.error(`[Pré-carga ${id}]`,error)).finally(next);
     };
     setTimeout(()=>window.requestIdleCallback?window.requestIdleCallback(run,{timeout:1000}):run(),300);

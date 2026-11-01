@@ -45,3 +45,12 @@ body.touch-off .island-direction-pad, body.touch-off .island-joystick, body.touc
 @media(max-width:800px) { .island-place { top:10px; padding:6px 14px; }.island-place h1 { font-size:18px; }.island-gear { top:10px; right:10px; width:46px; height:46px; }.island-minimap { top:10px; right:64px; padding:6px; }.island-minimap canvas { width:120px; height:90px; }.island-minimap>span:first-child { font-size:6px; }.island-interact { padding:8px 12px; max-width:210px; font-size:12px; } }
 @media(max-width:540px) { .island-place { max-width:52vw; }.island-place h1 { font-size:15px; }.island-minimap { display:none; }.island-direction-pad { left:10px; bottom:10px; grid-template-columns:repeat(3,42px); grid-template-rows:repeat(2,40px); }.island-joystick { left:10px; bottom:10px; }.island-interact { right:10px; bottom:10px; max-width:150px; gap:6px; font-size:11px; }.island-dialog { padding:28px 21px 24px; }.island-dialog h1 { font-size:25px; }.island-dialog p { font-size:14px; } }
 @media(max-height:520px) and (orientation:landscape) { .island-place { top:8px; padding:5px 14px; }.island-place h1 { font-size:16px; }.island-gear { top:8px; right:8px; width:40px; height:40px; }.island-minimap { top:8px; right:56px; padding:5px; }.island-minimap canvas { width:96px; height:72px; }.minimap-caption { display:none; }.island-direction-pad { left:10px; bottom:10px; grid-template-columns:repeat(3,38px); grid-template-rows:repeat(2,34px); }.island-joystick { left:8px; bottom:8px; transform:scale(.85); transform-origin:left bottom; }.island-interact { right:10px; bottom:10px; min-height:42px; padding:4px 10px; } }
+
+
+/* Preenche a aba e respeita áreas seguras. */
+.island-screen { height: 100vh; height: 100dvh; overflow: hidden; }
+.island-place { margin-top: env(safe-area-inset-top); }
+.island-gear { margin-top: env(safe-area-inset-top); margin-right: env(safe-area-inset-right); }
+.island-minimap { margin-top: env(safe-area-inset-top); margin-right: env(safe-area-inset-right); }
+.island-direction-pad, .island-joystick { margin-left: env(safe-area-inset-left); margin-bottom: env(safe-area-inset-bottom); }
+.island-interact { margin-right: env(safe-area-inset-right); margin-bottom: env(safe-area-inset-bottom); }
