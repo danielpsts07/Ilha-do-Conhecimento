@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste Labirinto</title>
+</head>
+<body style="margin:0;padding:0;background:#000;">
+  <script src="../js/config.js"></script>
+  <script src="../js/hero-animation.js"></script>
+  <script>
+    async function runTest() {
+      const logs = [];
+      window.console.log = (...args) => { logs.push(args.join(' ')); };
+      window.console.warn = (...args) => { logs.push('[WARN] ' + args.join(' ')); };
+      window.console.error = (...args) => { logs.push('[ERROR] ' + args.join(' ')); };
+
+      try {
+        await window.loadMemoryMaze();
+        // Open the puzzle
+        window.LabirintoPuzzle.open({
+          skipMemorize: false,
+          onExit: (won) => {
+            logs.push('onExit called: won=' + won);
+          }
+        });
+
+        // Wait for rendering
+        await new Promise(r => setTimeout(r, 600));
+
+        // Send results
+        await fetch('/result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'SUCCESS',
+            active: window.LabirintoPuzzle.active,
+            logs
+          })
+        });
+      } catch (err) {
+        await fetch('/result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'ERROR',
+            error: err.message,
+            stack: err.stack,
+            logs
+          })
+        });
+      }
+    }
+    window.addEventListener('load', runTest);
+  </script>
+</body>
+</html>

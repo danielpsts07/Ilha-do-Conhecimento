@@ -21,7 +21,7 @@
     $('#step-count').textContent=`0${step+1} / 03`;
     $('#key-guide').hidden=step!==0;
     for(const p of pages) $(`#${p.view}`).hidden=p.view!==page.view;
-    $('#previous-step').textContent=step===0?'Menu':'Voltar';
+    $('#previous-step').textContent=step===0?'Voltar ao menu':'Voltar';
     $('#next-step').textContent=step===2?'Entendi!':'Próxima';
     document.querySelectorAll('[data-step]').forEach(button=>{
       if(Number(button.dataset.step)===step)button.setAttribute('aria-current','step');else button.removeAttribute('aria-current');
@@ -116,7 +116,6 @@
     setTimeout(()=>{if(!message.open)message.showModal();},150);
   }
   document.querySelectorAll('[data-close]').forEach(button=>button.addEventListener('click',()=>{GameAudio.click();button.closest('dialog').close();}));
-  $('#settings-exit').addEventListener('click',()=>{GameAudio.click();openMessage();});
   $('#message-back').addEventListener('click',()=>{GameAudio.click();confirmQuitTab=false;message.close();});
   $('#message-confirm').addEventListener('click',()=>{
     GameAudio.click();
@@ -154,5 +153,57 @@
       if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)dialog.close();
     });
     dialog.addEventListener('close',()=>{if(dialog===message)confirmQuitTab=false;if(!book.open&&!message.open&&trigger)trigger.focus();});
+  }
+  if (typeof window !== 'undefined' && window.location?.search) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('tutorial')) {
+      window.addEventListener('load', () => {
+        if (params.has('largeText') && window.GameSettings) {
+          window.GameSettings.set('largeText', true);
+        }
+        openBook('tutorial');
+        const st = params.get('step');
+        if (st !== null) {
+          step = Number(st);
+          renderPage();
+        }
+      });
+    }
+    if (params.has('settings')) {
+      window.addEventListener('load', () => {
+        if (params.has('largeText') && window.GameSettings) {
+          window.GameSettings.set('largeText', true);
+        }
+        const sec = params.get('settings') || 'index';
+        openBook('settings', sec);
+        if (params.get('page') === '2') {
+          setTimeout(() => {
+            const next = document.getElementById('sheet-next-page');
+            if (next) next.click();
+          }, 150);
+        }
+      });
+    }
+    if (params.has('iniciar')) {
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          GameIsland.start();
+          setTimeout(() => {
+            if (params.has('f3')) {
+              document.dispatchEvent(new KeyboardEvent('keydown', { key: 'F3', bubbles: true }));
+            }
+            const tp = params.get('teleport');
+            if (tp && window.ISLAND_REGIONS) {
+              const r = window.ISLAND_REGIONS.find(reg => reg.id === tp);
+              if (r) {
+                const cx = r.bounds[0] + r.bounds[2] / 2;
+                const cy = r.bounds[1] + r.bounds[3] / 2;
+                if (window.GameIsland?.teleport) window.GameIsland.teleport(cx, cy);
+              }
+            }
+          }, 350);
+        }, 100);
+      });
+    }
   }
 })();

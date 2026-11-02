@@ -1,17 +1,54 @@
 {
-  "metrics": {"width":1376,"height":768,"speed":220,"footW":8,"footH":4,"heroH":75.6,"memorizeSeconds":4},
+  "metrics": {
+    "width": 1024,
+    "height": 434,
+    "speed": 220,
+    "footW": 8,
+    "footH": 4,
+    "heroH": 75.6,
+    "memorizeSeconds": 4
+  },
   "runas": [
-    {"id":"estrela","nome":"Estrela","cor":"#facc15"},
-    {"id":"lua","nome":"Lua","cor":"#38bdf8"},
-    {"id":"flor","nome":"Flor","cor":"#f472b6"},
-    {"id":"folha","nome":"Folha","cor":"#4ade80"},
-    {"id":"borboleta","nome":"Borboleta","cor":"#a855f7"},
-    {"id":"pata","nome":"Pata","cor":"#fb923c"}
+    { "id": "estrela", "nome": "Estrela", "cor": "#facc15" },
+    { "id": "lua", "nome": "Lua", "cor": "#38bdf8" },
+    { "id": "flor", "nome": "Flor", "cor": "#f472b6" },
+    { "id": "folha", "nome": "Folha", "cor": "#4ade80" },
+    { "id": "borboleta", "nome": "Borboleta", "cor": "#a855f7" },
+    { "id": "pata", "nome": "Pata", "cor": "#fb923c" }
   ],
   "fases": [
-    {"spawn":[512,499],"saidas":[{"id":"esq","zona":[298,220,52,42],"pe":[322,252]},{"id":"dir","zona":[690,220,47,42],"pe":[714,250]}]},
-    {"spawn":[512,499],"saidas":[{"id":"esq","zona":[298,220,52,42],"pe":[322,252]},{"id":"dir","zona":[690,220,47,42],"pe":[714,250]},{"id":"topo","zona":[490,142,60,36],"pe":[520,136]}]},
-    {"spawn":[512,499],"saidas":[{"id":"esq","zona":[300,222,58,40],"pe":[318,252]},{"id":"dir","zona":[668,222,67,36],"pe":[722,250]},{"id":"topo_esq","zona":[370,142,66,36],"pe":[402,136]},{"id":"topo_dir","zona":[604,142,58,36],"pe":[632,136]}]}
+    {
+      "spawn": [512, 400],
+      "saidas": [
+        { "id": "esq", "zona": [339, 142, 60, 60], "pe": [369, 172], "arco": [205, 170] },
+        { "id": "dir", "zona": [631, 141, 60, 60], "pe": [661, 171], "arco": [830, 170] }
+      ]
+    },
+    {
+      "spawn": [512, 400],
+      "saidas": [
+        { "id": "topo", "zona": [486, 52, 60, 60], "pe": [516, 82], "arco": [516, 45] },
+        { "id": "esq", "zona": [339, 141, 60, 60], "pe": [369, 171], "arco": [205, 170] },
+        { "id": "dir", "zona": [632, 141, 60, 60], "pe": [662, 171], "arco": [830, 170] }
+      ]
+    },
+    {
+      "spawn": [512, 400],
+      "saidas": [
+        { "id": "topo_esq", "zona": [399, 52, 60, 60], "pe": [429, 82], "arco": [420, 45] },
+        { "id": "topo_dir", "zona": [572, 52, 60, 60], "pe": [602, 82], "arco": [604, 45] },
+        { "id": "esq", "zona": [338, 141, 60, 60], "pe": [368, 171], "arco": [205, 170] },
+        { "id": "dir", "zona": [634, 141, 60, 60], "pe": [664, 171], "arco": [830, 170] }
+      ]
+    }
   ],
-  "camara": {"spawn":[700,720],"pedestal":{"pe":[691,480],"altura":112,"raio":30},"chave":{"altura":70,"centro":[691,325],"flutuacao":4},"interacao":100,"soleira":[625,252,140,48],"alvo":[695,272],"portal":{"centro":[692,170],"raio":140}}
+  "camara": {
+    "spawn": [700, 720],
+    "pedestal": { "pe": [691, 480], "altura": 112, "raio": 30 },
+    "chave": { "altura": 70, "centro": [691, 325], "flutuacao": 4 },
+    "interacao": 100,
+    "soleira": [625, 252, 140, 48],
+    "alvo": [695, 272],
+    "portal": { "centro": [692, 170], "raio": 140 }
+  }
 }

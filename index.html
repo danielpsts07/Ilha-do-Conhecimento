@@ -133,8 +133,6 @@
   </section>
 
     <dialog id="book-dialog" class="book-dialog mural-dialog" aria-labelledby="settings-title">
-    <!-- C1, C2: Botão fechar na raiz da sobreposição, irmão do palco -->
-    <button class="mural-close" data-close aria-label="Fechar configurações"><img src="assets/configuracoes/mural/ui/fechar-normal.webp" alt=""></button>
 
     <div class="mural-stage">
       <!-- Marcações para modo ?calibrar -->
@@ -208,10 +206,6 @@
                 <img src="assets/configuracoes/mural/ui/icone-restaurar.webp" alt="" class="action-icon">
                 <span>Restaurar padrões</span>
               </button>
-              <button id="settings-exit" class="mural-action-btn action-bordo" aria-label="Sair do jogo">
-                <img src="assets/configuracoes/mural/ui/etiqueta-bordo.webp" alt="" class="action-bg">
-                <span>Sair do jogo</span>
-              </button>
             </div>
             <p id="settings-reset-note" class="settings-note" role="status" aria-live="polite" style="position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap;"></p>
           </div>
@@ -219,17 +213,18 @@
           <!-- D. Submenus na folha de caderno -->
           <div class="mural-sheet-container" hidden>
             <div class="mural-sheet">
-              <!-- Botão Voltar -->
-              <button id="settings-back" class="sheet-back-btn" type="button" aria-label="Voltar ao mural" hidden>
-                <img src="assets/configuracoes/mural/ui/icone-voltar.webp" alt="" class="back-icon">
-                <span>Voltar</span>
-              </button>
+              <!-- Cabeçalho do Submenu (Voltar + Ícone + Título em fluxo) -->
+              <header class="sheet-header">
+                <button id="settings-back" class="sheet-back-btn" type="button" aria-label="Voltar ao mural" hidden>
+                  <img src="assets/configuracoes/mural/ui/icone-voltar.webp" alt="" class="back-icon">
+                  <span>Voltar</span>
+                </button>
 
-              <!-- Cabeçalho do Submenu -->
-              <div class="sheet-title-group">
-                <img id="sheet-header-icon" src="assets/configuracoes/mural/ui/icone-som.webp" alt="" class="sheet-header-icon">
-                <h2 id="sheet-main-title" class="sheet-title" tabindex="-1">Sons da aventura</h2>
-              </div>
+                <div class="sheet-title-group">
+                  <img id="sheet-header-icon" src="assets/configuracoes/mural/ui/icone-som.webp" alt="" class="sheet-header-icon">
+                  <h2 id="sheet-main-title" class="sheet-title" tabindex="-1">Sons da aventura</h2>
+                </div>
+              </header>
 
               <!-- Reserva do gato: x >= 72% e y >= 60% -->
               <div class="sheet-cat-reserve" aria-hidden="true"></div>
@@ -240,43 +235,53 @@
               <div class="settings-spread sheet-spread" data-settings-section="audio" hidden>
                 <h2 id="settings-audio-title" class="visually-hidden" tabindex="-1">Sons da aventura</h2>
                 <div class="sheet-page" data-page-section="audio" data-page="1">
-                  <!-- Linha Som -->
-                  <div class="mural-audio-row row-som">
-                    <img src="assets/configuracoes/mural/ui/icone-som.webp" alt="" class="audio-row-icon">
-                    <label for="sound-volume" class="audio-row-label">Som</label>
-                    <output id="sound-value" for="sound-volume" class="audio-row-value">70%</output>
-                  </div>
-                  <div class="mural-slider-wrap slider-som">
-                    <input id="sound-volume" type="range" min="0" max="100" value="70">
-                  </div>
+                  <div class="audio-sliders-column">
+                    <!-- Linha Som -->
+                    <div class="mural-audio-row row-som">
+                      <div class="audio-row-header">
+                        <img src="assets/configuracoes/mural/ui/icone-som.webp" alt="" class="audio-row-icon">
+                        <label for="sound-volume" class="audio-row-label">Som</label>
+                      </div>
+                      <output id="sound-value" for="sound-volume" class="audio-row-value">70%</output>
+                    </div>
+                    <div class="mural-slider-wrap slider-som">
+                      <input id="sound-volume" type="range" min="0" max="100" value="70">
+                    </div>
 
-                  <!-- Linha Música -->
-                  <div class="mural-audio-row row-musica">
-                    <img src="assets/configuracoes/musica.png" alt="" class="audio-row-icon">
-                    <label for="music-volume" class="audio-row-label">Música</label>
-                    <output id="music-value" for="music-volume" class="audio-row-value">35%</output>
-                  </div>
-                  <div class="mural-slider-wrap slider-musica">
-                    <input id="music-volume" type="range" min="0" max="100" value="35">
-                  </div>
+                    <!-- Linha Música -->
+                    <div class="mural-audio-row row-musica">
+                      <div class="audio-row-header">
+                        <img src="assets/configuracoes/musica.png" alt="" class="audio-row-icon">
+                        <label for="music-volume" class="audio-row-label">Música</label>
+                      </div>
+                      <output id="music-value" for="music-volume" class="audio-row-value">35%</output>
+                    </div>
+                    <div class="mural-slider-wrap slider-musica">
+                      <input id="music-volume" type="range" min="0" max="100" value="35">
+                    </div>
 
-                  <!-- Ouvir um efeito -->
-                  <button class="mural-link-efeito text-link" id="test-sound">♪ Ouvir um efeito</button>
+                    <div class="audio-actions-row">
+                      <!-- Ouvir um efeito -->
+                      <button class="mural-link-efeito text-link" id="test-sound">♪ Ouvir um efeito</button>
 
-                  <!-- Ouvir música de teste -->
-                  <button class="mural-btn-musica music-toggle" id="music-toggle" aria-pressed="false">
-                    <span class="status-dot"></span>
-                    <span id="music-status">Ouvir música de teste</span>
-                  </button>
+                      <!-- Ouvir música de teste -->
+                      <button class="mural-btn-musica music-toggle" id="music-toggle" aria-pressed="false">
+                        <span class="status-dot"></span>
+                        <span id="music-status">Ouvir música de teste</span>
+                      </button>
+                    </div>
+                  </div>
 
                   <!-- Cartão Silenciar tudo (coluna direita) -->
                   <div class="mural-card-silenciar">
                     <button id="toggle-mute" class="mural-switch switch-mute" role="switch" aria-checked="false" data-setting="mute">
                       <span class="switch-img"></span>
                     </button>
-                    <span id="toggle-mute-state" class="switch-state-mute">Desligado</span>
-                    <span class="mute-title">Silenciar tudo</span>
-                    <p class="mute-desc">Nenhum som toca enquanto estiver ligado.</p>
+                    <div class="mute-info">
+                      <span class="mute-title">Silenciar tudo</span>
+                      <p class="mute-desc">Nenhum som toca enquanto estiver ligado.</p>
+                      <span id="toggle-mute-state" class="switch-state-mute">Desligado</span>
+                    </div>
                   </div>
                   <div class="mural-notes-decor" aria-hidden="true">♪ ♫ ♪</div>
                 </div>
@@ -318,51 +323,57 @@
 
                 <!-- Página 2: Velocidade e Toque -->
                 <div class="sheet-page" data-page-section="controls" data-page="2" hidden>
-                  <div class="mural-speed-header">
-                    <img src="assets/hud/pata.png" alt="" class="speed-icon">
-                    <span class="speed-label" id="speed-label">Velocidade da caminhada</span>
-                  </div>
-                  <div class="stepper-mural stepper" role="group" aria-labelledby="speed-label">
-                    <button id="speed-prev" class="mural-page-arrow prev" aria-label="Mais devagar"></button>
-                    <output id="speed-value" class="stepper-value" aria-live="polite">Normal</output>
-                    <button id="speed-next" class="mural-page-arrow next" aria-label="Mais rápido"></button>
-                  </div>
-                  <div class="mural-walk-box">
-                    <div id="walk-preview" class="walk-preview" data-speed="normal" aria-hidden="true">
-                      <img src="assets/personagem/personagem-lado.png" alt="" class="walk-preview-hero">
+                  <div class="mural-speed-row">
+                    <div class="speed-control-group">
+                      <div class="mural-speed-header">
+                        <img src="assets/hud/pata.png" alt="" class="speed-icon">
+                        <span class="speed-label" id="speed-label">Velocidade da caminhada</span>
+                      </div>
+                      <div class="stepper-mural stepper" role="group" aria-labelledby="speed-label">
+                        <button id="speed-prev" class="mural-page-arrow prev" aria-label="Mais devagar"></button>
+                        <output id="speed-value" class="stepper-value" aria-live="polite">Normal</output>
+                        <button id="speed-next" class="mural-page-arrow next" aria-label="Mais rápido"></button>
+                      </div>
                     </div>
-                    <span class="walk-preview-caption">prévia da caminhada</span>
+                    <div class="mural-walk-box">
+                      <div id="walk-preview" class="walk-preview" data-speed="normal" aria-hidden="true">
+                        <img src="assets/personagem/personagem-lado.png" alt="" class="walk-preview-hero">
+                      </div>
+                      <span class="walk-preview-caption">prévia da caminhada</span>
+                    </div>
                   </div>
 
-                  <div class="mural-touch-header">
-                    <img src="assets/configuracoes/mural/ui/icone-controles.webp" alt="" class="touch-icon">
-                    <span class="touch-title" id="touch-label">Controle na tela</span>
-                    <span class="touch-hint">Para jogar com o dedo no tablet ou no celular.</span>
-                  </div>
-                  <div class="touch-choice mural-card-choices" role="radiogroup" aria-labelledby="touch-label">
-                    <button class="mural-touch-card touch-option is-selected" id="touch-arrows" role="radio" aria-checked="true" data-touch="arrows">
-                      <div class="touch-card-demo demo-arrows">
-                        <span class="mini-key">↑</span>
-                        <div class="mini-key-row">
-                          <span class="mini-key">←</span>
-                          <span class="mini-key">↓</span>
-                          <span class="mini-key">→</span>
+                  <div class="mural-touch-section">
+                    <div class="mural-touch-header">
+                      <img src="assets/configuracoes/mural/ui/icone-controles.webp" alt="" class="touch-icon">
+                      <span class="touch-title" id="touch-label">Controle na tela</span>
+                      <span class="touch-hint">Para jogar com o dedo no tablet ou no celular.</span>
+                    </div>
+                    <div class="touch-choice mural-card-choices" role="radiogroup" aria-labelledby="touch-label">
+                      <button class="mural-touch-card touch-option is-selected" id="touch-arrows" role="radio" aria-checked="true" data-touch="arrows">
+                        <div class="touch-card-demo demo-arrows">
+                          <span class="mini-key">↑</span>
+                          <div class="mini-key-row">
+                            <span class="mini-key">←</span>
+                            <span class="mini-key">↓</span>
+                            <span class="mini-key">→</span>
+                          </div>
                         </div>
-                      </div>
-                      <span class="touch-name">Setas</span>
-                    </button>
-                    <button class="mural-touch-card touch-option" id="touch-joystick" role="radio" aria-checked="false" data-touch="joystick">
-                      <div class="touch-card-demo demo-joystick">
-                        <span class="joystick-ring"><span class="joystick-dot"></span></span>
-                      </div>
-                      <span class="touch-name">Joystick</span>
-                    </button>
-                    <button class="mural-touch-card touch-option" id="touch-off" role="radio" aria-checked="false" data-touch="off">
-                      <div class="touch-card-demo demo-off">
-                        <span class="off-icon">⌨</span>
-                      </div>
-                      <span class="touch-name">Nenhum</span>
-                    </button>
+                        <span class="touch-name">Setas</span>
+                      </button>
+                      <button class="mural-touch-card touch-option" id="touch-joystick" role="radio" aria-checked="false" data-touch="joystick">
+                        <div class="touch-card-demo demo-joystick">
+                          <span class="joystick-ring"><span class="joystick-dot"></span></span>
+                        </div>
+                        <span class="touch-name">Joystick</span>
+                      </button>
+                      <button class="mural-touch-card touch-option" id="touch-off" role="radio" aria-checked="false" data-touch="off">
+                        <div class="touch-card-demo demo-off">
+                          <span class="off-icon">⌨</span>
+                        </div>
+                        <span class="touch-name">Nenhum</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -373,24 +384,26 @@
               <div class="settings-spread sheet-spread" data-settings-section="language" hidden>
                 <h2 id="settings-language-title" class="visually-hidden" tabindex="-1">Qual é a sua língua?</h2>
                 <div class="sheet-page" data-page-section="language" data-page="1">
-                  <p class="section-copy intro-language">A ilha fala português do Brasil. A versão em inglês ainda está sendo escrita.</p>
-                  <div class="language-cards">
-                    <button id="lang-pt" class="mural-lang-card lang-pt is-selected" aria-pressed="true">
-                      <img src="assets/configuracoes/mural/ui/cartao-selecionado.webp" alt="" class="lang-card-bg">
-                      <span class="flag flag-br" aria-hidden="true"></span>
-                      <span class="lang-card-name">Português</span>
-                      <span class="lang-card-sub">PT-BR · em uso</span>
-                      <span class="lang-check" aria-hidden="true">✓</span>
-                    </button>
-                    <button id="lang-en" class="mural-lang-card lang-en" aria-pressed="false" aria-disabled="true" aria-describedby="language-note">
-                      <img src="assets/configuracoes/mural/ui/cartao-azul.webp" alt="" class="lang-card-bg">
-                      <span class="flag flag-us" aria-hidden="true"></span>
-                      <span class="lang-card-name">English</span>
-                      <span class="lang-card-sub">EN</span>
-                      <span class="lang-soon">Em breve</span>
-                    </button>
+                  <p class="section-copy intro-language">A ilha fala português. O inglês está a caminho!</p>
+                  <div class="language-content-row">
+                    <div class="language-cards">
+                      <button id="lang-pt" class="mural-lang-card lang-pt is-selected" aria-pressed="true">
+                        <img src="assets/configuracoes/mural/ui/cartao-selecionado.webp" alt="" class="lang-card-bg">
+                        <span class="flag flag-br" aria-hidden="true"></span>
+                        <span class="lang-card-name">Português</span>
+                        <span class="lang-card-sub">PT-BR · em uso</span>
+                        <span class="lang-check" aria-hidden="true">✓</span>
+                      </button>
+                      <button id="lang-en" class="mural-lang-card lang-en" aria-pressed="false" aria-disabled="true" aria-describedby="language-note">
+                        <img src="assets/configuracoes/mural/ui/cartao-azul.webp" alt="" class="lang-card-bg">
+                        <span class="flag flag-us" aria-hidden="true"></span>
+                        <span class="lang-card-name">English</span>
+                        <span class="lang-card-sub">EN</span>
+                        <span class="lang-soon">Em breve</span>
+                      </button>
+                    </div>
+                    <img src="assets/configuracoes/mural/ui/icone-idioma.webp" alt="" class="mural-decor-idioma" aria-hidden="true">
                   </div>
-                  <img src="assets/configuracoes/mural/ui/icone-idioma.webp" alt="" class="mural-decor-idioma" aria-hidden="true">
                   <p id="language-note" class="settings-note lang-note" role="status" aria-live="polite">O inglês ainda não está disponível.</p>
                 </div>
               </div>
@@ -403,34 +416,36 @@
                 <div class="sheet-page" data-page-section="access" data-page="1">
                   <p class="section-copy intro-access">Letras maiores ajudam a ler. Menos animações deixam a tela mais calminha.</p>
                   
-                  <div class="mural-access-card card-large-text">
-                    <button id="toggle-large-text" class="mural-switch switch-access" role="switch" aria-checked="false" data-setting="largeText">
-                      <span class="switch-img"></span>
-                    </button>
-                    <div class="access-info">
-                      <span class="access-title">Letras maiores</span>
-                      <span class="access-desc">Textos do livro, da ilha e dos desafios crescem.</span>
+                  <div class="access-cards-column">
+                    <div class="mural-access-card card-large-text">
+                      <button id="toggle-large-text" class="mural-switch switch-access" role="switch" aria-checked="false" data-setting="largeText">
+                        <span class="switch-img"></span>
+                      </button>
+                      <div class="access-info">
+                        <span class="access-title">Letras maiores</span>
+                        <span class="access-desc">Textos do livro, da ilha e dos desafios crescem.</span>
+                      </div>
+                      <span id="toggle-large-text-state" class="access-state">Desligado</span>
                     </div>
-                    <span id="toggle-large-text-state" class="access-state">Desligado</span>
-                  </div>
 
-                  <div class="mural-access-card card-calm">
-                    <button id="toggle-calm" class="mural-switch switch-access" role="switch" aria-checked="false" data-setting="calm">
-                      <span class="switch-img"></span>
-                    </button>
-                    <div class="access-info">
-                      <span class="access-title">Menos animações</span>
-                      <span class="access-desc">As páginas trocam sem virar e a ilha fica mais paradinha.</span>
+                    <div class="mural-access-card card-calm">
+                      <button id="toggle-calm" class="mural-switch switch-access" role="switch" aria-checked="false" data-setting="calm">
+                        <span class="switch-img"></span>
+                      </button>
+                      <div class="access-info">
+                        <span class="access-title">Menos animações</span>
+                        <span class="access-desc">As páginas trocam sem virar e a ilha fica mais paradinha.</span>
+                      </div>
+                      <span id="toggle-calm-state" class="access-state">Desligado</span>
                     </div>
-                    <span id="toggle-calm-state" class="access-state">Desligado</span>
+
+                    <div class="mural-access-preview" aria-hidden="true">
+                      <span class="preview-aa">Aa</span>
+                      <span class="preview-text">A ilha espera por você!</span>
+                    </div>
                   </div>
 
                   <img src="assets/configuracoes/mural/ui/icone-acessibilidade.webp" alt="" class="mural-decor-access" aria-hidden="true">
-
-                  <div class="mural-access-preview" aria-hidden="true">
-                    <span class="preview-aa">Aa</span>
-                    <span class="preview-text">A ilha espera por você!</span>
-                  </div>
                 </div>
               </div>
 
@@ -560,7 +575,7 @@
             <span class="chapter">COMO JOGAR <span id="step-count">01 / 03</span></span>
             <h1 id="tutorial-title">Explore a ilha</h1>
             <p class="tutorial-copy" id="tutorial-copy"></p>
-            <div class="key-guide" id="key-guide"><div><kbd>W</kbd></div><div><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div><span>ou as setas do teclado</span></div>
+            <div class="key-guide" id="key-guide"><div class="wasd-cluster"><div><kbd>W</kbd></div><div><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div></div><span>ou as setas do teclado</span></div>
             <p class="tutorial-tip" id="tutorial-tip"></p>
           </section>
           <section class="page right-page tutorial-practice" aria-label="Demonstração dos controles">
@@ -584,6 +599,9 @@
         </div>
       </div>
     </div>
+  
+    <!-- C1, C2: Botão fechar na raiz da sobreposição, irmão do palco -->
+    <button class="mural-close" data-close aria-label="Fechar configurações"><img src="assets/configuracoes/mural/ui/fechar-normal.webp" alt=""></button>
   </dialog>
 
   <dialog id="message-dialog" class="message-dialog" aria-labelledby="message-title">

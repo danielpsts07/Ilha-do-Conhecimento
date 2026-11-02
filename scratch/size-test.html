@@ -1,0 +1,18 @@
+
+  <!DOCTYPE html><html><body>
+  <iframe id="f" src="file:///C:/Users/gpjac/Ilha-do-Conhecimento/index.html?tutorial&step=0" style="width:1920px;height:1080px;border:0;"></iframe>
+  <script>
+  window.onload = () => {
+    setTimeout(() => {
+      try {
+        const win = document.getElementById('f').contentWindow;
+        const tut = win.document.getElementById('tutorial-view');
+        document.title = 'SZ:' + tut.clientWidth + 'x' + tut.clientHeight;
+      } catch(e) {
+        document.title = 'ERR:' + e.message;
+      }
+    }, 400);
+  };
+  </script>
+  </body></html>
+  

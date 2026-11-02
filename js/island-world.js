@@ -14,10 +14,10 @@ window.IslandWorld = (() => {
   const regions = [
     {id:'center', name:'Praça do Portal', short:'Praça', x:48, y:39, color:'#efd599'},
     {id:'forest', name:'Floresta dos Padrões', short:'Floresta', x:22, y:23, color:'#56844b'},
-    {id:'village', name:'Vila do Conhecimento', short:'Vila', x:25, y:53, color:'#c88864'},
+    {id:'village', name:'Aldeia do Saber', short:'Aldeia', x:25, y:53, color:'#c88864'},
     {id:'ruins', name:'Ruínas das Formas', short:'Ruínas', x:77, y:23, color:'#e2c383'},
-    {id:'farm', name:'Fazenda dos Números', short:'Fazenda', x:78, y:53, color:'#b0bc62'},
-    {id:'mountain', name:'Montanha do Gato', short:'Montanha', x:48, y:12, color:'#8997a1'}
+    {id:'farm', name:'Campos Contados', short:'Campos', x:78, y:53, color:'#b0bc62'},
+    {id:'mountain', name:'Pico do Miau', short:'Pico', x:48, y:12, color:'#8997a1'}
   ];
   const points = [
     {id:'guide', x:50, y:43, title:'Uma ilha inteira para descobrir', chapter:'PLACA DA PRAÇA', text:'O portal trouxe você até aqui! Siga os caminhos: a floresta fica à esquerda e acima; a vila, à esquerda e abaixo. Do outro lado das pontes estão as ruínas e a fazenda. O gato espera na montanha, ao norte.', note:'Explore com WASD ou setas. Perto de uma placa, use E. M abre o mapa e Esc pausa a aventura.', action:'Ler a placa'},
@@ -34,7 +34,10 @@ window.IslandWorld = (() => {
     return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
   }
   const ellipse = (x,y,cx,cy,rx,ry) => ((x-cx)/rx)**2 + ((y-cy)/ry)**2;
-  function regionAt(x,y) {
+  function regionAt(x,y,fallbackId='center') {
+    if(typeof getIslandRegion==='function'){
+      return getIslandRegion(x/WORLD_SCALE,y/WORLD_SCALE,fallbackId);
+    }
     const tx=x/TILE, ty=y/TILE;
     if(ty<23 && tx>36 && tx<59)return regions[5];
     if(tx<37 && ty<39)return regions[1];

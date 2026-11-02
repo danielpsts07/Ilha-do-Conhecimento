@@ -69,6 +69,7 @@ window.IslandRenderer = (() => {
           {...a,w:l-a.x},{...a,x:r,w:a.x+a.w-r},{...a,h:t-a.y},{...a,y:d,h:a.y+a.h-d}]).filter(a=>a.w>0&&a.h>0);
       }
       for(const node of overlayNodes) {
+        if(node.classList.contains('island-place')&&!node.classList.contains('is-visible'))continue;
         const b=node.getBoundingClientRect();if(!b.width||!b.height)continue;
         reserve((b.left-bounds.left)*width/bounds.width-margin,(b.top-bounds.top)*height/bounds.height-margin,
           (b.right-bounds.left)*width/bounds.width+margin,(b.bottom-bounds.top)*height/bounds.height+margin);
@@ -404,7 +405,9 @@ window.IslandRenderer = (() => {
       world.devScreen?.draw(ctx,width,height,time);
       if(debug) {
         ctx.save();ctx.font='14px monospace';ctx.textAlign='left';ctx.textBaseline='top';
+        const curReg=(typeof getIslandRegion==='function')?getIslandRegion(player.x/WORLD_SCALE,player.y/WORLD_SCALE):IslandWorld.regionAt(player.x,player.y);
         const lines=[`x: ${(player.x/WORLD_SCALE).toFixed(0)}  y: ${(player.y/WORLD_SCALE).toFixed(0)}`,
+          `Região: ${curReg?.name||''}`,
           `Célula: ${IslandWorld.cellAt(world,player.x,player.y)?'andável':'bloqueada'}`,
           `Zoom: ${zoom.toFixed(2)}${factor>zoom+.001?` (encaixe: ${factor.toFixed(2)})`:''} [+/-]`,
           `Largura visível: ${(Math.min(1,view.width/world.width)*100).toFixed(2)}%`];
