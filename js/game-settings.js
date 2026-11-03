@@ -39,6 +39,9 @@ window.GameSettings = (() => {
     body.classList.toggle('touch-joystick',values.touch === 'joystick');
     body.classList.toggle('touch-off',values.touch === 'off');
     body.dataset.touch = values.touch;
+    body.dataset.touchMode = values.touch;
+    const screen = document.getElementById('island-screen');
+    if (screen) screen.dataset.touchMode = values.touch;
   }
   function set(key,value) {
     if (!Object.hasOwn(defaults,key)) return;

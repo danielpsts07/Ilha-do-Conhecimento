@@ -204,7 +204,7 @@ window.GameIsland = (() => {
   }
   function start() {
     if(active)return;
-    active=true;$('#home-screen').hidden=true;screen.hidden=false;document.body.classList.add('is-playing');
+    active=true;$('#home-screen').hidden=true;screen.hidden=false;document.body.classList.add('is-playing');screen.dataset.touchMode=GameSettings.touch;
     renderer.resize();updateCamera(true);updateNearby();updateProgress();lastTime=0;canvas.focus();frame=requestAnimationFrame(loop);
     if (!initialTitleShown) {
       initialTitleShown = true;
@@ -286,7 +286,12 @@ window.GameIsland = (() => {
     if(!active||blocked())return;
     renderer.renderOverview(player,camera,visited,true);showDialog(map,trigger);
   }
-  $('#island-interact').addEventListener('click',event=>interact(event.currentTarget));
+  const interactBtn=$('#island-interact');
+  if(interactBtn){
+    interactBtn.addEventListener('click',event=>interact(event.currentTarget));
+    interactBtn.addEventListener('pointerdown',()=>interactBtn.classList.add('is-pressed'));
+    for(const type of ['pointerup','pointercancel','lostpointercapture'])interactBtn.addEventListener(type,()=>interactBtn.classList.remove('is-pressed'));
+  }
   // Pausa (Esc) e mapa (M) seguem pelo teclado; os botões são opcionais no HUD imersivo.
   $('#island-pause-button')?.addEventListener('click',event=>showDialog(pause,event.currentTarget));
   $('#island-map-button')?.addEventListener('click',event=>openMap(event.currentTarget));
@@ -329,9 +334,9 @@ window.GameIsland = (() => {
   document.querySelectorAll('[data-walk]').forEach(button=>{
     button.addEventListener('pointerdown',event=>{
       if(!active||blocked())return;
-      event.preventDefault();button.focus();button.setPointerCapture(event.pointerId);press(`pointer-${event.pointerId}`,DIRS.indexOf(button.dataset.walk));
+      event.preventDefault();button.focus();button.classList.add('is-pressed');button.setPointerCapture(event.pointerId);press(`pointer-${event.pointerId}`,DIRS.indexOf(button.dataset.walk));
     });
-    for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,event=>release(`pointer-${event.pointerId}`));
+    for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,event=>{button.classList.remove('is-pressed');release(`pointer-${event.pointerId}`);});
     // Enter/Espaço no botão: segura o tempo de virar e dar um passo.
     button.addEventListener('click',event=>{
       if(event.detail!==0||!active||blocked())return;

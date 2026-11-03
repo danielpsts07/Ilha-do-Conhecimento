@@ -1035,7 +1035,42 @@ body.large-text {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   pointer-events: none;
+}
+
+.touch-demo-img {
+  width: clamp(26px, 4.2cqw, 36px);
+  height: clamp(26px, 4.2cqw, 36px);
+  object-fit: contain;
+  image-rendering: pixelated;
+  display: block;
+}
+
+.touch-demo-joystick {
+  position: relative;
+  width: clamp(26px, 4.2cqw, 36px);
+  height: clamp(26px, 4.2cqw, 36px);
+}
+
+.touch-demo-base {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  display: block;
+}
+
+.touch-demo-manche {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 50%;
+  height: 50%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  display: block;
 }
 
 .mini-key {
