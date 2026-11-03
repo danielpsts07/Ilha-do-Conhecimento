@@ -30,7 +30,7 @@
     </section>
   </main>
 
-  <section id="island-screen" class="island-screen" aria-label="Exploração da Ilha do Conhecimento" hidden>
+  <section id="island-screen" class="island-screen" data-touch-mode="arrows" aria-label="Exploração da Ilha do Conhecimento" hidden>
     <div class="island-viewport">
       <canvas id="island-canvas" tabindex="0" aria-label="Ilha explorável. Mova-se com WASD ou setas, interaja com E, abra o mapa com M e pause com Esc.">Seu navegador precisa permitir Canvas 2D para desenhar a ilha.</canvas>
       <!-- Nome do lugar no alto, ao centro. Objetivo e descobertas seguem para leitores de tela. -->
@@ -50,9 +50,9 @@
       </div>
       <button id="island-minimap-button" class="island-minimap" aria-label="Abrir mapa completo da ilha"><span>ILHA DO CONHECIMENTO <span aria-hidden="true">↗</span></span><canvas id="island-minimap" width="192" height="144" aria-hidden="true"></canvas><span class="minimap-caption"><i aria-hidden="true"></i> Você está aqui</span></button>
       <p id="island-loading" class="island-loading" role="status">Preparando sua ilha…</p>
-      <div class="island-direction-pad island-touch" role="group" aria-label="Movimento. Segure uma direção para caminhar."><button data-walk="up" aria-label="Caminhar para cima">↑</button><button data-walk="left" aria-label="Caminhar para a esquerda">←</button><button data-walk="down" aria-label="Caminhar para baixo">↓</button><button data-walk="right" aria-label="Caminhar para a direita">→</button></div>
+      <div class="island-direction-pad island-touch" role="group" aria-label="Movimento. Segure uma direção para caminhar."><button data-walk="up" aria-label="Caminhar para cima"><span class="visually-hidden">↑</span></button><button data-walk="left" aria-label="Caminhar para a esquerda"><span class="visually-hidden">←</span></button><button data-walk="down" aria-label="Caminhar para baixo"><span class="visually-hidden">↓</span></button><button data-walk="right" aria-label="Caminhar para a direita"><span class="visually-hidden">→</span></button></div>
       <div id="island-joystick" class="island-joystick island-touch" role="group" aria-label="Joystick. Arraste para caminhar."><span class="joystick-base"><span id="joystick-stick" class="joystick-stick"></span></span></div>
-      <button id="island-interact" class="island-interact island-touch" disabled><kbd>E</kbd><span id="island-interact-label">Aproxime-se de uma placa</span></button>
+      <button id="island-interact" class="island-interact island-touch" aria-label="Interagir" disabled><kbd class="visually-hidden">E</kbd><span id="island-interact-label">Aproxime-se de uma placa</span></button>
     </div>
     <p id="island-announcement" class="visually-hidden" aria-live="polite"></p>
   </section>
@@ -352,18 +352,16 @@
                     <div class="touch-choice mural-card-choices" role="radiogroup" aria-labelledby="touch-label">
                       <button class="mural-touch-card touch-option is-selected" id="touch-arrows" role="radio" aria-checked="true" data-touch="arrows">
                         <div class="touch-card-demo demo-arrows">
-                          <span class="mini-key">↑</span>
-                          <div class="mini-key-row">
-                            <span class="mini-key">←</span>
-                            <span class="mini-key">↓</span>
-                            <span class="mini-key">→</span>
-                          </div>
+                          <img src="assets/hud/controles/setas-completo.webp" alt="" class="touch-demo-img">
                         </div>
                         <span class="touch-name">Setas</span>
                       </button>
                       <button class="mural-touch-card touch-option" id="touch-joystick" role="radio" aria-checked="false" data-touch="joystick">
                         <div class="touch-card-demo demo-joystick">
-                          <span class="joystick-ring"><span class="joystick-dot"></span></span>
+                          <div class="touch-demo-joystick">
+                            <img src="assets/hud/controles/joystick-base.webp" alt="" class="touch-demo-base">
+                            <img src="assets/hud/controles/joystick-manche.webp" alt="" class="touch-demo-manche">
+                          </div>
                         </div>
                         <span class="touch-name">Joystick</span>
                       </button>
