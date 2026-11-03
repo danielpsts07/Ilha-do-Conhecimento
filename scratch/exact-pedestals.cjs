@@ -1,0 +1,131 @@
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const { spawn } = require('child_process');
+
+const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+<canvas id="c"></canvas>
+<script>
+async function run() {
+  const c = document.getElementById('c');
+  const ctx = c.getContext('2d');
+  const results = {};
+
+  const images = ['fase1_v3.webp', 'fase2_v3.webp', 'fase3_v3.webp'];
+  for (const name of images) {
+    const img = new Image();
+    await new Promise((res, rej) => {
+      img.onload = res;
+      img.onerror = rej;
+      img.src = '../assets/puzzles/labirinto/' + name;
+    });
+    c.width = img.width;
+    c.height = img.height;
+    ctx.drawImage(img, 0, 0);
+    const data = ctx.getImageData(0, 0, c.width, c.height).data;
+
+    function getPixel(x, y) {
+      const idx = (y * c.width + x) * 4;
+      return [data[idx], data[idx+1], data[idx+2], data[idx+3]];
+    }
+
+    // Measure exact bounds of pedestal given an approximate center
+    function measurePedestal(approxX, approxY) {
+      let minX = 1000, maxX = 0, minY = 1000, maxY = 0;
+      let count = 0;
+      for (let y = approxY - 50; y <= approxY + 50; y++) {
+        for (let x = approxX - 50; x <= approxX + 50; x++) {
+          const [r, g, b] = getPixel(x, y);
+          // Pedestal stone slab: gray color
+          // Distinct from green grass/hedge (g > r + 20) and tan dirt (r > b + 30)
+          const diff = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
+          const isStone = (diff < 28 && r > 115 && r < 205 && g > 120 && g < 205 && b > 130 && b < 215);
+          if (isStone) {
+            minX = Math.min(minX, x);
+            maxX = Math.max(maxX, x);
+            minY = Math.min(minY, y);
+            maxY = Math.max(maxY, y);
+            count++;
+          }
+        }
+      }
+      return { minX, maxX, minY, maxY, width: maxX - minX + 1, height: maxY - minY + 1, centerX: (minX + maxX)/2, centerY: (minY + maxY)/2, count };
+    }
+
+    if (name === 'fase1_v3.webp') {
+      results[name] = {
+        pedEsq: measurePedestal(372, 172),
+        pedDir: measurePedestal(660, 172)
+      };
+    } else if (name === 'fase2_v3.webp') {
+      results[name] = {
+        pedTopo: measurePedestal(516, 84),
+        pedEsq: measurePedestal(372, 172),
+        pedDir: measurePedestal(660, 172)
+      };
+    } else if (name === 'fase3_v3.webp') {
+      results[name] = {
+        pedTopoEsq: measurePedestal(428, 84),
+        pedTopoDir: measurePedestal(604, 84),
+        pedEsq: measurePedestal(368, 172),
+        pedDir: measurePedestal(664, 172)
+      };
+    }
+  }
+
+  fetch('/result', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(results, null, 2)
+  });
+}
+run();
+</script>
+</body>
+</html>`;
+
+fs.writeFileSync('scratch/exact-pedestals.html', html);
+
+const server = http.createServer((req, res) => {
+  if (req.method === 'POST' && req.url === '/result') {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      console.log('EXACT_PEDESTALS:\n', body);
+      res.writeHead(200);
+      res.end('OK');
+      process.exit(0);
+    });
+    return;
+  }
+  let filePath = path.join(__dirname, '..', req.url.split('?')[0]);
+  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+    filePath = path.join(filePath, 'index.html');
+  }
+  if (fs.existsSync(filePath)) {
+    const ext = path.extname(filePath);
+    const mime = ext === '.html' ? 'text/html' : ext === '.js' ? 'text/javascript' : ext === '.webp' ? 'image/webp' : 'application/octet-stream';
+    res.writeHead(200, { 'Content-Type': mime });
+    fs.createReadStream(filePath).pipe(res);
+  } else {
+    res.writeHead(404);
+    res.end('Not found');
+  }
+});
+
+server.listen(8091, () => {
+  console.log('Server listening on http://localhost:8091');
+  spawn('C:/Program Files/Google/Chrome/Application/chrome.exe', [
+    '--headless=new',
+    '--disable-gpu',
+    'http://localhost:8091/scratch/exact-pedestals.html'
+  ]);
+  setTimeout(() => {
+    console.log('Timeout');
+    process.exit(1);
+  }, 10000);
+});
+

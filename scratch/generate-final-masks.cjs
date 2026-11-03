@@ -1,0 +1,193 @@
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const { spawn } = require('child_process');
+
+const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+<canvas id="c"></canvas>
+<canvas id="mc"></canvas>
+<script>
+async function run() {
+  const c = document.getElementById('c');
+  const ctx = c.getContext('2d');
+  const mc = document.getElementById('mc');
+  const mctx = mc.getContext('2d');
+
+  const results = {};
+
+  for (let phaseNum = 1; phaseNum <= 3; phaseNum++) {
+    const name = 'fase' + phaseNum + '_v3.webp';
+    const img = new Image();
+    await new Promise(r => { img.onload = r; img.src = '../assets/puzzles/labirinto/' + name; });
+    const W = img.width, H = img.height;
+    c.width = mc.width = W;
+    c.height = mc.height = H;
+    ctx.drawImage(img, 0, 0);
+    const data = ctx.getImageData(0, 0, W, H).data;
+
+    function isPath(x, y) {
+      if (x < 1 || x >= W - 1 || y < 1 || y >= H - 1) return false;
+
+      // Pedestals are 100% walkable
+      // Left pedestal: x ~ 330..408, y ~ 135..212
+      if (x >= 330 && x <= 408 && y >= 135 && y <= 212) return true;
+      // Right pedestal: x ~ 624..702, y ~ 135..212
+      if (x >= 624 && x <= 702 && y >= 135 && y <= 212) return true;
+      // Top pedestal (phase 2): x ~ 475..555, y ~ 45..120
+      if (phaseNum === 2 && x >= 475 && x <= 555 && y >= 45 && y <= 120) return true;
+      // Top pedestals (phase 3): x ~ 390..468, y ~ 45..120 and x ~ 562..642, y ~ 45..120
+      if (phaseNum === 3 && ((x >= 390 && x <= 468 && y >= 45 && y <= 120) || (x >= 562 && x <= 642 && y >= 45 && y <= 120))) return true;
+
+      // Under arches:
+      // Left arch: x ~ 180..235, y ~ 145..200
+      if (x >= 180 && x <= 235 && y >= 145 && y <= 200) return true;
+      // Right arch: x ~ 805..865, y ~ 145..200
+      if (x >= 805 && x <= 865 && y >= 145 && y <= 200) return true;
+      // Top arch phase 2: x ~ 490..545, y ~ 10..80
+      if (phaseNum === 2 && x >= 490 && x <= 545 && y >= 10 && y <= 80) return true;
+      // Top arches phase 3: x ~ 395..450, y ~ 10..80 and x ~ 575..635, y ~ 10..80
+      if (phaseNum === 3 && ((x >= 395 && x <= 450 && y >= 10 && y <= 80) || (x >= 575 && x <= 635 && y >= 10 && y <= 80))) return true;
+
+      const i = (y * W + x) * 4;
+      const r = data[i], g = data[i+1], b = data[i+2];
+
+      // Green vegetation check (hedges, trees, grass):
+      const isGreen = (g > r + 8 && g > b + 12) || (g > 105 && r < 115 && b < 105);
+      const isDarkGreen = (r < 90 && g < 125 && b < 90);
+      if (isGreen || isDarkGreen) return false;
+
+      // Stone:
+      const maxDiff = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
+      const isStone = (maxDiff < 32 && r > 70 && r < 215 && g > 75 && g < 215 && b > 80 && b < 225);
+
+      // Dirt:
+      const isDirt = (r > 140 && g > 115 && b > 65 && b < 195 && r >= g - 8 && r > b + 15);
+      const isShadowDirt = (r > 95 && g > 75 && b > 45 && b < 155 && r > b + 12);
+
+      return isStone || isDirt || isShadowDirt;
+    }
+
+    // Flood fill from spawn (512, 400)
+    const visited = new Uint8Array(W * H);
+    const q = [400 * W + 512];
+    visited[400 * W + 512] = 1;
+    let head = 0;
+    while (head < q.length) {
+      const idx = q[head++];
+      const cx = idx % W, cy = Math.floor(idx / W);
+      for (const n of [cy > 0 ? idx - W : -1, cy < H - 1 ? idx + W : -1, cx > 0 ? idx - 1 : -1, cx < W - 1 ? idx + 1 : -1]) {
+        if (n >= 0 && !visited[n] && isPath(n % W, Math.floor(n / W))) {
+          visited[n] = 1;
+          q.push(n);
+        }
+      }
+    }
+
+    // Build the mask ImageData (RGBA)
+    const maskImgData = mctx.createImageData(W, H);
+    const maskData = maskImgData.data;
+    let walkableCount = 0;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 4;
+        if (visited[y * W + x]) {
+          maskData[i] = 255;
+          maskData[i+1] = 255;
+          maskData[i+2] = 255;
+          maskData[i+3] = 255;
+          walkableCount++;
+        } else {
+          maskData[i] = 0;
+          maskData[i+1] = 0;
+          maskData[i+2] = 0;
+          maskData[i+3] = 0;
+        }
+      }
+    }
+    mctx.putImageData(maskImgData, 0, 0);
+    const dataUrl = mc.toDataURL('image/png');
+
+    // Build 8px cell grid
+    const cell = 8;
+    const cols = Math.ceil(W / cell); // 128
+    const rows = Math.ceil(H / cell); // 55
+    const gridRows = [];
+    for (let r = 0; r < rows; r++) {
+      let rowStr = '';
+      for (let cl = 0; cl < cols; cl++) {
+        let white = 0, total = 0;
+        for (let dy = 0; dy < cell; dy++) {
+          const py = r * cell + dy;
+          if (py >= H) continue;
+          for (let dx = 0; dx < cell; dx++) {
+            const px = cl * cell + dx;
+            if (px >= W) continue;
+            total++;
+            if (visited[py * W + px]) white++;
+          }
+        }
+        rowStr += (total > 0 && white / total >= 0.4) ? '1' : '0';
+      }
+      gridRows.push(rowStr);
+    }
+
+    results['fase' + phaseNum] = {
+      width: W,
+      height: H,
+      walkablePixels: walkableCount,
+      walkablePercentage: (walkableCount / (W * H) * 100).toFixed(2),
+      dataUrl,
+      cols,
+      rows,
+      cell,
+      gridRows
+    };
+  }
+
+  fetch('/result', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(results)
+  });
+}
+run();
+</script>
+</body>
+</html>`;
+
+fs.writeFileSync('scratch/generate-final-masks.html', html);
+
+const server = http.createServer((req, res) => {
+  if (req.method === 'POST' && req.url === '/result') {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      const parsed = JSON.parse(body);
+      for (let i = 1; i <= 3; i++) {
+        const info = parsed['fase' + i];
+        console.log('Fase ' + i + ': ' + info.width + 'x' + info.height + ', walkable: ' + info.walkablePixels + ' px (' + info.walkablePercentage + '%)');
+        const base64Data = info.dataUrl.replace(/^data:image\/png;base64,/, '');
+        fs.writeFileSync('assets/puzzles/labirinto/fase' + i + '_mascara.png', base64Data, 'base64');
+        console.log('Saved assets/puzzles/labirinto/fase' + i + '_mascara.png');
+      }
+      fs.writeFileSync('scratch/final-grids.json', JSON.stringify(parsed, null, 2));
+      res.writeHead(200); res.end('OK'); process.exit(0);
+    });
+    return;
+  }
+  let filePath = path.join(__dirname, '..', req.url.split('?')[0]);
+  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) filePath = path.join(filePath, 'index.html');
+  if (fs.existsSync(filePath)) {
+    const ext = path.extname(filePath);
+    res.writeHead(200, { 'Content-Type': ext === '.html' ? 'text/html' : 'application/octet-stream' });
+    fs.createReadStream(filePath).pipe(res);
+  }
+});
+
+server.listen(8088, () => {
+  spawn('C:/Program Files/Google/Chrome/Application/chrome.exe', ['--headless=new', '--disable-gpu', 'http://localhost:8088/scratch/generate-final-masks.html']);
+});
+

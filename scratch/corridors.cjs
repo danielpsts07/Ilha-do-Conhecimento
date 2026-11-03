@@ -1,0 +1,132 @@
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const { spawn } = require('child_process');
+
+const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+<canvas id="c"></canvas>
+<script>
+async function run() {
+  const c = document.getElementById('c');
+  const ctx = c.getContext('2d');
+  const results = {};
+
+  const images = ['fase1_v3.webp', 'fase2_v3.webp', 'fase3_v3.webp'];
+  for (const name of images) {
+    const img = new Image();
+    await new Promise((res, rej) => {
+      img.onload = res;
+      img.onerror = rej;
+      img.src = '../assets/puzzles/labirinto/' + name;
+    });
+    c.width = img.width;
+    c.height = img.height;
+    ctx.drawImage(img, 0, 0);
+    const data = ctx.getImageData(0, 0, c.width, c.height).data;
+
+    function isPath(x, y) {
+      if (x < 0 || x >= c.width || y < 0 || y >= c.height) return false;
+      const idx = (y * c.width + x) * 4;
+      const r = data[idx], g = data[idx+1], b = data[idx+2];
+      // Tan dirt path or gray stone
+      const isDirt = (r > 175 && g > 150 && b > 95 && b < 190 && r > b + 20);
+      const diff = Math.max(Math.abs(r-g), Math.abs(g-b), Math.abs(r-b));
+      const isStone = (diff < 30 && r > 115 && r < 210 && g > 120 && g < 210 && b > 130 && b < 220);
+      // Under arches: slightly shadowed dirt or wood
+      const isArchShadow = (r > 120 && r < 185 && g > 100 && g < 165 && b > 70 && b < 140 && r > b + 15);
+      return isDirt || isStone || isArchShadow;
+    }
+
+    // Measure vertical width of horizontal corridors
+    // Left corridor at x = 100, 200, 280
+    function measureVertical(x) {
+      let minY = 1000, maxY = 0;
+      for (let y = 50; y < 300; y++) {
+        if (isPath(x, y)) {
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+        }
+      }
+      return { x, minY, maxY, height: maxY - minY + 1 };
+    }
+
+    // Measure horizontal width of vertical corridors
+    function measureHorizontal(y, minScanX = 400, maxScanX = 650) {
+      let minX = 1000, maxX = 0;
+      for (let x = minScanX; x < maxScanX; x++) {
+        if (isPath(x, y)) {
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+        }
+      }
+      return { y, minX, maxX, width: maxX - minX + 1 };
+    }
+
+    results[name] = {
+      leftCorridor_x100: measureVertical(100),
+      leftCorridor_x200: measureVertical(200),
+      leftCorridor_x280: measureVertical(280),
+      rightCorridor_x750: measureVertical(750),
+      rightCorridor_x850: measureVertical(850),
+      rightCorridor_x950: measureVertical(950),
+      bottomCorridor_y380: measureHorizontal(380, 450, 580),
+      bottomCorridor_y410: measureHorizontal(410, 450, 580)
+    };
+  }
+
+  fetch('/result', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(results, null, 2)
+  });
+}
+run();
+</script>
+</body>
+</html>`;
+
+fs.writeFileSync('scratch/corridors.html', html);
+
+const server = http.createServer((req, res) => {
+  if (req.method === 'POST' && req.url === '/result') {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      console.log('CORRIDORS:\n', body);
+      res.writeHead(200);
+      res.end('OK');
+      process.exit(0);
+    });
+    return;
+  }
+  let filePath = path.join(__dirname, '..', req.url.split('?')[0]);
+  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+    filePath = path.join(filePath, 'index.html');
+  }
+  if (fs.existsSync(filePath)) {
+    const ext = path.extname(filePath);
+    const mime = ext === '.html' ? 'text/html' : ext === '.js' ? 'text/javascript' : ext === '.webp' ? 'image/webp' : 'application/octet-stream';
+    res.writeHead(200, { 'Content-Type': mime });
+    fs.createReadStream(filePath).pipe(res);
+  } else {
+    res.writeHead(404);
+    res.end('Not found');
+  }
+});
+
+server.listen(8092, () => {
+  console.log('Server listening on http://localhost:8092');
+  spawn('C:/Program Files/Google/Chrome/Application/chrome.exe', [
+    '--headless=new',
+    '--disable-gpu',
+    'http://localhost:8092/scratch/corridors.html'
+  ]);
+  setTimeout(() => {
+    console.log('Timeout');
+    process.exit(1);
+  }, 10000);
+});
+

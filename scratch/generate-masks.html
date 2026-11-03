@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+<canvas id="c"></canvas>
+<canvas id="maskCanvas"></canvas>
+<script>
+async function run() {
+  const c = document.getElementById('c');
+  const ctx = c.getContext('2d');
+  const mc = document.getElementById('maskCanvas');
+  const mctx = mc.getContext('2d');
+
+  const images = ['fase1_v3.webp', 'fase2_v3.webp', 'fase3_v3.webp'];
+  const results = {};
+
+  for (let idx = 0; idx < images.length; idx++) {
+    const name = images[idx];
+    const phaseNum = idx + 1;
+    const img = new Image();
+    await new Promise((res, rej) => {
+      img.onload = res;
+      img.onerror = rej;
+      img.src = '../assets/puzzles/labirinto/' + name;
+    });
+
+    const W = img.width; // 1024
+    const H = img.height; // 434
+    c.width = mc.width = W;
+    c.height = mc.height = H;
+
+    ctx.drawImage(img, 0, 0);
+    const imgData = ctx.getImageData(0, 0, W, H);
+    const data = imgData.data;
+
+    const maskImgData = mctx.createImageData(W, H);
+    const maskData = maskImgData.data;
+
+    function isWalkablePixel(x, y) {
+      // Image bounds (leave 1px border at exits so character stops at screen edge)
+      if (x < 1 || x >= W - 1 || y < 1 || y >= H - 1) return false;
+
+      const i = (y * W + x) * 4;
+      const r = data[i], g = data[i+1], b = data[i+2];
+
+      // Green vegetation check (hedges, trees, grass borders):
+      const isGreen = (g > r + 10 && g > b + 15) || (g > 110 && r < 120 && b < 110);
+      const isDarkFoliage = (r < 95 && g < 130 && b < 95);
+
+      // Under horizontal arches (left arch x: 180..235, y: 148..198; right arch x: 805..865, y: 148..198)
+      if ((x >= 180 && x <= 235 && y >= 148 && y <= 198) ||
+          (x >= 805 && x <= 865 && y >= 148 && y <= 198)) {
+        if (!isGreen && !isDarkFoliage) return true;
+      }
+
+      // Under top arches (Fase 2 x: 495..545, y: 10..75; Fase 3 x: 395..455, y: 10..75 and x: 575..635, y: 10..75)
+      if (phaseNum === 2 && x >= 495 && x <= 545 && y >= 10 && y <= 75) {
+        if (!isGreen && !isDarkFoliage) return true;
+      }
+      if (phaseNum === 3 && ((x >= 395 && x <= 455 && y >= 10 && y <= 75) || (x >= 575 && x <= 635 && y >= 10 && y <= 75))) {
+        if (!isGreen && !isDarkFoliage) return true;
+      }
+
+      if (isGreen || isDarkFoliage) return false;
+
+      // Pedestal stone check:
+      const maxDiff = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
+      if (maxDiff < 30 && r > 110 && r < 215 && g > 115 && g < 215 && b > 125 && b < 225) {
+        return true;
+      }
+
+      // Dirt path check:
+      if (r > 160 && g > 135 && b > 80 && b < 195 && r >= g - 6 && r > b + 18) {
+        return true;
+      }
+
+      // Slightly shadowed dirt (near hedges/arches):
+      if (r > 120 && g > 100 && b > 60 && b < 155 && r > g - 4 && r > b + 15) {
+        return true;
+      }
+
+      return false;
+    }
+
+    // Pass 1: raw walkability
+    const rawWalk = new Uint8Array(W * H);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (isWalkablePixel(x, y)) {
+          rawWalk[y * W + x] = 1;
+        }
+      }
+    }
+
+    // Also guarantee 100% solidity for the stone pedestals BEFORE flood fill
+    function fillPedestal(cx, cy, radius = 36) {
+      for (let y = cy - radius; y <= cy + radius; y++) {
+        for (let x = cx - radius; x <= cx + radius; x++) {
+          if (x >= 0 && x < W && y >= 0 && y < H) {
+            rawWalk[y * W + x] = 1;
+          }
+        }
+      }
+    }
+
+    if (phaseNum === 1) {
+      fillPedestal(369, 172);
+      fillPedestal(661, 171);
+    } else if (phaseNum === 2) {
+      fillPedestal(369, 171);
+      fillPedestal(662, 171);
+      fillPedestal(516, 82);
+    } else if (phaseNum === 3) {
+      fillPedestal(368, 171);
+      fillPedestal(664, 171);
+      fillPedestal(429, 82);
+      fillPedestal(602, 82);
+    }
+
+    // Pass 2: Connected component from spawn point (512, 400)
+    const connected = new Uint8Array(W * H);
+    const queue = [400 * W + 512];
+    connected[400 * W + 512] = 1;
+    let head = 0;
+    while (head < queue.length) {
+      const idx = queue[head++];
+      const cx = idx % W;
+      const cy = Math.floor(idx / W);
+
+      const neighbors = [
+        cy > 0 ? idx - W : -1,
+        cy < H - 1 ? idx + W : -1,
+        cx > 0 ? idx - 1 : -1,
+        cx < W - 1 ? idx + 1 : -1
+      ];
+
+      for (const n of neighbors) {
+        if (n >= 0 && rawWalk[n] && !connected[n]) {
+          connected[n] = 1;
+          queue.push(n);
+        }
+      }
+    }
+
+    // Populate maskImgData
+    let walkableCount = 0;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 4;
+        if (connected[y * W + x]) {
+          maskData[i] = 255;
+          maskData[i+1] = 255;
+          maskData[i+2] = 255;
+          maskData[i+3] = 255;
+          walkableCount++;
+        } else {
+          maskData[i] = 0;
+          maskData[i+1] = 0;
+          maskData[i+2] = 0;
+          maskData[i+3] = 0;
+        }
+      }
+    }
+
+    mctx.putImageData(maskImgData, 0, 0);
+    const dataUrl = mc.toDataURL('image/png');
+
+    function buildGridRows(cell) {
+      const cols = Math.ceil(W / cell);
+      const rows = Math.ceil(H / cell);
+      const gridRows = [];
+      for (let r = 0; r < rows; r++) {
+        let rowStr = '';
+        for (let c = 0; c < cols; c++) {
+          let white = 0, total = 0;
+          for (let dy = 0; dy < cell; dy++) {
+            const py = r * cell + dy;
+            if (py >= H) continue;
+            for (let dx = 0; dx < cell; dx++) {
+              const px = c * cell + dx;
+              if (px >= W) continue;
+              total++;
+              if (connected[py * W + px]) white++;
+            }
+          }
+          rowStr += (total > 0 && white / total >= 0.5) ? '1' : '0';
+        }
+        gridRows.push(rowStr);
+      }
+      return { cols, rows, cell, gridRows };
+    }
+
+    results['fase' + phaseNum] = {
+      width: W,
+      height: H,
+      walkablePixels: walkableCount,
+      walkablePercentage: (walkableCount / (W * H) * 100).toFixed(2),
+      dataUrl,
+      grid8: buildGridRows(8)
+    };
+  }
+
+  fetch('/result', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(results)
+  });
+}
+run();
+</script>
+</body>
+</html>

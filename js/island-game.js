@@ -20,7 +20,7 @@ window.GameIsland = (() => {
   // Devagar 16, Normal 12, Rápido 8 ticks por passo (fatores em game-settings.js).
   const ticksPerTile=()=>Math.round(TICKS_PER_TILE/(window.GameSettings?.walkSpeed||1));
   const TICK_MS=1000/TICK_HZ;
-  let active=false,loaded=false,frame=0,lastTime=0,acc=0,near=null,currentRegion='center',dialogTrigger=null,foundCat=false;
+  let active=false,loaded=false,frame=0,lastTime=0,acc=0,near=null,currentRegion='center',dialogTrigger=null,foundCat=false,titleTimer=null,initialTitleShown=false,regionCandidate=null,regionCandidateMs=0;
   const inChallenge=()=>Boolean(window.PuzzleGame?.active||window.GameRescue?.active);
   const blocked=()=>!loaded||document.hidden||inChallenge()||dev?.active||dialogs.some(dialog=>dialog.open);
   function updateProgress() {
@@ -106,13 +106,75 @@ window.GameIsland = (() => {
     camera.x=Math.max(0,Math.min(Math.max(0,world.width-renderer.width),camera.x));
     camera.y=Math.max(0,Math.min(Math.max(0,world.height-renderer.height),camera.y));
   }
-  function updateLocation() {
-    const region=IslandWorld.regionAt(player.x,player.y);
-    if(region.id===currentRegion)return;
-    currentRegion=region.id;$('#island-region').textContent=region.name;
-    if(!visited.has(region.id)) {
-      visited.add(region.id);$('#island-discovery').textContent=`${visited.size} de 6 lugares descobertos`;
-      $('#island-announcement').textContent=`Você descobriu: ${region.name}. ${visited.size} de 6 lugares.`;
+  function showRegionTitle(name) {
+    const place = document.querySelector('.island-place');
+    const titleEl = document.querySelector('#island-region');
+    if (!place || !titleEl) return;
+    if (titleTimer) {
+      clearTimeout(titleTimer);
+      titleTimer = null;
+    }
+    titleEl.textContent = name;
+    place.classList.add('is-visible');
+    titleTimer = setTimeout(() => {
+      place.classList.remove('is-visible');
+      titleTimer = null;
+    }, 5000);
+  }
+  function commitRegion(region) {
+    if (!region || region.id === currentRegion) return;
+    currentRegion = region.id;
+    if (!visited.has(region.id)) {
+      visited.add(region.id);
+      const disc = $('#island-discovery');
+      if (disc) disc.textContent = `${visited.size} de 6 lugares descobertos`;
+      const ann = $('#island-announcement');
+      if (ann) ann.textContent = `Você descobriu: ${region.name}. ${visited.size} de 6 lugares.`;
+    } else {
+      const ann = $('#island-announcement');
+      if (ann) ann.textContent = region.name;
+    }
+    showRegionTitle(region.name);
+  }
+  function updateLocation(elapsed = 0) {
+    const imgX = player.x / WORLD_SCALE, imgY = player.y / WORLD_SCALE;
+    const raw = (typeof getRawIslandRegion === 'function')
+      ? getRawIslandRegion(imgX, imgY)
+      : IslandWorld.regionAt(player.x, player.y);
+
+    if (!raw) {
+      regionCandidate = null;
+      regionCandidateMs = 0;
+      return;
+    }
+
+    if (raw.id === currentRegion) {
+      regionCandidate = null;
+      regionCandidateMs = 0;
+      return;
+    }
+
+    const dist = (typeof getIslandZoneDistance === 'function')
+      ? getIslandZoneDistance(raw, imgX, imgY)
+      : 24;
+
+    if (dist >= 24) {
+      commitRegion(raw);
+      regionCandidate = null;
+      regionCandidateMs = 0;
+      return;
+    }
+
+    if (regionCandidate && regionCandidate.id === raw.id) {
+      regionCandidateMs += (elapsed || TICK_MS);
+      if (regionCandidateMs >= 150) {
+        commitRegion(raw);
+        regionCandidate = null;
+        regionCandidateMs = 0;
+      }
+    } else {
+      regionCandidate = raw;
+      regionCandidateMs = (elapsed || TICK_MS);
     }
   }
   function updateNearby() {
@@ -134,7 +196,7 @@ window.GameIsland = (() => {
       // Passo fixo: a lógica roda exatamente 60 vezes por segundo, qualquer que seja a taxa da tela.
       acc+=elapsed;
       while(acc>=TICK_MS-1e-6){tick();acc-=TICK_MS;} // 1e-6 absorve o arredondamento de 1000/60
-      updateLocation();updateNearby();
+      updateLocation(elapsed);updateNearby();
     }
     updateCamera(false,dt);renderer.draw(player,camera,near,time,calmMotion(),visited);
     if(loaded)window.preloadPuzzles?.(()=>active&&!blocked());
@@ -144,9 +206,27 @@ window.GameIsland = (() => {
     if(active)return;
     active=true;$('#home-screen').hidden=true;screen.hidden=false;document.body.classList.add('is-playing');
     renderer.resize();updateCamera(true);updateNearby();updateProgress();lastTime=0;canvas.focus();frame=requestAnimationFrame(loop);
+    if (!initialTitleShown) {
+      initialTitleShown = true;
+      const initialRegion = (typeof getIslandRegion === 'function')
+        ? getIslandRegion(player.x / WORLD_SCALE, player.y / WORLD_SCALE, 'center')
+        : { id: 'center', name: 'Praça do Portal' };
+      currentRegion = initialRegion.id;
+      showRegionTitle(initialRegion.name);
+      const ann = $('#island-announcement');
+      if (ann) ann.textContent = initialRegion.name;
+    }
   }
   function stop() {
     dev?.close();
+    if (titleTimer) {
+      clearTimeout(titleTimer);
+      titleTimer = null;
+    }
+    const place = document.querySelector('.island-place');
+    if (place) place.classList.remove('is-visible');
+    regionCandidate = null;
+    regionCandidateMs = 0;
     active=false;cancelAnimationFrame(frame);clearInput();lastTime=0;
     window.PuzzleGame?.stop();window.GameRescue?.stop();
     for(const dialog of [info,pause,map])if(dialog.open)dialog.close();
@@ -298,5 +378,6 @@ window.GameIsland = (() => {
     if(active)updateCamera(true);
     if(renderer.failed.length)$('#island-loading').textContent='Algumas imagens não abriram. Confira se a pasta assets está junto do index.html.';
   });
-  return {start,stop,get active(){return active;}};
+  function teleport(imgX,imgY){player.x=imgX*WORLD_SCALE;player.y=imgY*WORLD_SCALE;player.moving=false;updateCamera(true);updateLocation(16);}
+  return {start,stop,teleport,get active(){return active;}};
 })();

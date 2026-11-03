@@ -5,9 +5,15 @@ body.is-playing::before { background:#253d36; filter:none; }
 .island-viewport { position:absolute; inset:0; overflow:hidden; background:#55acbc; }
 #island-canvas { display:block; width:100%; height:100%; image-rendering:pixelated; outline-offset:-5px; }#island-canvas:focus-visible { outline:3px solid #ffe3a366; }
 
-/* Nome do lugar: alto, ao centro. */
-.island-place { pointer-events:none; position:absolute; top:14px; left:50%; transform:translateX(-50%); max-width:min(46vw,520px); padding:8px 22px; background:#f4e3b9f2; color:#544734; border:2px solid #927859; border-radius:6px; box-shadow:3px 4px #344a4033; text-align:center; }
+/* Nome do lugar: alto, ao centro. Aparece por 5 s ao entrar em uma nova região. */
+.island-place { pointer-events:none; position:absolute; top:14px; left:50%; transform:translateX(-50%); max-width:min(46vw,520px); padding:8px 22px; background:#f4e3b9f2; color:#544734; border:2px solid #927859; border-radius:6px; box-shadow:3px 4px #344a4033; text-align:center; opacity:0; visibility:hidden; transition:opacity 400ms ease, visibility 400ms ease; }
+.island-place.is-visible { opacity:1; visibility:visible; transition:opacity 300ms ease, visibility 300ms ease; }
 .island-place h1 { margin:0; padding:0; font-size:22px; line-height:1.15; letter-spacing:-.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+@media (prefers-reduced-motion: reduce) {
+  .island-place, .island-place.is-visible { transition:none !important; }
+}
+body.calm-motion .island-place, body.calm-motion .island-place.is-visible { transition:none !important; }
+body.large-text .island-place h1 { font-size:26px; }
 
 /* Engrenagem: canto superior direito, ao lado do minimapa. */
 .island-gear { position:absolute; top:14px; right:14px; width:54px; height:54px; padding:0; border:0; background:none; line-height:0; transition:transform .15s,filter .15s; }
