@@ -5,15 +5,46 @@ window.GameIsland = (() => {
   const screen = $('#island-screen'), canvas = $('#island-canvas');
   const world = IslandWorld.create();
   const renderer = IslandRenderer.create(canvas, $('#island-minimap'), $('#island-map'), world);
-  // dir: 0 baixo, 1 esquerda, 2 direita, 3 cima (mesma ordem das linhas da folha).
-  const DIRS = ['down', 'left', 'right', 'up'], DX = [0, -1, 1, 0], DY = [1, 0, 0, -1];
-  const player = { ...world.spawn, facing: 'down', dir: 0, moving: false, frame: HeroAnimation.IDLE, steps: 0, idle: 0, prog: 0, dur: 0, walk: 0, turn: 0, was: false, fromX: 0, fromY: 0, toX: 0, toY: 0 }, camera = { x: 0, y: 0 };
+  const INV_SQRT2 = 1 / Math.SQRT2;
+  const DIRS = ['down', 'left', 'right', 'up', 'down-left', 'down-right', 'up-left', 'up-right'];
+  const DIRS_PT = ['baixo', 'esquerda', 'direita', 'cima', 'baixo-esq', 'baixo-dir', 'cima-esq', 'cima-dir'];
+  const DX = [0, -1, 1, 0, -INV_SQRT2, INV_SQRT2, -INV_SQRT2, INV_SQRT2];
+  const DY = [1, 0, 0, -1, INV_SQRT2, INV_SQRT2, -INV_SQRT2, -INV_SQRT2];
+  const player = {
+    ...world.spawn,
+    facing: 'down',
+    dir: 0,
+    moving: false,
+    frame: HeroAnimation.IDLE,
+    steps: 0,
+    idle: 0,
+    prog: 0,
+    dur: 0,
+    walk: 0,
+    turn: 0,
+    was: false,
+    fromX: 0,
+    fromY: 0,
+    toX: 0,
+    toY: 0,
+    intentName: '(nenhuma)',
+    switchesPerSec: 0
+  }, camera = { x: 0, y: 0 };
   const dev = world.devScreen = window.DevPuzzleScreen?.create(canvas, world, clearInput);
-  // held guarda a ordem das direções seguradas: a última pressionada manda (como nos Pokémon 2D).
-  const visited = new Set(['center']), held = [], pointers = new Map();
+  const visited = new Set(['center']), pointers = new Map();
+  const heldCodes = new Set();
+  const touchWalkHeld = new Set();
+  const transitionHistory = [];
+  const MOVEMENT_CODES = new Set([
+    'KeyW', 'KeyA', 'KeyS', 'KeyD',
+    'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'
+  ]);
+  const KEY_FALLBACK_TO_CODE = {
+    w: 'KeyW', a: 'KeyA', s: 'KeyS', d: 'KeyD',
+    arrowup: 'ArrowUp', arrowleft: 'ArrowLeft', arrowdown: 'ArrowDown', arrowright: 'ArrowRight'
+  };
   const info = $('#island-info-dialog'), pause = $('#island-pause-dialog'), map = $('#island-map-dialog');
   const dialogs = Array.from(document.querySelectorAll('dialog'));
-  const directionKeys = { w: 'up', a: 'left', s: 'down', d: 'right', arrowup: 'up', arrowleft: 'left', arrowdown: 'down', arrowright: 'right' };
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   // Preferências do livro de configurações: "Menos animações" e velocidade da caminhada.
   const calmMotion = () => reducedMotion.matches || Boolean(window.GameSettings?.calm);
@@ -42,62 +73,284 @@ window.GameIsland = (() => {
     clearInput(); screen.hidden = false; renderer.resize(); updateCamera(true); lastTime = 0;
     updateProgress(); (trigger || canvas).focus();
   }
-  function clearInput() {
-    held.length = 0; pointers.clear(); resetJoystick();
-    // Para no ponto atual do passo: o mapa não é uma grade fixa, então não há salto.
-    Object.assign(player, { moving: false, prog: 0, walk: 0, turn: 0, was: false, steps: 0, idle: 0, frame: HeroAnimation.IDLE });
+  let joystickSector = null;
+  const SECTOR_CENTERS = [90, 180, 0, 270, 135, 45, 225, 315]; // dir index -> deg
+  const ANGLE_TO_DIR = [2, 5, 0, 4, 1, 6, 3, 7]; // 45° sectors around [0, 45, 90, 135, 180, 225, 270, 315]
+
+  function angleDiff(a, b) {
+    let d = (a - b + 180) % 360 - 180;
+    return d < -180 ? d + 360 : d;
   }
-  function press(id, dir) { release(id); held.push({ id, dir }); }
-  function release(id) { const i = held.findIndex(entry => entry.id === id); if (i > -1) held.splice(i, 1); }
-  function wantedDir() {
-    // Joystick: direção dominante do vetor (4 direções, sem diagonal).
+
+  function resolveJoystickDir(vx, vy) {
+    if (Math.hypot(vx, vy) < 0.20) {
+      joystickSector = null;
+      return null;
+    }
+    const deg = (Math.atan2(vy, vx) * 180 / Math.PI + 360) % 360;
+    // Histerese angular pequena de ≈ 6° (margem nominal 22.5° + 6° = 28.5°) para não oscilar na fronteira
+    if (joystickSector !== null) {
+      const center = SECTOR_CENTERS[joystickSector];
+      if (Math.abs(angleDiff(deg, center)) <= 28.5) return joystickSector;
+    }
+    const sectorIdx = Math.floor(((deg + 22.5) % 360) / 45);
+    joystickSector = ANGLE_TO_DIR[sectorIdx];
+    return joystickSector;
+  }
+
+  function recordDirectionSwitch() {
+    const now = performance.now();
+    transitionHistory.push(now);
+    while (transitionHistory.length > 0 && now - transitionHistory[0] > 1000) {
+      transitionHistory.shift();
+    }
+    player.switchesPerSec = transitionHistory.length;
+  }
+
+  function updateSwitchesPerSec() {
+    const now = performance.now();
+    while (transitionHistory.length > 0 && now - transitionHistory[0] > 1000) {
+      transitionHistory.shift();
+    }
+    player.switchesPerSec = transitionHistory.length;
+  }
+
+  function clearInput() {
+    joystickSector = null;
+    heldCodes.clear();
+    touchWalkHeld.clear();
+    pointers.clear();
+    resetJoystick();
+    // Para no ponto atual do passo: o mapa não é uma grade fixa, então não há salto.
+    Object.assign(player, { moving: false, prog: 0, walk: 0, turn: 0, was: false, steps: 0, idle: 0, frame: HeroAnimation.IDLE, intentName: '(nenhuma)' });
+  }
+
+  function computeIntent() {
+    // 1. Joystick analógico: se ativo fora da zona morta (20%), ele define a intenção
     for (const value of pointers.values()) {
       if (!value || (!value.x && !value.y)) continue;
-      return Math.abs(value.x) > Math.abs(value.y) ? (value.x > 0 ? 2 : 1) : (value.y > 0 ? 0 : 3);
+      const joyDir = resolveJoystickDir(value.x, value.y);
+      if (joyDir !== null) {
+        return { dir: joyDir, ix: Math.round(DX[joyDir]), iy: Math.round(DY[joyDir]), name: `Joystick ${DIRS_PT[joyDir]}` };
+      }
     }
-    return held.length ? held[held.length - 1].dir : null;
+
+    // 2. Teclado e data-walk: vetor dx = D - A, dy = S - W (teclas opostas se anulam)
+    const right = heldCodes.has('KeyD') || heldCodes.has('ArrowRight') || touchWalkHeld.has('right');
+    const left = heldCodes.has('KeyA') || heldCodes.has('ArrowLeft') || touchWalkHeld.has('left');
+    const down = heldCodes.has('KeyS') || heldCodes.has('ArrowDown') || touchWalkHeld.has('down');
+    const up = heldCodes.has('KeyW') || heldCodes.has('ArrowUp') || touchWalkHeld.has('up');
+
+    const ix = (right ? 1 : 0) - (left ? 1 : 0);
+    const iy = (down ? 1 : 0) - (up ? 1 : 0);
+
+    const keys = [];
+    if (up) keys.push('W');
+    if (left) keys.push('A');
+    if (down) keys.push('S');
+    if (right) keys.push('D');
+    const name = keys.length ? keys.join('+') : '(nenhuma)';
+
+    if (ix === 0 && iy === 0) return { dir: null, ix: 0, iy: 0, name };
+    if (ix === 0 && iy > 0) return { dir: 0, ix, iy, name }; // baixo
+    if (ix < 0 && iy === 0) return { dir: 1, ix, iy, name }; // esquerda
+    if (ix > 0 && iy === 0) return { dir: 2, ix, iy, name }; // direita
+    if (ix === 0 && iy < 0) return { dir: 3, ix, iy, name }; // cima
+    if (ix < 0 && iy > 0) return { dir: 4, ix, iy, name };   // baixo-esq
+    if (ix > 0 && iy > 0) return { dir: 5, ix, iy, name };   // baixo-dir
+    if (ix < 0 && iy < 0) return { dir: 6, ix, iy, name };   // cima-esq
+    if (ix > 0 && iy < 0) return { dir: 7, ix, iy, name };   // cima-dir
+    return { dir: null, ix: 0, iy: 0, name };
   }
+
   // Procura o passo: inteiro se livre; senão contorna cantos de lado; senão anda até a parede.
   function pathFree(x0, y0, x1, y1) {
     const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0)));
-    for (let i = 1; i <= n; i++)if (!IslandWorld.isWalkable(world, x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n)) return false;
+    for (let i = 1; i <= n; i++) if (!IslandWorld.isWalkable(world, x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n)) return false;
     return true;
   }
+
   function findStep(dir) {
-    const { x, y } = player, dx = DX[dir], dy = DY[dir], px = -dy, py = dx;
-    if (pathFree(x, y, x + dx * STEP_TILE, y + dy * STEP_TILE)) return { x: x + dx * STEP_TILE, y: y + dy * STEP_TILE, len: 1 };
-    for (let o = 2; o <= STEP_TILE / 2; o += 2)for (const s of [1, -1]) {
-      const lx = x + px * o * s, ly = y + py * o * s;
-      if (pathFree(x, y, lx, ly) && pathFree(lx, ly, lx + dx * STEP_TILE, ly + dy * STEP_TILE)) return { x: lx + dx * STEP_TILE, y: ly + dy * STEP_TILE, len: 1 };
+    const { x, y } = player;
+    if (dir < 4) {
+      const dx = DX[dir], dy = DY[dir], px = -dy, py = dx;
+      if (pathFree(x, y, x + dx * STEP_TILE, y + dy * STEP_TILE)) return { x: x + dx * STEP_TILE, y: y + dy * STEP_TILE, len: 1 };
+      for (let o = 2; o <= STEP_TILE / 2; o += 2) for (const s of [1, -1]) {
+        const lx = x + px * o * s, ly = y + py * o * s;
+        if (pathFree(x, y, lx, ly) && pathFree(lx, ly, lx + dx * STEP_TILE, ly + dy * STEP_TILE)) return { x: lx + dx * STEP_TILE, y: ly + dy * STEP_TILE, len: 1 };
+      }
+      let free = 0; while (free < STEP_TILE && IslandWorld.isWalkable(world, x + dx * (free + 1), y + dy * (free + 1))) free++;
+      return free >= 4 ? { x: x + dx * free, y: y + dy * free, len: free / STEP_TILE } : null;
     }
-    let free = 0; while (free < STEP_TILE && IslandWorld.isWalkable(world, x + dx * (free + 1), y + dy * (free + 1))) free++;
-    return free >= 4 ? { x: x + dx * free, y: y + dy * free, len: free / STEP_TILE } : null;
+
+    // Movimento em diagonal (fator 1/√2 por eixo para velocidade linear idêntica à ortogonal)
+    const dx = DX[dir] * STEP_TILE, dy = DY[dir] * STEP_TILE;
+    const signX = DX[dir] < 0 ? -1 : 1, signY = DY[dir] < 0 ? -1 : 1;
+
+    // Prevenção de corte de quina: as duas células vizinhas e o ponto final precisam estar livres
+    const xFree = pathFree(x, y, x + dx, y);
+    const yFree = pathFree(x, y, x, y + dy);
+    const diagFree = pathFree(x, y, x + dx, y + dy);
+
+    if (xFree && yFree && diagFree) {
+      return { x: x + dx, y: y + dy, len: 1 };
+    }
+
+    // Diagonal bloqueada: deslize pelo eixo livre (resolvendo X e Y separadamente)
+    // O sprite continua sendo a direção da intenção (p.facing permanece DIRS[want])
+    const fullXFree = pathFree(x, y, x + signX * STEP_TILE, y);
+    const fullYFree = pathFree(x, y, x, y + signY * STEP_TILE);
+
+    if (fullXFree && !fullYFree) {
+      return { x: x + signX * STEP_TILE, y, len: 1 };
+    }
+    if (fullYFree && !fullXFree) {
+      return { x, y: y + signY * STEP_TILE, len: 1 };
+    }
+    if (fullXFree && fullYFree) {
+      return { x: x + signX * STEP_TILE, y, len: 1 };
+    }
+
+    // Passo parcial em caso de colisão próxima
+    let freeX = 0;
+    while (freeX < STEP_TILE && IslandWorld.isWalkable(world, x + signX * (freeX + 1), y)) freeX++;
+    if (freeX >= 4) return { x: x + signX * freeX, y, len: freeX / STEP_TILE };
+
+    let freeY = 0;
+    while (freeY < STEP_TILE && IslandWorld.isWalkable(world, x, y + signY * (freeY + 1))) freeY++;
+    if (freeY >= 4) return { x, y: y + signY * freeY, len: freeY / STEP_TILE };
+
+    return null;
   }
-  // Um tick de 1/60 s, seguindo o teste de caminhada: virar parado e passo de 16 ticks.
+
+  // Um tick de 1/60 s: direção derivada puramente do estado da entrada no tick atual.
   function advance(want) {
     const p = player;
-    if (!p.moving) {
-      if (want === null) { p.walk = 0; p.was = false; p.turn = 0; p.steps = 0; p.idle++; return; }
-      p.idle = 0;
-      if (want !== p.dir && !p.was) { p.dir = want; p.facing = DIRS[want]; p.turn = TURN_TICKS; p.walk = 0; return; }
-      if (p.turn > 0) { p.turn--; if (p.turn > 0) return; }
-      p.dir = want; p.facing = DIRS[want];
-      const step = findStep(want);
-      if (!step) { p.walk++; p.was = true; return; } // bate na parede e anda no lugar
-      Object.assign(p, { moving: true, prog: 0, dur: Math.max(1, Math.round(ticksPerTile() * step.len)), fromX: p.x, fromY: p.y, toX: step.x, toY: step.y });
+
+    // Caso 1: Sem intenção de movimento (teclas soltas / joystick na zona morta)
+    if (want === null) {
+      if (!p.moving) {
+        p.walk = 0;
+        p.was = false;
+        p.turn = 0;
+        p.steps = 0;
+        p.idle++;
+        return;
+      }
+      p.prog++;
+      p.walk = 0;
+      const t = Math.min(1, p.prog / p.dur);
+      p.x = p.fromX + (p.toX - p.fromX) * t;
+      p.y = p.fromY + (p.toY - p.fromY) * t;
+      return;
     }
-    p.prog++; p.was = true; p.walk = 0;
+
+    p.idle = 0;
+
+    // Caso 2: Em repouso absoluto (!p.moving && !p.was) - toque rápido só vira
+    if (!p.moving && !p.was) {
+      if (want !== p.dir) {
+        p.dir = want;
+        p.facing = DIRS[want];
+        p.turn = TURN_TICKS;
+        p.walk = 0;
+        recordDirectionSwitch();
+        return;
+      }
+      if (p.turn > 0) {
+        p.turn--;
+        if (p.turn > 0) return;
+      }
+      p.dir = want;
+      p.facing = DIRS[want];
+      const step = findStep(want);
+      if (!step) { p.walk++; p.was = true; return; }
+      Object.assign(p, {
+        moving: true,
+        prog: 0,
+        dur: Math.max(1, Math.round(ticksPerTile() * step.len)),
+        fromX: p.x,
+        fromY: p.y,
+        toX: step.x,
+        toY: step.y
+      });
+    }
+    // Caso 3: Mudança de direção enquanto já está em movimento (inclusive no meio de um passo)
+    // Recalcula o passo a partir da posição atual sem teleporte nem salto visual
+    else if (want !== p.dir) {
+      p.dir = want;
+      p.facing = DIRS[want];
+      p.turn = 0;
+      recordDirectionSwitch();
+
+      const step = findStep(want);
+      if (!step) {
+        p.moving = false;
+        p.walk++;
+        p.was = true;
+        return;
+      }
+      const newDur = Math.max(1, Math.round(ticksPerTile() * step.len));
+      // Preserva a fase do ciclo de caminhada da coluna de animação
+      const frac = (p.moving && p.dur > 0) ? (p.prog / p.dur) : 0;
+      const targetProg = Math.min(newDur - 1, Math.max(0, Math.round(frac * newDur)));
+      const dx = step.x - p.x;
+      const dy = step.y - p.y;
+      p.fromX = p.x - dx * (targetProg / newDur);
+      p.fromY = p.y - dy * (targetProg / newDur);
+      p.toX = p.fromX + dx;
+      p.toY = p.fromY + dy;
+      p.dur = newDur;
+      p.prog = targetProg;
+      p.moving = true;
+    }
+    // Caso 4: Continua na mesma direção
+    else if (!p.moving) {
+      const step = findStep(want);
+      if (!step) { p.walk++; p.was = true; return; }
+      Object.assign(p, {
+        moving: true,
+        prog: 0,
+        dur: Math.max(1, Math.round(ticksPerTile() * step.len)),
+        fromX: p.x,
+        fromY: p.y,
+        toX: step.x,
+        toY: step.y
+      });
+    }
+
+    p.prog++;
+    p.was = true;
+    p.walk = 0;
     const t = Math.min(1, p.prog / p.dur);
-    p.x = p.fromX + (p.toX - p.fromX) * t; p.y = p.fromY + (p.toY - p.fromY) * t;
+    p.x = p.fromX + (p.toX - p.fromX) * t;
+    p.y = p.fromY + (p.toY - p.fromY) * t;
   }
+
   function tick() {
     if (world.spawnPending) { Object.assign(player, world.spawn); world.spawnPending = false; }
-    const p = player; advance(wantedDir());
+    updateSwitchesPerSec();
+    const intent = computeIntent();
+    player.intentName = intent.name;
+    advance(intent.dir);
     // O quadro sai antes de fechar o passo, para o último quadro do passo também aparecer.
-    p.frame = HeroAnimation.column(p, calmMotion());
-    if (p.moving && p.prog >= p.dur) { p.x = p.toX; p.y = p.toY; p.moving = false; p.prog = 0; p.steps++; }
+    const p = player;
+    p.frame = HeroAnimation.column(p,calmMotion());
+    if (p.moving && p.prog >= p.dur) {
+      p.x = p.toX;
+      p.y = p.toY;
+      p.moving = false;
+      p.prog = 0;
+      p.steps++;
+    }
   }
-  function resetJoystick() { const stick = $('#joystick-stick'), joystick = $('#island-joystick'); if (stick) stick.style.transform = 'translate(-50%,-50%)'; if (joystick) joystick.classList.remove('is-active'); }
+
+  function resetJoystick() {
+    joystickSector = null;
+    const stick = $('#joystick-stick'), joystick = $('#island-joystick');
+    if (stick) stick.style.transform = 'translate(-50%,-50%)';
+    if (joystick) joystick.classList.remove('is-active');
+  }
   function updateCamera(snap, dt = 0) {
     const tx = Math.max(0, Math.min(world.width - renderer.width, player.x - renderer.width / 2));
     const ty = Math.max(0, Math.min(world.height - renderer.height, player.y - renderer.height * .58));
@@ -323,29 +576,39 @@ window.GameIsland = (() => {
       for (const id of window.AdventureProgress?.regions || []) AdventureProgress.award(id);
       updateProgress(); dev.announce('[DEV] As 4 chaves foram concedidas.'); return;
     }
-    const direction = directionKeys[key];
-    if (direction) { event.preventDefault(); if (!event.repeat) press(key, DIRS.indexOf(direction)); }
+    const code = event.code || KEY_FALLBACK_TO_CODE[key];
+    if (code && MOVEMENT_CODES.has(code)) {
+      event.preventDefault();
+      if (!event.repeat) heldCodes.add(code);
+    }
     else if (key === 'e') { event.preventDefault(); if (!event.repeat) interact(); }
     else if (key === 'm') { event.preventDefault(); if (!event.repeat) openMap(); }
     else if (key === 'f3') { event.preventDefault(); if (!event.repeat) renderer.toggleDebug(); }
     else if (key === 'escape') { event.preventDefault(); if (!event.repeat) showDialog(pause); }
   });
   document.addEventListener('keyup', event => {
-    const direction = directionKeys[event.key.toLowerCase()];
-    if (direction) release(event.key.toLowerCase());
+    const key = event.key.toLowerCase();
+    const code = event.code || KEY_FALLBACK_TO_CODE[key];
+    if (code) heldCodes.delete(code);
   });
-  // Captura garante que soltar fora do botão também encerra a caminhada.
+  // Direcional por toque (data-walk): multitoque para diagonais combinando botões
   document.querySelectorAll('[data-walk]').forEach(button => {
+    const dirName = button.dataset.walk;
     button.addEventListener('pointerdown', event => {
       if (!active || blocked()) return;
-      event.preventDefault(); button.focus(); button.classList.add('is-pressed'); button.setPointerCapture(event.pointerId); press(`pointer-${event.pointerId}`, DIRS.indexOf(button.dataset.walk));
+      event.preventDefault(); button.focus(); button.classList.add('is-pressed');
+      button.setPointerCapture(event.pointerId);
+      touchWalkHeld.add(dirName);
     });
-    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(type, event => { button.classList.remove('is-pressed'); release(`pointer-${event.pointerId}`); });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(type, () => {
+      button.classList.remove('is-pressed');
+      touchWalkHeld.delete(dirName);
+    });
     // Enter/Espaço no botão: segura o tempo de virar e dar um passo.
     button.addEventListener('click', event => {
       if (event.detail !== 0 || !active || blocked()) return;
-      press('button-tap', DIRS.indexOf(button.dataset.walk));
-      setTimeout(() => release('button-tap'), (TURN_TICKS + 2) * TICK_MS);
+      touchWalkHeld.add(dirName);
+      setTimeout(() => touchWalkHeld.delete(dirName), (TURN_TICKS + 2) * TICK_MS);
     });
   });
   // Joystick analógico: arrastar o bastão dá um vetor {x,y} dentro de pointers.
@@ -367,7 +630,7 @@ window.GameIsland = (() => {
       const len = Math.hypot(vx, vy);
       if (len > 1) { vx /= len; vy /= len; } // mantém o bastão dentro do anel
       // Pequena zona morta no centro evita andar sem querer com um toque parado.
-      const vec = Math.hypot(vx, vy) < .18 ? { x: 0, y: 0 } : { x: vx, y: vy };
+      const vec = Math.hypot(vx, vy) < 0.20 ? { x: 0, y: 0 } : { x: vx, y: vy };
       pointers.set(event.pointerId, vec); setStick(vec.x, vec.y);
     });
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) joystick.addEventListener(type, event => {

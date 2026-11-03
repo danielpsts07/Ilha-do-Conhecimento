@@ -475,7 +475,10 @@ body.large-text {
   z-index: 15;
 }
 
-/* Botão Voltar (#settings-back): Alvo de toque min 48px, texto >= 18px, pill contrastante */
+/* Botão Voltar (#settings-back): Alvo de toque min 48px, texto >= 18px, pill contrastante constante */
+.mural-dialog #settings-back,
+.mural-dialog .sheet-back-btn,
+#settings-back,
 .sheet-back-btn {
   position: relative;
   left: auto;
@@ -485,22 +488,41 @@ body.large-text {
   gap: 0.8cqw;
   min-height: clamp(44px, 8.0cqh, 52px);
   padding: 0 clamp(16px, 2.0cqw, 24px);
-  background: #f7e0bc;
-  border: 2px solid #5c3818;
+  background: #ebd1aa;
+  border: 0;
   border-radius: 999px;
   box-shadow: 0 2px 5px rgba(74, 42, 20, 0.35);
   cursor: pointer;
   outline: none;
   box-sizing: border-box;
-  transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+  transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease, filter 120ms ease;
 }
 
+.mural-dialog #settings-back:hover,
+.mural-dialog .sheet-back-btn:hover,
+#settings-back:hover,
 .sheet-back-btn:hover {
   background: #ebd1aa;
   transform: translateX(-2px);
   box-shadow: 0 3px 7px rgba(74, 42, 20, 0.45);
 }
 
+.mural-dialog #settings-back:active,
+.mural-dialog .sheet-back-btn:active,
+#settings-back:active,
+.sheet-back-btn:active,
+#settings-back.is-pressed,
+.mural-dialog #settings-back.is-pressed,
+.sheet-back-btn.is-pressed {
+  background: #c9a06b;
+  transform: translateX(-1px) translateY(1px);
+  box-shadow: 0 1px 3px rgba(74, 42, 20, 0.4);
+  filter: brightness(0.85);
+}
+
+.mural-dialog #settings-back:focus-visible,
+.mural-dialog .sheet-back-btn:focus-visible,
+#settings-back:focus-visible,
 .sheet-back-btn:focus-visible {
   outline: 3px dashed #4a2a14;
   outline-offset: 3px;
@@ -888,7 +910,7 @@ body.large-text {
   pointer-events: none;
 }
 
-/* Página 2: Velocidade e Toque */
+/* Velocidade e Toque */
 .mural-speed-row {
   display: flex;
   align-items: center;
@@ -944,33 +966,6 @@ body.large-text {
   font: bold clamp(13px, 1.7cqw, 16px) Georgia, serif;
   color: #4a2a14;
   box-sizing: border-box;
-}
-
-.mural-walk-box {
-  position: absolute;
-  right: 6cqw;
-  top: 0;
-  width: clamp(90px, 16cqw, 130px);
-  height: clamp(60px, 17cqh, 85px);
-  background: #e2cdaa;
-  border: 1px solid #784e2d;
-  border-radius: 6px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-}
-
-.walk-preview-hero {
-  height: clamp(22px, 5cqh, 30px);
-  image-rendering: pixelated;
-}
-
-.walk-preview-caption {
-  font: clamp(10px, 1.2cqw, 12px) Georgia, serif;
-  color: #6e4d30;
-  margin-top: 4px;
 }
 
 .mural-touch-section {

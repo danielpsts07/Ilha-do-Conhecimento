@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Teste Câmara da Chave</title>
+  <style>
+    body, html { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000; }
+  </style>
+</head>
+<body>
+  <script src="/js/config.js"></script>
+  <script src="/js/labirinto-mascaras.js"></script>
+  <script src="/js/labirinto-logica.js"></script>
+  <script src="/js/hero-animation.js"></script>
+  <script src="/js/labirinto-puzzle.js"></script>
+  <script>
+    async function start() {
+      const data = LABIRINTO_LOCAL;
+      await window.LabirintoPuzzle.prepare(data);
+      console.log('Prepare finished');
+
+      let exitWon = null;
+      window.LabirintoPuzzle.open({
+        phase: 3,
+        debug: () => location.search.includes('debug'),
+        onExit: (won) => {
+          exitWon = won;
+          console.log('onExit called with:', won);
+        }
+      });
+
+      // Report test metrics after 1 second
+      setTimeout(() => {
+        const canvas = document.querySelector('canvas');
+        const report = {
+          canvasW: canvas?.width,
+          canvasH: canvas?.height,
+          active: window.LabirintoPuzzle.active,
+          bodyHtml: document.body.innerHTML.length
+        };
+        fetch('/report-test', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(report)
+        });
+      }, 1000);
+    }
+    window.onload = start;
+  </script>
+</body>
+</html>
