@@ -1,201 +1,715 @@
-/* Labirinto das runas: três cruzamentos, câmara e portal; contrato onExit preservado. */
+/* Labirinto das runas: três cruzamentos (1024×434 _v3), câmara (1376×768) e portal; contrato onExit preservado. */
 window.LabirintoPuzzle = (() => {
   'use strict';
-  const W=1376,H=768,K=W/1024,base='assets/puzzles/labirinto/',cache=new Map(),art={},surfaces=[],runes={};
-  let ready,data,current,warning='';
+  const base = 'assets/puzzles/labirinto/', cache = new Map(), art = {}, surfaces = [], runes = {};
+  let ready, data, current, warning = '';
+
+  // Tabela única símbolo -> arquivo de laje e cor característica
+  const SLAB_MAP = {
+    lua: { src: 'assets/puzzles/simbolos/laje-lua.webp', cor: '#38bdf8', nome: 'Lua' },
+    estrela: { src: 'assets/puzzles/simbolos/laje-estrela.webp', cor: '#facc15', nome: 'Estrela' },
+    flor: { src: 'assets/puzzles/simbolos/laje-flor.webp', cor: '#f472b6', nome: 'Flor' },
+    pata: { src: 'assets/puzzles/simbolos/laje-pata.webp', cor: '#fb923c', nome: 'Pata' },
+    borboleta: { src: 'assets/puzzles/simbolos/laje-borboleta.webp', cor: '#a855f7', nome: 'Borboleta' },
+    folha: { src: 'assets/puzzles/simbolos/laje-folha.webp', cor: '#4ade80', nome: 'Folha' }
+  };
+
+  const SCENARIOS = [
+    base + 'fase1_v3.webp',
+    base + 'fase2_v3.webp',
+    base + 'fase3_v3.webp',
+    base + 'camara_chave_bg.jpg'
+  ];
+
   function image(src) {
-    if(!cache.has(src))cache.set(src,new Promise(resolve=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>{console.warn(`[Labirinto] Ausente: ${src}. Placeholder ativado.`);resolve(null);};im.src=src;}));
+    if (!cache.has(src)) cache.set(src, new Promise(resolve => {
+      const im = new Image();
+      im.onload = () => resolve(im);
+      im.onerror = () => {
+        console.warn(`[Labirinto] Ausente: ${src}. Placeholder ativado.`);
+        resolve(null);
+      };
+      im.src = src;
+    }));
     return cache.get(src);
   }
+
   function prepare(input) {
-    return ready ||= (async()=>{
-      const cfg=LABIRINTO_CONFIG,c=input.camara;
-      data={...input,metrics:{...input.metrics,footW:cfg.FOOT_W,footH:cfg.FOOT_H},camara:{...c,pedestal:{...c.pedestal,altura:cfg.PEDESTAL_H_CAMARA},chave:{...c.chave,centro:[c.pedestal.pe[0],c.pedestal.pe[1]-cfg.PEDESTAL_H_CAMARA-8-c.chave.altura/2]}}};
-      const L=window.LabirintoLogica,m=data.metrics,ids=data.runas.map(r=>r.id);
+    return ready ||= (async () => {
+      const cfg = LABIRINTO_CONFIG, c = input.camara;
+      data = {
+        ...input,
+        metrics: { ...input.metrics, footW: cfg.FOOT_W, footH: cfg.FOOT_H },
+        camara: {
+          ...c,
+          pedestal: { ...c.pedestal, altura: cfg.PEDESTAL_H_CAMARA },
+          chave: {
+            ...c.chave,
+            centro: [c.pedestal.pe[0], c.pedestal.pe[1] - cfg.PEDESTAL_H_CAMARA - 8 - c.chave.altura / 2]
+          }
+        }
+      };
+      const L = window.LabirintoLogica, m = data.metrics, ids = data.runas.map(r => r.id);
       console.info(`[Labirinto] ${L.randomTest(ids)}`);
-      await Promise.all(data.runas.map(async r=>{
-        const glow=document.createElement('canvas');glow.width=glow.height=160;
-        const c=glow.getContext('2d'),g=c.createRadialGradient(80,80,0,80,80,80);g.addColorStop(0,r.cor);g.addColorStop(1,r.cor+'00');c.fillStyle=g;c.fillRect(0,0,160,160);
-        runes[r.id]={...r,glow,image:await image(`${base}runas/runa_${r.id}.png`)};
+
+      // Carrega as lajes dos símbolos e pré-gera os brilhos radiais
+      await Promise.all(data.runas.map(async r => {
+        const slabInfo = SLAB_MAP[r.id];
+        const slabImage = slabInfo ? await image(slabInfo.src) : null;
+        const cor = slabInfo ? slabInfo.cor : r.cor;
+        const glow = document.createElement('canvas'); glow.width = glow.height = 200;
+        const gc = glow.getContext('2d'), g = gc.createRadialGradient(100, 100, 10, 100, 100, 100);
+        g.addColorStop(0, cor); g.addColorStop(1, cor + '00'); gc.fillStyle = g; gc.fillRect(0, 0, 200, 200);
+        runes[r.id] = { ...r, cor, glow, slabImage, nome: slabInfo ? slabInfo.nome : r.nome };
       }));
-      [art.hero,art.pedestal,art.key]=await Promise.all([image(`assets/${HERO_SHEET.src}`),image(base+'pedestal_pedra.png'),image('assets/hud/chave_logica.png')]);
-      if(art.pedestal)try{
-        const im=art.pedestal,canvas=document.createElement('canvas');canvas.width=im.naturalWidth;canvas.height=im.naturalHeight;const ctx=canvas.getContext('2d');ctx.drawImage(im,0,0);
-        const pixels=ctx.getImageData(0,0,canvas.width,canvas.height),removed=L.removeBlackBorder(pixels.data,canvas.width,canvas.height);ctx.putImageData(pixels,0,0);art.pedestal=canvas;
-        if(removed)console.warn(`[Labirinto] Fundo quase preto removido em memória (${removed} pixels). Substitua pedestal_pedra.png por uma versão transparente.`);
-      }catch(error){console.warn('[Labirinto] Não foi possível ler os pixels do pedestal; usando marcador.',error);art.pedestal=null;}
-      warning=art.pedestal?'':'Placeholder: pedestal indisponível';
-      for(const name of ['portalGlow','keyGlow']){
-        const glow=art[name]=document.createElement('canvas');glow.width=glow.height=280;
-        const c=glow.getContext('2d'),g=c.createRadialGradient(140,140,0,140,140,140);g.addColorStop(0,name==='portalGlow'?'#c58bff':'#8affb5');g.addColorStop(1,name==='portalGlow'?'#a855f700':'#4ade8000');c.fillStyle=g;c.fillRect(0,0,280,280);
+
+      [art.hero, art.pedestal, art.key] = await Promise.all([
+        image(`assets/${HERO_SHEET.src}`),
+        image(base + 'pedestal_pedra.png'),
+        image('assets/hud/chave_logica.png')
+      ]);
+
+      if (art.pedestal) try {
+        const im = art.pedestal, canvas = document.createElement('canvas');
+        canvas.width = im.naturalWidth; canvas.height = im.naturalHeight;
+        const ctx = canvas.getContext('2d'); ctx.drawImage(im, 0, 0);
+        const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const removed = L.removeBlackBorder(pixels.data, canvas.width, canvas.height);
+        ctx.putImageData(pixels, 0, 0); art.pedestal = canvas;
+        if (removed) console.warn(`[Labirinto] Fundo quase preto removido em memória (${removed} pixels). Substitua pedestal_pedra.png por uma versão transparente.`);
+      } catch (error) {
+        console.warn('[Labirinto] Não foi possível ler os pixels do pedestal da câmara; usando marcador.', error);
+        art.pedestal = null;
       }
-      for(let n=0;n<4;n++){
-        const chamber=n===3,k=chamber?1:K,w=chamber?W:1024,h=chamber?H:572;
-        const bg=await image(base+(chamber?'camara_chave_bg.jpg':`fase${n+1}_v2.webp`));
-        // Em file://, o espelho PNG do alfa evita a restrição de leitura de canvas local.
-        const src=window.location.protocol==='file:'?LABIRINTO_MASKS_LOCAL[n]:base+(chamber?'camara_mascara.png':`fase${n+1}_mascara.png`);
-        const im=await image(src),read=document.createElement('canvas');read.width=w;read.height=h;const c=read.getContext('2d');
-        if(!im)throw Error(`Máscara ${n+1} ausente: não é seguro abrir os caminhos sem colisão.`);
-        if(im.naturalWidth!==w||im.naturalHeight!==h)throw Error(`Máscara ${n+1}: dimensões inválidas`);
-        c.drawImage(im,0,0);const pixels=c.getImageData(0,0,w,h),mask=new Uint8Array(w*h);
-        for(let i=0;i<mask.length;i++){mask[i]=pixels.data[i*4+3]>40?1:0;pixels.data[i*4]=0;pixels.data[i*4+1]=255;pixels.data[i*4+2]=0;pixels.data[i*4+3]=mask[i]?75:0;}
-        const overlay=document.createElement('canvas');overlay.width=w;overlay.height=h;overlay.getContext('2d').putImageData(pixels,0,0);read.width=read.height=0;
-        const config=chamber?data.camara:data.fases[n],spawn=chamber?config.spawn:config.spawn.map(v=>Math.round(v*K));
-        const exits=chamber?[]:config.saidas.map(e=>({id:e.id,zone:e.zona.map(v=>v*K),x:e.pe[0]*K,y:e.pe[1]*K}));
-        const obstacle=chamber?{x:config.pedestal.pe[0],y:config.pedestal.pe[1],r:config.pedestal.raio}:null;
-        const field=L.field(mask,w,h,k,m.footW,m.footH,obstacle,LABIRINTO_CONFIG.CORNER_NUDGE);
-        const nav=L.grid(field,8,2),zones=chamber?[config.soleira]:exits.map(e=>e.zone);
-        const failures=L.geometryTest(nav,spawn,zones,obstacle),label=chamber?'Câmara':`Fase ${n+1}`;
-        if(chamber){const path=L.path(nav,spawn[0],spawn[1],config.alvo[0],config.alvo[1]),end=path[path.length-1];if(!end||Math.hypot(end.x-config.alvo[0],end.y-config.alvo[1])>1)failures.push('alvo final do portal sem acesso');}
-        console[failures.length?'error':'info'](`[Labirinto] ${label}: ${failures.join('; ')||'spawn, cobertura e BFS OK'}`);
-        if(failures.length)throw Error(`${label}: ${failures.join('; ')}`);
-        surfaces[n]={bg,overlay,field,nav,spawn,exits};
+
+      for (const name of ['portalGlow', 'keyGlow']) {
+        const glow = art[name] = document.createElement('canvas'); glow.width = glow.height = 280;
+        const gc = glow.getContext('2d'), g = gc.createRadialGradient(140, 140, 0, 140, 140, 140);
+        g.addColorStop(0, name === 'portalGlow' ? '#c58bff' : '#8affb5');
+        g.addColorStop(1, name === 'portalGlow' ? '#a855f700' : '#4ade8000');
+        gc.fillStyle = g; gc.fillRect(0, 0, 280, 280);
       }
-      console.info('[Labirinto] Pés 8×4; grade 8 px, margem 2 px em todas as telas.');
-    })().catch(error=>{ready=null;throw error;});
+
+      const grades = window.LABIRINTO_GRADES;
+      if (!grades) throw Error('Grades de colisão do labirinto não encontradas (js/labirinto-mascaras.js).');
+
+      for (let n = 0; n < 4; n++) {
+        const chamber = n === 3;
+        const bg = await image(SCENARIOS[n]);
+        const mask = grades.getMask(n);
+        if (!mask) throw Error(`Grade ${n + 1} ausente: impossível navegar sem colisão.`);
+
+        const gInfo = grades.getInfo ? grades.getInfo(n) : { cols: chamber ? 172 : 128, rows: chamber ? 96 : 55, cell: 8 };
+        const W = chamber ? 1376 : 1024;
+        const H = chamber ? 768 : 434;
+
+        // Overlay de depuração gerado via createImageData/putImageData (seguro em file://)
+        const overlay = document.createElement('canvas'); overlay.width = gInfo.cols; overlay.height = gInfo.rows;
+        const oc = overlay.getContext('2d'), imgData = oc.createImageData(gInfo.cols, gInfo.rows);
+        for (let i = 0; i < mask.length; i++) {
+          imgData.data[i * 4] = 0; imgData.data[i * 4 + 1] = 255; imgData.data[i * 4 + 2] = 0; imgData.data[i * 4 + 3] = mask[i] ? 75 : 0;
+        }
+        oc.putImageData(imgData, 0, 0);
+
+        const config = chamber ? data.camara : data.fases[n];
+        const spawn = config.spawn;
+        const exits = chamber ? [] : config.saidas.map(e => ({ id: e.id, zone: e.zona, x: e.pe[0], y: e.pe[1], arco: e.arco }));
+        const obstacle = chamber ? { x: config.pedestal.pe[0], y: config.pedestal.pe[1], r: config.pedestal.raio } : null;
+        const field = L.field(mask, gInfo.cols, gInfo.rows, gInfo.cell, m.footW, m.footH, obstacle, LABIRINTO_CONFIG.CORNER_NUDGE);
+        const nav = L.grid(field, gInfo.cell, chamber ? 2 : 0);
+        const zones = chamber ? [config.soleira] : exits.map(e => e.zone);
+        const failures = L.geometryTest(nav, spawn, zones, obstacle), label = chamber ? 'Câmara' : `Fase ${n + 1}`;
+        if (chamber) {
+          const path = L.path(nav, spawn[0], spawn[1], config.alvo[0], config.alvo[1]), end = path[path.length - 1];
+          if (!end || Math.hypot(end.x - config.alvo[0], end.y - config.alvo[1]) > 1) failures.push('alvo final do portal sem acesso');
+        }
+        console[failures.length ? 'error' : 'info'](`[Labirinto] ${label}: ${failures.join('; ') || 'spawn, cobertura e BFS OK'}`);
+        if (failures.length) throw Error(`${label}: ${failures.join('; ')}`);
+        surfaces[n] = {
+          bg, overlay, field, nav, spawn, exits, w: W, h: H,
+          safeXMin: W * 0.12, safeXMax: W * 0.88, safeW: W * 0.76
+        };
+      }
+      console.info('[Labirinto] Pés 8×4; grade 8 px; fases 1–3 em 1024×434 (cover com zona segura); câmara em 1376×768.');
+    })().catch(error => { ready = null; throw error; });
   }
-  function open(options={}) {
-    if(current)current(false);
-    const L=window.LabirintoLogica,cfg=LABIRINTO_CONFIG,m=data.metrics,c=data.camara,ids=data.runas.map(r=>r.id),returnFocus=document.activeElement;
-    const host=document.createElement('div'),frame=document.createElement('div'),canvas=document.createElement('canvas'),ctx=canvas.getContext('2d'),status=document.createElement('p');
-    host.style.cssText='position:fixed;inset:0;z-index:1000;background:#101c19;display:flex;justify-content:center;';frame.style.cssText='position:relative;height:100%;';
-    host.setAttribute('role','dialog');host.setAttribute('aria-modal','true');host.setAttribute('aria-label','Labirinto das runas');
-    canvas.style.cssText='display:block;width:100%;height:100%;touch-action:none;';canvas.tabIndex=0;
-    status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);';
-    frame.appendChild(canvas);frame.appendChild(status);host.appendChild(frame);document.body.appendChild(host);
-    const controls=[],labels=['X','↻','Já memorizei','E — Pegar a chave'];
-    for(let i=0;i<4;i++){
-      const b=document.createElement('button');b.type='button';b.textContent=labels[i];b.setAttribute('aria-label',i===0?'Sair do labirinto':i===1?'Reiniciar com nova sequência':labels[i]);
-      b.style.cssText='position:absolute;min-height:44px;min-width:44px;border:2px solid #b9dc9a;border-radius:10px;background:#183a30ed;color:#fff5d7;font:inherit;font-size:16px;cursor:pointer;padding:5px 12px;';
-      b.onfocus=()=>{b.style.outline='3px solid #ffe591';};b.onblur=()=>{b.style.outline='';};frame.appendChild(b);controls.push(b);
+
+  function open(options = {}) {
+    if (current) current(false);
+    const L = window.LabirintoLogica, cfg = LABIRINTO_CONFIG, m = data.metrics, c = data.camara, ids = data.runas.map(r => r.id), returnFocus = document.activeElement;
+    const host = document.createElement('div'), frame = document.createElement('div'), canvas = document.createElement('canvas'), ctx = canvas.getContext('2d'), status = document.createElement('p');
+    host.style.cssText = 'position:fixed;inset:0;z-index:1000;background:#0d1814;display:flex;justify-content:center;align-items:center;overflow:hidden;';
+    frame.style.cssText = 'position:relative;width:100%;height:100%;overflow:hidden;';
+    host.setAttribute('role', 'dialog'); host.setAttribute('aria-modal', 'true'); host.setAttribute('aria-label', 'Labirinto das runas');
+    canvas.style.cssText = 'display:block;width:100%;height:100%;touch-action:none;'; canvas.tabIndex = 0;
+    status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite'); status.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);';
+    frame.appendChild(canvas); frame.appendChild(status); host.appendChild(frame); document.body.appendChild(host);
+
+    const controls = [], labels = ['X', '↻', 'Já memorizei', 'E — Pegar a chave'];
+    for (let i = 0; i < 4; i++) {
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = labels[i];
+      b.setAttribute('aria-label', i === 0 ? 'Sair do labirinto' : i === 1 ? 'Reiniciar com nova sequência' : labels[i]);
+      b.style.cssText = 'position:absolute;min-height:44px;min-width:44px;border:2px solid #b9dc9a;border-radius:10px;background:#183a30ed;color:#fff5d7;font:inherit;font-size:16px;cursor:pointer;padding:6px 14px;z-index:10;user-select:none;';
+      b.onfocus = () => { b.style.outline = '3px solid #ffe591'; }; b.onblur = () => { b.style.outline = ''; };
+      frame.appendChild(b); controls.push(b);
     }
-    const font=getComputedStyle(document.body).fontFamily||'sans-serif',calm=window.matchMedia('(prefers-reduced-motion: reduce)').matches||Boolean(window.GameSettings?.calm);
-    const hero={x:688,y:670,dir:3,moving:false,walk:0,idle:0},held=new Uint8Array(8),particles=new Float32Array(24*5),empty=[];
-    let s=1,offset=0,width=1376,state='',elapsed=0,time=0,last=0,raf=0,closed=false,debug=false,seq=[],ped=[],order=[],route=empty,waypoint=0,chosen=-1,completed=0,phase=0,f=surfaces[0],claimed=false,sparkColor='#4ade80';
-    let routeTime=0,routeX=0,routeY=0,targetX=0,targetY=0,routeRetried=false;
-    const dirs={arrowleft:0,a:1,arrowright:2,d:3,arrowup:4,w:5,arrowdown:6,s:7};
-    function say(message){status.textContent=message;canvas.setAttribute('aria-label',`${message} WASD/setas ou toque para andar. Escape sai. F3 depura; N avança com F3.`);}
-    function canTake(){return state==='CAMARA_ANDAR'&&!claimed&&Math.hypot(hero.x-c.pedestal.pe[0],hero.y-c.pedestal.pe[1])<=c.interacao;}
-    function change(next){state=next;elapsed=0;held.fill(0);route=empty;hero.walk=0;controls[2].hidden=next!=='MEMORIZAR';controls[2].disabled=true;controls[3].hidden=true;
-      if(next==='MEMORIZAR')say(`Memorize a ordem das runas! 1ª: ${runes[seq[0]].nome}; 2ª: ${runes[seq[1]].nome}; 3ª: ${runes[seq[2]].nome}.`);
-      else if(next==='ANDAR')say(`Escolha a ${phase+1}ª runa da sequência!`);else if(next==='ERRO')say('Ainda não é essa! Vamos recomeçar!');
-      else if(next==='FEEDBACK_CERTO')say(`Muito bem! Caminho ${completed} de 3 concluído.`);else if(next==='CAMARA_ANDAR')say('Pegue a chave! Aproxime-se do pedestal.');
-      else if(next==='PEGAR_CHAVE')say('Chave encontrada!');else if(next==='PORTAL')say('O portal está aberto! Vamos voltar à ilha.');
-      else if(next==='ENTRAR_PORTAL')say('Entrando no portal...');
+    const font = getComputedStyle(document.body).fontFamily || 'sans-serif', calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches || Boolean(window.GameSettings?.calm);
+    const SIMBOLO_ESCALA_NA_PRACA = options.simboloEscala ?? cfg.SIMBOLO_ESCALA_NA_PRACA ?? 0.62;
+    const PERSONAGEM_ESCALA = options.personagemEscala ?? cfg.PERSONAGEM_ESCALA ?? 1.0;
+
+    const hero = { x: 512, y: 400, dir: 3, moving: false, walk: 0, idle: 0 };
+    const held = new Uint8Array(8), particles = new Float32Array(24 * 5), empty = [];
+    const skipMem = Boolean(options.skipMemorize || (typeof location !== 'undefined' && location.search.includes('pular_memoria')));
+
+    let s = 1, offsetX = 0, offsetY = 0, state = '', elapsed = 0, time = 0, last = 0, raf = 0, closed = false, debug = false;
+    let seq = [], ped = [], order = [], route = empty, waypoint = 0, chosen = -1, completed = 0;
+    let phase = options.phase || 0, f = surfaces[phase], claimed = false, sparkColor = '#4ade80';
+    let routeTime = 0, routeX = 0, routeY = 0, targetX = 0, targetY = 0, routeRetried = false;
+    const dirs = { arrowleft: 0, a: 1, arrowright: 2, d: 3, arrowup: 4, w: 5, arrowdown: 6, s: 7 };
+
+    function say(message) { status.textContent = message; canvas.setAttribute('aria-label', `${message} WASD/setas ou toque para andar. Escape sai. F3 depura; N avança com F3.`); }
+    function canTake() { return state === 'CAMARA_ANDAR' && !claimed && Math.hypot(hero.x - c.pedestal.pe[0], hero.y - c.pedestal.pe[1]) <= c.interacao; }
+
+    function change(next) {
+      state = next; elapsed = 0; held.fill(0); route = empty; hero.walk = 0;
+      controls[2].hidden = next !== 'MEMORIZAR'; controls[2].disabled = true; controls[3].hidden = true;
+      if (next === 'MEMORIZAR') say(`Memorize a ordem dos símbolos! 1º: ${runes[seq[0]].nome}; 2º: ${runes[seq[1]].nome}; 3º: ${runes[seq[2]].nome}.`);
+      else if (next === 'ANDAR') say(`Escolha o ${phase + 1}º símbolo da sequência!`);
+      else if (next === 'ERRO') say('Ainda não é essa! Vamos recomeçar!');
+      else if (next === 'FEEDBACK_CERTO') say(`Muito bem! Caminho ${completed} de 3 concluído.`);
+      else if (next === 'CAMARA_ANDAR') say('Pegue a chave! Aproxime-se do pedestal.');
+      else if (next === 'PEGAR_CHAVE') say('Chave encontrada!');
+      else if (next === 'PORTAL') say('O portal está aberto! Vamos voltar à ilha.');
+      else if (next === 'ENTRAR_PORTAL') say('Entrando no portal...');
     }
-    function round(memorize=true){f=surfaces[phase];ped=phase<3?L.pedestals(ids,seq,phase+1):empty;order=f.exits.map((_,i)=>i).sort((a,b)=>f.exits[a].y-f.exits[b].y);hero.x=f.spawn[0];hero.y=f.spawn[1];hero.dir=3;hero.idle=0;chosen=-1;particles.fill(0);change(phase===3?'CAMARA_ANDAR':memorize?'MEMORIZAR':'ANDAR');}
-    function restart(){seq=L.sequence(ids);completed=phase=0;claimed=false;round();canvas.focus();}
-    function resize(){width=Math.min(window.innerWidth,window.innerHeight*W/H);const dpr=Math.min(2,window.devicePixelRatio||1);frame.style.width=`${width}px`;canvas.width=Math.round(width*dpr);canvas.height=Math.round(window.innerHeight*dpr);s=canvas.width/W;offset=(canvas.height-H*s)/2;
-      const top=offset/s*width/W;for(let i=0;i<2;i++){controls[i].style.top=`${top+8}px`;controls[i].style.right=`${8+i*54}px`;}
-      for(let i=2;i<4;i++){controls[i].style.left=`${(i===2?688:c.chave.centro[0])*width/W}px`;controls[i].style.transform='translateX(-50%)';controls[i].style.top=`${top+(i===2?518:c.chave.centro[1]-c.chave.altura/2)*width/W-(i===3?52:0)}px`;controls[i].style.width='200px';}
+
+    function round(memorize = true) {
+      f = surfaces[phase];
+      ped = phase < 3 ? L.pedestals(ids, seq, phase + 1) : empty;
+      order = f.exits.map((_, i) => i).sort((a, b) => f.exits[a].y - f.exits[b].y);
+      hero.x = f.spawn[0]; hero.y = f.spawn[1]; hero.dir = 3; hero.idle = 0;
+      chosen = -1; particles.fill(0);
+      resize();
+      change(phase === 3 ? 'CAMARA_ANDAR' : (memorize && !skipMem) ? 'MEMORIZAR' : 'ANDAR');
     }
-    function choose(index){if(state!=='ANDAR')return;chosen=index;
-      if(ped[index]!==seq[phase]){change('ERRO');return;}
-      completed=phase+1;change('FEEDBACK_CERTO');const e=f.exits[index];burst(e.x,e.y-96,runes[seq[phase]].cor);
+
+    function restart() {
+      seq = L.sequence(ids);
+      completed = phase = options.phase || 0;
+      claimed = false;
+      round(!skipMem);
+      canvas.focus();
     }
-    function burst(x,y,color){sparkColor=color;for(let i=0;i<24;i++){const j=i*5;particles[j]=x;particles[j+1]=y;particles[j+2]=(Math.random()-.5)*170;particles[j+3]=-30-Math.random()*100;particles[j+4]=.9;}}
-    function collect(dev=false){if(state!=='CAMARA_ANDAR'||claimed||!dev&&!canTake())return;claimed=true;change('PEGAR_CHAVE');burst(c.chave.centro[0],c.chave.centro[1],'#4ade80');canvas.focus();}
-    function follow(x,y,retry=false){route=L.path(f.nav,hero.x,hero.y,x,y);waypoint=0;targetX=x;targetY=y;routeX=hero.x;routeY=hero.y;routeTime=0;routeRetried=retry;}
-    function beginPortal(){change('PORTAL');follow(c.alvo[0],c.alvo[1]);
-      // A busca considera a caixa de pés e o bloqueio circular: nunca atravessa o pedestal.
-      if(!route.length){console.error('[Labirinto] Não foi possível traçar o caminho do portal.');claimed=false;change('CAMARA_ANDAR');}
-    }
-    function down(event){event.preventDefault();if(state!=='ANDAR'&&state!=='CAMARA_ANDAR')return;const r=canvas.getBoundingClientRect();
-      // client → pixels do canvas → design; y desconta a centralização vertical.
-      const x=((event.clientX-r.left)*canvas.width/r.width)/s,y=(((event.clientY-r.top)*canvas.height/r.height)-offset)/s;
-      if(state==='CAMARA_ANDAR'&&Math.abs(x-c.chave.centro[0])<=45&&Math.abs(y-c.chave.centro[1])<=c.chave.altura/2+8){collect();return;}
-      follow(x,y);canvas.focus();
-    }
-    function key(event){if(event.ctrlKey||event.altKey||event.metaKey)return;const k=event.key.toLowerCase();event.stopImmediatePropagation();
-      if(k==='tab'){event.preventDefault();let i=controls.indexOf(document.activeElement);const step=event.shiftKey?-1:1;for(let n=0;n<4;n++){i=(i+step+4)%4;if(!controls[i].hidden&&!controls[i].disabled){controls[i].focus();break;}}return;}
-      if((k==='enter'||k===' ')&&controls.includes(event.target))return;
-      event.preventDefault();if(k in dirs){if(state==='ANDAR'||state==='CAMARA_ANDAR'){held[dirs[k]]=1;route=empty;}return;}if(event.repeat)return;
-      if(k==='escape')close(false);else if(k==='f3'){if(options.toggleDebug)options.toggleDebug();else debug=!debug;}
-      else if((k==='e'||k==='enter')&&state==='CAMARA_ANDAR')collect();
-      else if(k==='n'&&(options.debug?options.debug():debug)){if(state==='CAMARA_ANDAR')collect(true);else if(state==='ANDAR'||state==='MEMORIZAR'){if(state==='MEMORIZAR')change('ANDAR');choose(ped.indexOf(seq[phase]));}}
-    }
-    function up(event){const k=event.key.toLowerCase();if(k in dirs){event.preventDefault();event.stopImmediatePropagation();held[dirs[k]]=0;}}
-    function blur(){held.fill(0);if(state!=='PORTAL')route=empty;last=0;}
-    function close(won=false){if(closed)return;closed=true;held.fill(0);route=empty;cancelAnimationFrame(raf);canvas.removeEventListener('pointerdown',down);document.removeEventListener('keydown',key,true);document.removeEventListener('keyup',up,true);window.removeEventListener('resize',resize);window.removeEventListener('blur',blur);host.remove();current=null;returnFocus?.focus();options.onExit?.(won);}
-    function walk(dt){let vx=Number(held[2]||held[3])-Number(held[0]||held[1]),vy=Number(held[6]||held[7])-Number(held[4]||held[5]),distance=m.speed*dt;
-      const following=!vx&&!vy&&waypoint<route.length;
-      if(!vx&&!vy&&waypoint<route.length){const p=route[waypoint];vx=p.x-hero.x;vy=p.y-hero.y;const d=Math.hypot(vx,vy);if(d<.5){waypoint++;return;}distance=Math.min(distance,d);}
-      const len=Math.hypot(vx,vy),x=hero.x,y=hero.y;if(len){L.move(f.field,hero,vx/len*distance,vy/len*distance);hero.dir=Math.abs(vx)>Math.abs(vy)?vx<0?1:2:vy<0?3:0;}
-      // HeroAnimation conta a partir de 1; em 120/144 Hz o primeiro dt tem menos de um tick.
-      const moving=Math.hypot(hero.x-x,hero.y-y)>.001;hero.walk=moving?Math.max(1,hero.walk+dt*60):0;hero.idle=moving?0:hero.idle+dt*60;
-      // No toque, menos de 1 px em 0,5 s pede uma nova rota; uma segunda parada cancela o toque.
-      if(following&&state!=='PORTAL'&&(routeTime+=dt)>=.5){
-        if(Math.hypot(hero.x-routeX,hero.y-routeY)<1){if(routeRetried)route=empty;else follow(targetX,targetY,true);}
-        routeX=hero.x;routeY=hero.y;routeTime=0;
+
+    function resize() {
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = Math.round(vw * dpr);
+      canvas.height = Math.round(vh * dpr);
+
+      const curF = surfaces[phase] || surfaces[0];
+      const W = curF.w, H = curF.h;
+      const screenAR = canvas.width / canvas.height;
+      const imageAR = W / H;
+      const safeAR = curF.safeW / H;
+
+      if (screenAR >= safeAR) {
+        // Tela 16:9 até ultrawide: cover total (corte horizontal nos lados até a zona segura, ou corte vertical em ultrawide)
+        s = Math.max(canvas.width / W, canvas.height / H);
+      } else {
+        // Telas mais estreitas que 16:9 (16:10, 4:3): limita a escala para caber toda a zona segura
+        s = canvas.width / curF.safeW;
       }
-      if(state==='ANDAR')for(let i=0;i<f.exits.length;i++)if(L.hit(hero,f.exits[i].zone,m.footW,m.footH)){choose(i);break;}
-    }
-    function update(dt){time+=dt;elapsed+=dt;
-      if(state==='MEMORIZAR'){controls[2].disabled=elapsed<1.5;if(elapsed>=m.memorizeSeconds)change('ANDAR');}
-      else if(state==='ANDAR'||state==='CAMARA_ANDAR')walk(dt);
-      else if(state==='FEEDBACK_CERTO'&&elapsed>=.9)change('ESCURECER_CERTO');
-      else if(state==='ERRO'&&elapsed>=1.1)change('ESCURECER_ERRO');
-      else if(state==='ESCURECER_ERRO'&&elapsed>=.4){completed=phase=0;claimed=false;if(cfg.ERRO_NOVA_SEQUENCIA)seq=L.sequence(ids);round();}
-      else if(state==='ESCURECER_CERTO'&&elapsed>=.4)change('TRANSICAO');
-      else if(state==='TRANSICAO'&&elapsed>=1){phase++;round(false);}
-      else if(state==='PEGAR_CHAVE'&&elapsed>=.8)beginPortal();
-      else if(state==='PORTAL'){walk(dt);if(waypoint>=route.length&&L.hit(hero,c.soleira,m.footW,m.footH))change('ENTRAR_PORTAL');}
-      else if(state==='ENTRAR_PORTAL'&&elapsed>=.6)change('BRANCO');
-      else if(state==='BRANCO'&&elapsed>=.4){close(true);return;}
-      controls[3].hidden=!canTake();
-      for(let i=0;i<24;i++){const j=i*5;if(particles[j+4]>0){particles[j]+=particles[j+2]*dt;particles[j+1]+=particles[j+3]*dt;particles[j+4]-=dt;}}
-    }
-    function text(value,x,y,size=26,color='#fff5d7'){ctx.fillStyle=color;ctx.font=`bold ${size}px ${font}`;ctx.textAlign='center';ctx.fillText(value,x,y);}
-    function panel(x,y,w,h){ctx.fillStyle='#112b26df';ctx.beginPath();ctx.roundRect(x,y,w,h,18);ctx.fill();ctx.strokeStyle='#b9dc9a';ctx.lineWidth=2;ctx.stroke();}
-    function rune(id,x,y,size,alpha=1,strong=false){const r=runes[id];ctx.globalAlpha=alpha*(strong?.9:calm?.35:.35+.1*Math.sin(2.2*time));ctx.drawImage(r.glow,x-size*.9,y-size*.9,size*1.8,size*1.8);ctx.globalAlpha=alpha;
-      if(r.image)ctx.drawImage(r.image,x-size/2,y-size/2,size,size);else{ctx.fillStyle=r.cor;ctx.fillRect(x-size/2,y-size/2,size,size);text(r.nome,x,y+5,14,'#102820');}ctx.globalAlpha=1;
-    }
-    function stone(x,y,height){
-      ctx.imageSmoothingEnabled=true;
-      if(art.pedestal){const w=height*art.pedestal.width/art.pedestal.height;ctx.drawImage(art.pedestal,x-w/2,y-height,w,height);}
-      else text('?',x,y-height/2,height*.6,'#ffe591');
-    }
-    function pedestal(index){const e=f.exits[index],chosenHere=chosen===index,success=completed>phase,alpha=success&&!chosenHere?.35:1,shake=!calm&&state==='ERRO'&&elapsed<.3&&chosenHere?Math.sin(elapsed*90)*3:0;
-      ctx.globalAlpha=alpha;const x=e.x+shake,y=e.y;
-      stone(x,y,cfg.PEDESTAL_H);
-      const ry=Math.max(38,y-cfg.PEDESTAL_H-4-34+(calm?0:Math.sin(2.2*time+index)*3));rune(ped[index],x,ry,68,alpha,success&&chosenHere);
-      if(chosenHere&&state==='ERRO'&&elapsed<.3){ctx.fillStyle='#ff384baa';ctx.fillRect(x-34,ry-34,68,68);}ctx.globalAlpha=1;
-    }
-    function keyArt(){if(claimed&&state!=='PEGAR_CHAVE')return;
-      const t=state==='PEGAR_CHAVE'?Math.min(1,elapsed/.8):0,x=c.chave.centro[0],y=c.chave.centro[1]+(calm?0:Math.sin(time*2.2)*c.chave.flutuacao)-48*t,height=c.chave.altura,width=height*(art.key?.naturalWidth||229)/(art.key?.naturalHeight||482),size=140+80*t;
-      ctx.globalAlpha=(1-t)*(calm?.35:.35+.1*Math.sin(time*2.2));ctx.drawImage(art.keyGlow,x-size/2,y-size/2,size,size);ctx.globalAlpha=1-t;
-      if(art.key)ctx.drawImage(art.key,x-width/2,y-height/2,width,height);else{ctx.fillStyle='#4ade80';ctx.fillRect(x-8,y-32,16,64);ctx.fillRect(x,y+20,22,8);}ctx.globalAlpha=1;
-    }
-    function portalArt(){const r=c.portal.raio,x=c.portal.centro[0],y=c.portal.centro[1];ctx.globalAlpha=claimed?(calm?.55:.55+.1*Math.sin(time*3)):.16;ctx.drawImage(art.portalGlow,x-r,y-r,r*2,r*2);ctx.globalAlpha=1;}
-    function player(){if(state==='BRANCO')return;const t=state==='ENTRAR_PORTAL'?Math.min(1,elapsed/.6):0,hs=HERO_SHEET,scale=m.heroH/hs.frameH*Math.max(.001,1-t),col=window.HeroAnimation.column(hero,calm);ctx.globalAlpha=1-t;ctx.fillStyle='#10251d77';ctx.beginPath();ctx.ellipse(hero.x,hero.y,16*(1-t),6*(1-t),0,0,Math.PI*2);ctx.fill();ctx.imageSmoothingEnabled=false;
-      if(art.hero)ctx.drawImage(art.hero,col*hs.frameW,hero.dir*hs.frameH,hs.frameW,hs.frameH,hero.x-hs.pivotX*scale,hero.y-hs.pivotY*scale,hs.frameW*scale,hs.frameH*scale);else{ctx.fillStyle='#efba78';ctx.fillRect(hero.x-15*(1-t),hero.y-m.heroH*(1-t),30*(1-t),m.heroH*(1-t));}ctx.imageSmoothingEnabled=true;ctx.globalAlpha=1;
-    }
-    function draw(){ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#101c19';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.setTransform(s,0,0,s,0,offset);ctx.save();ctx.beginPath();ctx.rect(0,0,W,H);ctx.clip();
-      ctx.imageSmoothingEnabled=true;if(f.bg)ctx.drawImage(f.bg,0,0,W,H);else{ctx.fillStyle='#304e39';ctx.fillRect(0,0,W,H);ctx.drawImage(f.overlay,0,0,W,H);}
-      let drawn=false;
-      if(phase===3){portalArt();if(hero.y<c.pedestal.pe[1]){player();drawn=true;}stone(c.pedestal.pe[0],c.pedestal.pe[1],cfg.PEDESTAL_H_CAMARA);keyArt();}
-      else for(let i=0;i<order.length;i++){const n=order[i];if(!drawn&&hero.y<f.exits[n].y){player();drawn=true;}pedestal(n);}if(!drawn)player();
-      for(let i=0;i<24&&!calm;i++){const j=i*5;if(particles[j+4]>0){ctx.globalAlpha=particles[j+4]/.9;ctx.fillStyle=sparkColor;ctx.fillRect(particles[j],particles[j+1],5,5);}}ctx.globalAlpha=1;
-      if(options.debug?options.debug():debug){ctx.drawImage(f.overlay,0,0,f.field.w*f.field.k,f.field.h*f.field.k);ctx.lineWidth=2;
-        for(let i=0;i<f.exits.length;i++){const e=f.exits[i],z=e.zone;ctx.strokeStyle=ped[i]===seq[phase]?'#28ff35':'#ffe230';ctx.strokeRect(z[0],z[1],z[2],z[3]);text(runes[ped[i]].nome+(ped[i]===seq[phase]?' — CORRETA':''),e.x,z[1]-18,18,ctx.strokeStyle);ctx.fillStyle='#ff42d0';ctx.fillRect(e.x-4,e.y-4,8,8);}
-        if(phase===3){ctx.strokeStyle='#ff42d0';ctx.beginPath();ctx.arc(c.pedestal.pe[0],c.pedestal.pe[1],c.pedestal.raio,0,Math.PI*2);ctx.stroke();ctx.strokeStyle='#ffe230';ctx.strokeRect(c.soleira[0],c.soleira[1],c.soleira[2],c.soleira[3]);}
-        ctx.strokeStyle='#fff';ctx.strokeRect(hero.x-m.footW/2,hero.y-m.footH/2,m.footW,m.footH);ctx.fillStyle='#fff';ctx.fillRect(f.spawn[0]-4,f.spawn[1]-4,8,8);
-        panel(200,694,976,56);text(`${phase===3?'Câmara':`Cruzamento ${phase+1}`} · S: ${seq.join(' → ')} · (${hero.x.toFixed(1)}, ${hero.y.toFixed(1)}) · N avança`,688,729,21);
+      offsetX = (canvas.width - W * s) / 2;
+      offsetY = (canvas.height - H * s) / 2;
+
+      // Botões superiores (X e ↻) ancorados no topo direito seguro
+      controls[0].style.top = '14px'; controls[0].style.right = '14px';
+      controls[1].style.top = '14px'; controls[1].style.right = '70px';
+
+      // Botão "Já memorizei" centralizado
+      controls[2].style.left = '50%';
+      controls[2].style.transform = 'translateX(-50%)';
+      controls[2].style.top = `${Math.round((offsetY + (phase === 3 ? 518 : 310) * s) / dpr)}px`;
+      controls[2].style.width = '200px';
+
+      // Botão "Pegar chave"
+      if (phase === 3) {
+        controls[3].style.left = `${Math.round((offsetX + c.chave.centro[0] * s) / dpr)}px`;
+        controls[3].style.transform = 'translateX(-50%)';
+        controls[3].style.top = `${Math.round((offsetY + (c.chave.centro[1] - c.chave.altura / 2 - 52) * s) / dpr)}px`;
+        controls[3].style.width = '210px';
       }
-      if(state==='MEMORIZAR'){ctx.fillStyle='#000a';ctx.fillRect(0,0,W,H);for(let i=0;i<3;i++){const x=488+i*200;rune(seq[i],x,350,120);text(`${i+1}ª`,x,450,29);}ctx.fillStyle='#d8e7c444';ctx.fillRect(438,480,500,12);ctx.fillStyle='#b4ed92';ctx.fillRect(438,480,500*Math.max(0,1-elapsed/m.memorizeSeconds),12);}
-      // Placa compacta nos caminhos 2/3 para não cobrir as runas das saídas superiores.
-      const compact=phase===1||phase===2,header=compact?20:width<700?190:62;panel(350,compact?0:header-38,676,compact?26:65);
-      text(state==='MEMORIZAR'?'Memorize a ordem das runas!':phase===3?claimed?'Chave conquistada!':'Pegue a chave!':`Escolha a ${phase+1}ª runa da sequência!`,688,compact?20:header+5,compact?20:27);
-      for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(42+i*48,40,15,0,Math.PI*2);ctx.fillStyle=i<completed?'#4ade80':'#14362ddd';ctx.fill();ctx.strokeStyle='#a5dfac';ctx.lineWidth=3;ctx.stroke();}
-      if(state==='ERRO'||state==='FEEDBACK_CERTO'){panel(state==='ERRO'?258:410,530,state==='ERRO'?860:556,70);text(state==='ERRO'?'Ainda não é essa! Vamos recomeçar!':'Muito bem! Caminho encontrado!',688,574,29);}
-      if(state==='ESCURECER_CERTO'||state==='ESCURECER_ERRO'){ctx.fillStyle=`rgba(0,0,0,${Math.min(1,elapsed/.4)})`;ctx.fillRect(0,0,W,H);}
-      if(state==='TRANSICAO'){ctx.fillStyle='#0b1c18';ctx.fillRect(0,0,W,H);text(completed===3?'Câmara da chave':`Caminho ${completed+1} de 3`,688,390,40);}
-      if(warning){ctx.fillStyle='#17271deb';ctx.fillRect(0,752,W,16);text(warning,688,765,13,'#ffe59f');}ctx.restore();
-      if(state==='BRANCO'){ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=`rgba(255,255,255,${Math.min(1,elapsed/.4)})`;ctx.fillRect(0,0,canvas.width,canvas.height);}
     }
-    function loop(stamp){if(closed)return;const dt=last?Math.min(.05,(stamp-last)/1000):0;last=stamp;update(dt);if(closed)return;draw();raf=requestAnimationFrame(loop);}
-    controls[0].onclick=()=>close(false);controls[1].onclick=restart;controls[2].onclick=()=>{if(state==='MEMORIZAR'&&elapsed>=1.5){change('ANDAR');canvas.focus();}};controls[3].onclick=()=>collect();
-    canvas.addEventListener('pointerdown',down);document.addEventListener('keydown',key,true);document.addEventListener('keyup',up,true);window.addEventListener('resize',resize);window.addEventListener('blur',blur);current=close;restart();resize();raf=requestAnimationFrame(loop);
+
+    function screenToGame(clientX, clientY) {
+      const r = canvas.getBoundingClientRect();
+      const px = (clientX - r.left) * (canvas.width / r.width);
+      const py = (clientY - r.top) * (canvas.height / r.height);
+      return {
+        x: (px - offsetX) / s,
+        y: (py - offsetY) / s
+      };
+    }
+
+    function choose(index) {
+      if (state !== 'ANDAR') return;
+      chosen = index;
+      if (ped[index] !== seq[phase]) { change('ERRO'); return; }
+      completed = phase + 1; change('FEEDBACK_CERTO');
+      const e = f.exits[index]; burst(e.x, e.y, runes[seq[phase]].cor);
+    }
+
+    function burst(x, y, color) {
+      sparkColor = color;
+      for (let i = 0; i < 24; i++) {
+        const j = i * 5;
+        particles[j] = x; particles[j + 1] = y;
+        particles[j + 2] = (Math.random() - .5) * 170;
+        particles[j + 3] = -30 - Math.random() * 100;
+        particles[j + 4] = .9;
+      }
+    }
+
+    function collect(dev = false) {
+      if (state !== 'CAMARA_ANDAR' || claimed || (!dev && !canTake())) return;
+      claimed = true; change('PEGAR_CHAVE');
+      burst(c.chave.centro[0], c.chave.centro[1], '#4ade80');
+      canvas.focus();
+    }
+
+    function follow(x, y, retry = false) {
+      route = L.path(f.nav, hero.x, hero.y, x, y);
+      waypoint = 0; targetX = x; targetY = y;
+      routeX = hero.x; routeY = hero.y; routeTime = 0; routeRetried = retry;
+    }
+
+    function beginPortal() {
+      change('PORTAL'); follow(c.alvo[0], c.alvo[1]);
+      if (!route.length) {
+        console.error('[Labirinto] Não foi possível traçar o caminho do portal.');
+        claimed = false; change('CAMARA_ANDAR');
+      }
+    }
+
+    function down(event) {
+      event.preventDefault();
+      if (state !== 'ANDAR' && state !== 'CAMARA_ANDAR') return;
+      const { x, y } = screenToGame(event.clientX, event.clientY);
+      if (state === 'CAMARA_ANDAR' && Math.abs(x - c.chave.centro[0]) <= 45 && Math.abs(y - c.chave.centro[1]) <= c.chave.altura / 2 + 8) {
+        collect(); return;
+      }
+      follow(x, y); canvas.focus();
+    }
+
+    function key(event) {
+      if (event.ctrlKey || event.altKey || event.metaKey) return;
+      const k = event.key.toLowerCase(); event.stopImmediatePropagation();
+      if (k === 'tab') {
+        event.preventDefault(); let i = controls.indexOf(document.activeElement);
+        const step = event.shiftKey ? -1 : 1;
+        for (let n = 0; n < 4; n++) {
+          i = (i + step + 4) % 4;
+          if (!controls[i].hidden && !controls[i].disabled) { controls[i].focus(); break; }
+        }
+        return;
+      }
+      if ((k === 'enter' || k === ' ') && controls.includes(event.target)) return;
+      event.preventDefault();
+      if (k in dirs) {
+        if (state === 'ANDAR' || state === 'CAMARA_ANDAR') { held[dirs[k]] = 1; route = empty; }
+        return;
+      }
+      if (event.repeat) return;
+      if (k === 'escape') close(false);
+      else if (k === 'f3') { if (options.toggleDebug) options.toggleDebug(); else debug = !debug; }
+      else if ((k === 'e' || k === 'enter') && state === 'CAMARA_ANDAR') collect();
+      else if (k === 'n' && (options.debug ? options.debug() : debug)) {
+        if (state === 'CAMARA_ANDAR') collect(true);
+        else if (state === 'ANDAR' || state === 'MEMORIZAR') {
+          if (state === 'MEMORIZAR') change('ANDAR');
+          choose(ped.indexOf(seq[phase]));
+        }
+      }
+    }
+
+    function up(event) {
+      const k = event.key.toLowerCase();
+      if (k in dirs) { event.preventDefault(); event.stopImmediatePropagation(); held[dirs[k]] = 0; }
+    }
+
+    function blur() { held.fill(0); if (state !== 'PORTAL') route = empty; last = 0; }
+
+    function close(won = false) {
+      if (closed) return;
+      closed = true; held.fill(0); route = empty;
+      cancelAnimationFrame(raf);
+      canvas.removeEventListener('pointerdown', down);
+      document.removeEventListener('keydown', key, true);
+      document.removeEventListener('keyup', up, true);
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('orientationchange', resize);
+      if (window.visualViewport) window.visualViewport.removeEventListener('resize', resize);
+      window.removeEventListener('blur', blur);
+      host.remove(); current = null; returnFocus?.focus();
+      options.onExit?.(won);
+    }
+
+    function walk(dt) {
+      let vx = Number(held[2] || held[3]) - Number(held[0] || held[1]);
+      let vy = Number(held[6] || held[7]) - Number(held[4] || held[5]);
+      let distance = m.speed * dt;
+      const following = !vx && !vy && waypoint < route.length;
+      if (!vx && !vy && waypoint < route.length) {
+        const p = route[waypoint];
+        vx = p.x - hero.x; vy = p.y - hero.y;
+        const d = Math.hypot(vx, vy);
+        if (d < .5) { waypoint++; return; }
+        distance = Math.min(distance, d);
+      }
+      const len = Math.hypot(vx, vy), x = hero.x, y = hero.y;
+      if (len) {
+        L.move(f.field, hero, vx / len * distance, vy / len * distance);
+        hero.dir = Math.abs(vx) > Math.abs(vy) ? vx < 0 ? 1 : 2 : vy < 0 ? 3 : 0;
+      }
+      const moving = Math.hypot(hero.x - x, hero.y - y) > .001;
+      hero.walk = moving ? Math.max(1, hero.walk + dt * 60) : 0;
+      hero.idle = moving ? 0 : hero.idle + dt * 60;
+      if (following && state !== 'PORTAL' && (routeTime += dt) >= .5) {
+        if (Math.hypot(hero.x - routeX, hero.y - routeY) < 1) {
+          if (routeRetried) route = empty; else follow(targetX, targetY, true);
+        }
+        routeX = hero.x; routeY = hero.y; routeTime = 0;
+      }
+      if (state === 'ANDAR') for (let i = 0; i < f.exits.length; i++) {
+        if (L.hit(hero, f.exits[i].zone, m.footW, m.footH)) { choose(i); break; }
+      }
+    }
+
+    function update(dt) {
+      time += dt; elapsed += dt;
+      if (state === 'MEMORIZAR') {
+        controls[2].disabled = elapsed < 1.5;
+        if (elapsed >= m.memorizeSeconds) change('ANDAR');
+      } else if (state === 'ANDAR' || state === 'CAMARA_ANDAR') walk(dt);
+      else if (state === 'FEEDBACK_CERTO' && elapsed >= .9) change('ESCURECER_CERTO');
+      else if (state === 'ERRO' && elapsed >= 1.1) change('ESCURECER_ERRO');
+      else if (state === 'ESCURECER_ERRO' && elapsed >= .4) {
+        completed = phase = 0; claimed = false;
+        if (cfg.ERRO_NOVA_SEQUENCIA) seq = L.sequence(ids);
+        round();
+      } else if (state === 'ESCURECER_CERTO' && elapsed >= .4) change('TRANSICAO');
+      else if (state === 'TRANSICAO' && elapsed >= 1) { phase++; round(false); }
+      else if (state === 'PEGAR_CHAVE' && elapsed >= .8) beginPortal();
+      else if (state === 'PORTAL') {
+        walk(dt);
+        if (waypoint >= route.length && L.hit(hero, c.soleira, m.footW, m.footH)) change('ENTRAR_PORTAL');
+      } else if (state === 'ENTRAR_PORTAL' && elapsed >= .6) change('BRANCO');
+      else if (state === 'BRANCO' && elapsed >= .4) { close(true); return; }
+
+      controls[3].hidden = !canTake();
+      for (let i = 0; i < 24; i++) {
+        const j = i * 5;
+        if (particles[j + 4] > 0) {
+          particles[j] += particles[j + 2] * dt;
+          particles[j + 1] += particles[j + 3] * dt;
+          particles[j + 4] -= dt;
+        }
+      }
+    }
+
+    function text(value, x, y, size = 26, color = '#fff5d7') {
+      ctx.fillStyle = color; ctx.font = `bold ${size}px ${font}`;
+      ctx.textAlign = 'center'; ctx.fillText(value, x, y);
+    }
+    function panel(x, y, w, h, r = 16) {
+      ctx.fillStyle = '#112b26df'; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill();
+      ctx.strokeStyle = '#b9dc9a'; ctx.lineWidth = 2; ctx.stroke();
+    }
+
+    // Desenha uma laje de símbolo assentada no quadrado de pedra do cenário
+    // Largura = 62% do quadrado de pedra (~74 px em 1024 px = ~46 px), centralizada pela face de cima
+    function drawSlab(id, x, y, customWidth = null, alpha = 1, opts = {}) {
+      const r = runes[id]; if (!r) return;
+      const img = r.slabImage;
+      const { chosenHere = false, success = false, error = false, idle = false } = opts;
+      const stateScale = (chosenHere || success) ? 1.05 : 1.0;
+      const stoneW = phase === 3 ? 137.6 : 74;
+      const baseW = customWidth || (stoneW * SIMBOLO_ESCALA_NA_PRACA);
+      const w = baseW * stateScale;
+      const h = img ? w * (img.naturalHeight / img.naturalWidth) : w;
+      const left = x - w / 2;
+      const top = y - (img ? h * 0.44 : h / 2);
+
+      const glowSize = w * 1.8;
+      if (chosenHere || success) {
+        ctx.save(); ctx.globalAlpha = alpha * .95;
+        ctx.drawImage(r.glow, x - glowSize / 2, y - glowSize / 2, glowSize, glowSize);
+        ctx.restore();
+      } else if (idle && !calm) {
+        ctx.save(); ctx.globalAlpha = alpha * (.28 + .08 * Math.sin(2.2 * time + x));
+        const idleGlow = w * 1.4;
+        ctx.drawImage(r.glow, x - idleGlow / 2, y - idleGlow / 2, idleGlow, idleGlow);
+        ctx.restore();
+      }
+
+      ctx.save(); ctx.globalAlpha = alpha;
+      const smooth = (options.smooth !== undefined) ? options.smooth : (window._TEST_SMOOTH !== undefined ? window._TEST_SMOOTH : true);
+      ctx.imageSmoothingEnabled = smooth;
+      if (smooth) ctx.imageSmoothingQuality = 'high';
+
+      if (img) {
+        ctx.drawImage(img, left, top, w, h);
+      } else {
+        ctx.fillStyle = r.cor; ctx.fillRect(left, top, w, h);
+        text(r.nome, x, y + 5, 15, '#102820');
+      }
+
+      if (error) {
+        ctx.fillStyle = '#ff384b88';
+        ctx.fillRect(left, top, w, h);
+      }
+      ctx.restore();
+    }
+
+    function stone(x, y, height) {
+      ctx.imageSmoothingEnabled = true;
+      if (art.pedestal) {
+        const w = height * art.pedestal.width / art.pedestal.height;
+        ctx.drawImage(art.pedestal, x - w / 2, y - height, w, height);
+      } else text('?', x, y - height / 2, height * .6, '#ffe591');
+    }
+
+    function pedestal(index) {
+      const e = f.exits[index], chosenHere = chosen === index, success = completed > phase;
+      const alpha = success && !chosenHere ? .35 : 1;
+      const isError = chosenHere && state === 'ERRO' && elapsed < .3;
+      const shake = !calm && isError ? Math.sin(elapsed * 90) * 4 : 0;
+      const x = e.x + shake, y = e.y;
+      drawSlab(ped[index], x, y, null, alpha, {
+        chosenHere: chosenHere && (state === 'FEEDBACK_CERTO' || success),
+        success: success && chosenHere,
+        error: isError,
+        idle: state === 'ANDAR'
+      });
+    }
+
+    function keyArt() {
+      if (claimed && state !== 'PEGAR_CHAVE') return;
+      const t = state === 'PEGAR_CHAVE' ? Math.min(1, elapsed / .8) : 0;
+      const x = c.chave.centro[0];
+      const y = c.chave.centro[1] + (calm ? 0 : Math.sin(time * 2.2) * c.chave.flutuacao) - 48 * t;
+      const height = c.chave.altura;
+      const width = height * (art.key?.naturalWidth || 229) / (art.key?.naturalHeight || 482);
+      const size = 140 + 80 * t;
+      ctx.globalAlpha = (1 - t) * (calm ? .35 : .35 + .1 * Math.sin(time * 2.2));
+      ctx.drawImage(art.keyGlow, x - size / 2, y - size / 2, size, size);
+      ctx.globalAlpha = 1 - t;
+      if (art.key) ctx.drawImage(art.key, x - width / 2, y - height / 2, width, height);
+      else { ctx.fillStyle = '#4ade80'; ctx.fillRect(x - 8, y - 32, 16, 64); ctx.fillRect(x, y + 20, 22, 8); }
+      ctx.globalAlpha = 1;
+    }
+
+    function portalArt() {
+      const r = c.portal.raio, x = c.portal.centro[0], y = c.portal.centro[1];
+      ctx.globalAlpha = claimed ? (calm ? .55 : .55 + .1 * Math.sin(time * 3)) : .16;
+      ctx.drawImage(art.portalGlow, x - r, y - r, r * 2, r * 2);
+      ctx.globalAlpha = 1;
+    }
+
+    function player() {
+      if (state === 'BRANCO') return;
+      const t = state === 'ENTRAR_PORTAL' ? Math.min(1, elapsed / .6) : 0;
+      const hs = HERO_SHEET;
+      const scale = (m.heroH / hs.frameH * Math.max(.001, 1 - t)) * PERSONAGEM_ESCALA;
+      const col = window.HeroAnimation ? window.HeroAnimation.column(hero, calm) : 0;
+      ctx.globalAlpha = 1 - t;
+      ctx.fillStyle = '#10251d77';
+      ctx.beginPath();
+      ctx.ellipse(hero.x, hero.y, 16 * (1 - t) * PERSONAGEM_ESCALA, 6 * (1 - t) * PERSONAGEM_ESCALA, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.imageSmoothingEnabled = false;
+      if (art.hero) {
+        ctx.drawImage(art.hero, col * hs.frameW, hero.dir * hs.frameH, hs.frameW, hs.frameH,
+          hero.x - hs.pivotX * scale, hero.y - hs.pivotY * scale, hs.frameW * scale, hs.frameH * scale);
+      } else {
+        ctx.fillStyle = '#efba78';
+        ctx.fillRect(hero.x - 15 * (1 - t) * PERSONAGEM_ESCALA, hero.y - m.heroH * (1 - t) * PERSONAGEM_ESCALA,
+          30 * (1 - t) * PERSONAGEM_ESCALA, m.heroH * (1 - t) * PERSONAGEM_ESCALA);
+      }
+      ctx.imageSmoothingEnabled = true;
+      ctx.globalAlpha = 1;
+    }
+
+    function draw() {
+      const W = f.w, H = f.h;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+      // Preenchimento de fundo borrado e escurecido (nunca faixas pretas ou vazias)
+      if (f.bg && (offsetY > 0 || offsetX > 0)) {
+        ctx.save();
+        ctx.filter = 'blur(16px) brightness(0.4)';
+        // Desenha a cena cobrindo todo o canvas atrás
+        const coverScale = Math.max(canvas.width / W, canvas.height / H);
+        const bgW = W * coverScale, bgH = H * coverScale;
+        ctx.drawImage(f.bg, (canvas.width - bgW) / 2, (canvas.height - bgH) / 2, bgW, bgH);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = '#101c19';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      // Palco centralizado com escala única
+      ctx.setTransform(s, 0, 0, s, offsetX, offsetY);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, W, H);
+      ctx.clip();
+
+      ctx.imageSmoothingEnabled = true;
+      if (f.bg) ctx.drawImage(f.bg, 0, 0, W, H);
+      else { ctx.fillStyle = '#304e39'; ctx.fillRect(0, 0, W, H); }
+
+      let drawn = false;
+      if (phase === 3) {
+        portalArt();
+        if (hero.y < c.pedestal.pe[1]) { player(); drawn = true; }
+        stone(c.pedestal.pe[0], c.pedestal.pe[1], cfg.PEDESTAL_H_CAMARA);
+        keyArt();
+      } else {
+        for (let i = 0; i < order.length; i++) {
+          const n = order[i];
+          if (!drawn && hero.y < f.exits[n].y) { player(); drawn = true; }
+          pedestal(n);
+        }
+      }
+      if (!drawn) player();
+
+      for (let i = 0; i < 24 && !calm; i++) {
+        const j = i * 5;
+        if (particles[j + 4] > 0) {
+          ctx.globalAlpha = particles[j + 4] / .9;
+          ctx.fillStyle = sparkColor;
+          ctx.fillRect(particles[j], particles[j + 1], 4, 4);
+        }
+      }
+      ctx.globalAlpha = 1;
+
+      // Depuração F3
+      if (options.debug ? options.debug() : debug) {
+        ctx.drawImage(f.overlay, 0, 0, W, H);
+        ctx.lineWidth = 2;
+        for (let i = 0; i < f.exits.length; i++) {
+          const e = f.exits[i], z = e.zone;
+          ctx.strokeStyle = ped[i] === seq[phase] ? '#28ff35' : '#ffe230';
+          ctx.strokeRect(z[0], z[1], z[2], z[3]);
+          text(runes[ped[i]].nome + (ped[i] === seq[phase] ? ' — CORRETA' : ''), e.x, z[1] - 12, 16, ctx.strokeStyle);
+          ctx.fillStyle = '#ff42d0'; ctx.fillRect(e.x - 4, e.y - 4, 8, 8);
+          if (e.arco) {
+            ctx.strokeStyle = '#38bdf8';
+            ctx.strokeRect(e.arco[0] - 16, e.arco[1] - 16, 32, 32);
+          }
+        }
+        if (phase === 3) {
+          ctx.strokeStyle = '#ff42d0'; ctx.beginPath(); ctx.arc(c.pedestal.pe[0], c.pedestal.pe[1], c.pedestal.raio, 0, Math.PI * 2); ctx.stroke();
+          ctx.strokeStyle = '#ffe230'; ctx.strokeRect(c.soleira[0], c.soleira[1], c.soleira[2], c.soleira[3]);
+        }
+        ctx.strokeStyle = '#fff'; ctx.strokeRect(hero.x - m.footW / 2, hero.y - m.footH / 2, m.footW, m.footH);
+        ctx.fillStyle = '#fff'; ctx.fillRect(f.spawn[0] - 4, f.spawn[1] - 4, 8, 8);
+
+        // Indicador de zona segura horizontal [12%, 88%]
+        ctx.strokeStyle = '#ff880088'; ctx.lineWidth = 1; ctx.setLineDash([6, 6]);
+        ctx.strokeRect(f.safeXMin, 0, f.safeW, H);
+        ctx.setLineDash([]);
+
+        panel(phase === 3 ? 200 : 112, H - 46, phase === 3 ? 976 : 800, 36);
+        text(`${phase === 3 ? 'Câmara' : `Cruzamento ${phase + 1}`} · S: ${seq.join(' → ')} · (${hero.x.toFixed(1)}, ${hero.y.toFixed(1)}) · N avança`, W / 2, H - 23, 15);
+      }
+
+      // Tela de memorização
+      if (state === 'MEMORIZAR') {
+        ctx.fillStyle = '#000000a8'; ctx.fillRect(0, 0, W, H);
+        const startX = W / 2 - 140;
+        const slabY = H * 0.44;
+        for (let i = 0; i < 3; i++) {
+          const sx = startX + i * 140;
+          drawSlab(seq[i], sx, slabY, 74, 1, { chosenHere: true });
+          text(`${i + 1}ª`, sx, slabY + 54, 22);
+        }
+        const barW = Math.min(360, W * 0.4);
+        ctx.fillStyle = '#d8e7c444'; ctx.fillRect(W / 2 - barW / 2, slabY + 76, barW, 8);
+        ctx.fillStyle = '#b4ed92'; ctx.fillRect(W / 2 - barW / 2, slabY + 76, barW * Math.max(0, 1 - elapsed / m.memorizeSeconds), 8);
+      }
+
+      // Cabeçalho da fase
+      const compact = phase === 1 || phase === 2;
+      const headerY = compact ? 8 : 12;
+      const headerW = phase === 3 ? 560 : 440;
+      panel(W / 2 - headerW / 2, headerY, headerW, 36);
+      text(state === 'MEMORIZAR' ? 'Memorize a ordem das runas!' : phase === 3 ? (claimed ? 'Chave conquistada!' : 'Pegue a chave!') : `Escolha o ${phase + 1}º símbolo da sequência!`,
+        W / 2, headerY + 24, compact ? 17 : 19);
+
+      // Indicadores circulares de progresso
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath(); ctx.arc(28 + i * 30, 24, 10, 0, Math.PI * 2);
+        ctx.fillStyle = i < completed ? '#4ade80' : '#14362ddd'; ctx.fill();
+        ctx.strokeStyle = '#a5dfac'; ctx.lineWidth = 2; ctx.stroke();
+      }
+
+      // Mensagens de erro ou acerto
+      if (state === 'ERRO' || state === 'FEEDBACK_CERTO') {
+        const msgW = state === 'ERRO' ? 520 : 420;
+        panel(W / 2 - msgW / 2, H * 0.72, msgW, 46);
+        text(state === 'ERRO' ? 'Ainda não é essa! Vamos recomeçar!' : 'Muito bem! Caminho encontrado!', W / 2, H * 0.72 + 30, 21);
+      }
+      if (state === 'ESCURECER_CERTO' || state === 'ESCURECER_ERRO') {
+        ctx.fillStyle = `rgba(0,0,0,${Math.min(1, elapsed / .4)})`; ctx.fillRect(0, 0, W, H);
+      }
+      if (state === 'TRANSICAO') {
+        ctx.fillStyle = '#0b1c18'; ctx.fillRect(0, 0, W, H);
+        text(completed === 3 ? 'Câmara da chave' : `Caminho ${completed + 1} de 3`, W / 2, H / 2, 32);
+      }
+      if (warning) {
+        ctx.fillStyle = '#17271deb'; ctx.fillRect(0, H - 16, W, 16);
+        text(warning, W / 2, H - 4, 12, '#ffe59f');
+      }
+      ctx.restore();
+
+      if (state === 'BRANCO') {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.fillStyle = `rgba(255,255,255,${Math.min(1, elapsed / .4)})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    function loop(stamp) {
+      if (closed) return;
+      const dt = last ? Math.min(.05, (stamp - last) / 1000) : 0;
+      last = stamp;
+      update(dt);
+      if (closed) return;
+      draw();
+      raf = requestAnimationFrame(loop);
+    }
+
+    controls[0].onclick = () => close(false);
+    controls[1].onclick = restart;
+    controls[2].onclick = () => { if (state === 'MEMORIZAR' && elapsed >= 1.5) { change('ANDAR'); canvas.focus(); } };
+    controls[3].onclick = () => collect();
+
+    canvas.addEventListener('pointerdown', down);
+    document.addEventListener('keydown', key, true);
+    document.addEventListener('keyup', up, true);
+    window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', resize);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
+    window.addEventListener('blur', blur);
+
+    current = close;
+    restart();
+    resize();
+    raf = requestAnimationFrame(loop);
   }
-  return {prepare,open,get active(){return Boolean(current);}};
+
+  return { prepare, open, get active() { return Boolean(current); } };
 })();

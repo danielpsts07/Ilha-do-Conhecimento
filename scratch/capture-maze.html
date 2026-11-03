@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Captura Labirinto</title>
+</head>
+<body style="margin:0;padding:0;background:#000;overflow:hidden;">
+  <script src="../js/config.js"></script>
+  <script src="../js/hero-animation.js"></script>
+  <script>
+    async function captureFlow() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const phaseToTest = parseInt(urlParams.get('fase') || '0', 10);
+      const isDebug = urlParams.get('debug') === '1';
+
+      await window.loadMemoryMaze();
+      window.LabirintoPuzzle.open({
+        phase: phaseToTest,
+        skipMemorize: true, // skip memorization so we see the walking maze with pedestals!
+        onExit: () => {}
+      });
+
+      if (isDebug) {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'F3', bubbles: true }));
+      }
+
+      // Allow 2 frames of rendering
+      await new Promise(r => setTimeout(r, 400));
+
+      // Get screenshot from canvas
+      const cv = document.querySelector('canvas');
+      const dataUrl = cv ? cv.toDataURL('image/png') : '';
+
+      fetch('/save-shot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shotName: urlParams.get('shotName'),
+          dataUrl
+        })
+      });
+    }
+    window.addEventListener('load', captureFlow);
+  </script>
+</body>
+</html>

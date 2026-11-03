@@ -387,9 +387,9 @@ body.large-text {
   pointer-events: none;
 }
 
-/* Continuar (etiqueta-verde, left 10.6%, width 22.4%) */
+/* Continuar (etiqueta-verde, left 23.2%, width 22.4%) */
 .mural-action-btn.action-verde {
-  left: 10.6%;
+  left: 23.2%;
   width: 22.4%;
 }
 
@@ -405,9 +405,9 @@ body.large-text {
   pointer-events: none;
 }
 
-/* Restaurar padrões (tira-listrada, left 38.0%, width 24.0%) */
+/* Restaurar padrões (tira-listrada, left 52.7%, width 24.0%) */
 .mural-action-btn.action-listrada {
-  left: 38.0%;
+  left: 52.7%;
   width: 24.0%;
 }
 
@@ -433,27 +433,15 @@ body.large-text {
   pointer-events: none;
 }
 
-/* Sair do jogo (etiqueta-bordo, left 67.0%, width 22.4%) */
-.mural-action-btn.action-bordo {
-  left: 67.0%;
-  width: 22.4%;
-}
-
-.mural-action-btn.action-bordo span {
-  position: absolute;
-  left: 62%;
-  top: 52%;
-  transform: translate(-50%, -50%);
-  color: #faecc9;
-  font: bold 1.9cqw Georgia, serif;
-  white-space: nowrap;
-  text-shadow: 1px 1px 0 rgba(70, 38, 18, 0.6);
-  pointer-events: none;
-}
 
 /* ==========================================================================
    SUBMENU: FOLHA DE CADERNO (folha-caderno-com-gato.webp)
    left 2.0%  top 4.0%  width 96.0%  height 93.1% (proporção 584:345)
+   ========================================================================== */
+/* ==========================================================================
+   SUBMENUS NA FOLHA DE CADERNO (MURAL DE CORTIÇA)
+   Layout em fluxo com flex/grid, fontes fluidas com clamp(cqh/cqw),
+   respeito à reserva do gato (x >= 72% e y >= 60%) e acessibilidade total.
    ========================================================================== */
 .mural-sheet-container {
   position: absolute;
@@ -475,58 +463,74 @@ body.large-text {
   height: 100%;
 }
 
-/* Botão Voltar (left 15.1%, top 8.4%) */
-.sheet-back-btn {
+/* Cabeçalho do Submenu: Voltar + Ícone + Título em fluxo vertical garantido */
+.sheet-header {
   position: absolute;
-  left: 15.1%;
-  top: 8.4%;
+  left: 13.5cqw;
+  top: 2.8cqh;
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5cqh;
+  z-index: 15;
+}
+
+/* Botão Voltar (#settings-back): Alvo de toque min 48px, texto >= 18px, pill contrastante */
+.sheet-back-btn {
+  position: relative;
+  left: auto;
+  top: auto;
+  display: inline-flex;
   align-items: center;
-  gap: 0.6cqw;
-  background: transparent;
-  border: 0;
-  padding: 0;
-  margin: 0;
+  gap: 0.8cqw;
+  min-height: clamp(44px, 8.0cqh, 52px);
+  padding: 0 clamp(16px, 2.0cqw, 24px);
+  background: #f7e0bc;
+  border: 2px solid #5c3818;
+  border-radius: 999px;
+  box-shadow: 0 2px 5px rgba(74, 42, 20, 0.35);
   cursor: pointer;
   outline: none;
-  z-index: 10;
+  box-sizing: border-box;
+  transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
 }
 
 .sheet-back-btn:hover {
+  background: #ebd1aa;
   transform: translateX(-2px);
+  box-shadow: 0 3px 7px rgba(74, 42, 20, 0.45);
 }
 
 .sheet-back-btn:focus-visible {
-  outline: 2px dashed #4a2a14;
+  outline: 3px dashed #4a2a14;
   outline-offset: 3px;
-  border-radius: 4px;
 }
 
 .sheet-back-btn .back-icon {
-  width: 4cqw;
+  width: clamp(18px, 2.4cqw, 24px);
   height: auto;
   object-fit: contain;
 }
 
 .sheet-back-btn span {
-  font: bold 1.8cqw Georgia, serif;
+  font: bold clamp(18px, 2.2cqw, 22px) Georgia, serif;
   color: #4a2a14;
   white-space: nowrap;
+  line-height: 1;
 }
 
-/* Linha do título (ícone left 12% top 19.3%, título left 18.9% 3.0cqw) */
+/* Linha do título */
 .sheet-title-group {
-  position: absolute;
-  left: 12%;
-  top: 19.3%;
+  position: relative;
+  left: auto;
+  top: auto;
   display: flex;
   align-items: center;
-  gap: 1.4cqw;
-  z-index: 10;
+  gap: 1.0cqw;
 }
 
 .sheet-header-icon {
-  width: 5.5cqw;
+  width: clamp(22px, 3.5cqw, 32px);
   height: auto;
   object-fit: contain;
 }
@@ -534,25 +538,14 @@ body.large-text {
 .sheet-title {
   margin: 0;
   padding: 0;
-  font: bold 3.0cqw Georgia, serif;
+  font: bold clamp(18px, 2.8cqw, 26px) Georgia, serif;
   color: #4a2a14;
   white-space: nowrap;
+  line-height: 1.1;
 }
 
 .sheet-title:focus {
   outline: none;
-}
-
-/* Parágrafo de introdução (left 12%, top 31%, até 82% largura) */
-.section-copy {
-  position: absolute;
-  left: 12%;
-  top: 31%;
-  width: 82%;
-  margin: 0;
-  font: calc(var(--ts) * clamp(11px, 1.7cqw, 15px)) / 1.35 Georgia, serif;
-  color: #4a2a14;
-  z-index: 5;
 }
 
 /* Zona proibida do gato: x >= 72% e y >= 60% */
@@ -566,23 +559,41 @@ body.large-text {
   z-index: 2;
 }
 
+/* Estrutura de conteúdo e páginas da folha */
 .sheet-spread {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  pointer-events: none;
 }
 
 .sheet-page {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  left: 13.5cqw;
+  top: 25.5cqh;
+  width: 82.5cqw;
+  bottom: 8.5cqh;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
+  pointer-events: auto;
+}
+
+/* Bloco de introdução: altura reservada para até 2 linhas e margem inferior mínima */
+.section-copy {
+  position: relative;
+  margin: 0 0 2cqh 0;
+  width: 100%;
+  max-width: 58cqw;
+  min-height: 5.2cqh;
+  font: calc(var(--ts) * clamp(13px, 1.65cqw, 16px)) / 1.35 Georgia, serif;
+  color: #4a2a14;
+  flex-shrink: 0;
 }
 
 .settings-note {
-  font: italic calc(var(--ts) * clamp(10px, 1.4cqw, 13px)) Georgia, serif;
+  font: italic calc(var(--ts) * clamp(12px, 1.4cqw, 15px)) Georgia, serif;
   color: #6e4d30;
   margin: 0;
 }
@@ -590,76 +601,60 @@ body.large-text {
 /* ==========================================================================
    TELA 1: SOM
    ========================================================================== */
-.row-som {
-  position: absolute;
-  left: 12%;
-  top: 31%;
-  width: 27.6cqw;
-  height: 3.5cqw;
+.sheet-page[data-page-section="audio"] {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 3.5cqw;
+}
+
+.audio-sliders-column {
+  display: flex;
+  flex-direction: column;
+  width: 33cqw;
+  flex-shrink: 0;
+}
+
+.mural-audio-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6cqh;
+}
+
+.audio-row-header {
+  display: flex;
+  align-items: center;
+  gap: 0.8cqw;
 }
 
 .audio-row-icon {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 2.6cqw;
-  height: 2.6cqw;
+  width: clamp(18px, 2.4cqw, 24px);
+  height: auto;
   object-fit: contain;
 }
 
 .audio-row-label {
-  position: absolute;
-  left: 3.5cqw;
-  top: 50%;
-  transform: translateY(-50%);
-  font: bold 1.9cqw Georgia, serif;
+  font: bold clamp(14px, 1.8cqw, 18px) Georgia, serif;
   color: #4a2a14;
   white-space: nowrap;
 }
 
 .audio-row-value {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  font: bold 1.8cqw Georgia, serif;
+  font: bold clamp(14px, 1.7cqw, 18px) Georgia, serif;
   color: #4a2a14;
   white-space: nowrap;
 }
 
-.slider-som {
-  position: absolute;
-  left: 12%;
-  top: 36.5%;
-  width: 27.6cqw;
-  height: 12.5cqh;
-}
-
-.row-musica {
-  position: absolute;
-  left: 12%;
-  top: 51%;
-  width: 27.6cqw;
-  height: 3.5cqw;
-  display: flex;
-  align-items: center;
-}
-
-.slider-musica {
-  position: absolute;
-  left: 12%;
-  top: 56.5%;
-  width: 27.6cqw;
-  height: 12.5cqh;
-}
-
 .mural-slider-wrap {
+  position: relative;
+  width: 100%;
+  height: clamp(28px, 9.8cqh, 42px);
   background: url('../assets/configuracoes/mural/ui/trilho-regua.webp') center / 100% 100% no-repeat !important;
   display: flex;
   align-items: center;
+  margin-bottom: 1.8cqh;
+  box-sizing: border-box;
 }
 
 .mural-slider-wrap input[type="range"],
@@ -680,8 +675,8 @@ body.large-text {
 .mural-slider-wrap input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none !important;
   appearance: none !important;
-  width: 4.8cqw !important;
-  height: 12.5cqh !important;
+  width: clamp(24px, 4.6cqw, 34px) !important;
+  height: clamp(28px, 9.8cqh, 42px) !important;
   background: url('../assets/configuracoes/mural/ui/marcador-patinha.webp') center / contain no-repeat !important;
   image-rendering: pixelated !important;
   border: 0 !important;
@@ -690,8 +685,8 @@ body.large-text {
 }
 
 .mural-slider-wrap input[type="range"]::-moz-range-thumb {
-  width: 4.8cqw !important;
-  height: 12.5cqh !important;
+  width: clamp(24px, 4.6cqw, 34px) !important;
+  height: clamp(28px, 9.8cqh, 42px) !important;
   background: url('../assets/configuracoes/mural/ui/marcador-patinha.webp') center / contain no-repeat !important;
   image-rendering: pixelated !important;
   border: 0 !important;
@@ -699,45 +694,52 @@ body.large-text {
   filter: none !important;
 }
 
+.audio-actions-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.2cqh;
+  margin-top: 0.6cqh;
+}
+
 .mural-link-efeito {
-  position: absolute;
-  left: 12%;
-  top: 73.5%;
-  font: bold 1.6cqw Georgia, serif;
+  font: bold clamp(13px, 1.6cqw, 16px) Georgia, serif;
   color: #2b557b;
   text-decoration: underline;
   cursor: pointer;
+  background: transparent;
+  border: 0;
+  padding: 0;
   white-space: nowrap;
 }
 
 .mural-btn-musica {
-  position: absolute;
-  left: 12%;
-  top: 80%;
-  width: max-content;
-  max-width: 45cqw;
-  padding: 0.8cqh 1.2cqw;
-  min-height: 6.2cqh;
-  display: flex;
+  padding: clamp(5px, 0.9cqh, 8px) clamp(10px, 1.4cqw, 16px);
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 0.8cqw;
-  background: #fdf4e2;
+  background: #fff8eb;
   border: 1px solid #784e2d;
   border-radius: 999px;
-  font: bold 1.5cqw Georgia, serif;
+  font: bold clamp(12px, 1.5cqw, 15px) Georgia, serif;
   line-height: 1;
   color: #4a2a14;
   cursor: pointer;
   white-space: nowrap;
   box-sizing: border-box;
+  transition: background-color 100ms ease, transform 100ms ease;
+}
+
+.mural-btn-musica:hover {
+  background: #fdf0d5;
 }
 
 .mural-btn-musica .status-dot {
-  width: 0.8cqw;
-  height: 0.8cqw;
+  width: clamp(7px, 0.9cqw, 10px);
+  height: clamp(7px, 0.9cqw, 10px);
   border-radius: 50%;
   background: #967355;
+  flex-shrink: 0;
 }
 
 .mural-btn-musica[aria-pressed="true"] .status-dot {
@@ -745,24 +747,27 @@ body.large-text {
 }
 
 .mural-card-silenciar {
-  position: absolute;
-  left: 58.5%;
-  top: 32.4%;
-  width: 36.8cqw;
-  height: 21.8cqh;
-  background: #fdf4e2;
+  width: clamp(190px, 28cqw, 240px);
+  height: clamp(65px, 17cqh, 85px);
+  background: #fff8eb;
   border: 1px solid #784e2d;
   border-radius: 8px;
+  padding: clamp(8px, 1cqh, 12px) clamp(10px, 1.4cqw, 16px);
+  display: flex;
+  align-items: center;
+  gap: 1.2cqw;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .switch-mute {
-  position: absolute;
-  left: 4%;
-  top: 16%;
-  width: 31%;
-  height: 44%;
+  width: clamp(38px, 6.2cqw, 50px);
+  height: clamp(24px, 6cqh, 32px);
   cursor: pointer;
+  flex-shrink: 0;
+  background: transparent;
+  border: 0;
+  padding: 0;
 }
 
 .switch-mute .switch-img {
@@ -776,39 +781,34 @@ body.large-text {
   background-image: url('../assets/configuracoes/mural/ui/interruptor-ligado.webp');
 }
 
-.switch-state-mute {
-  position: absolute;
-  left: 7.5%;
-  top: 60%;
-  font: 1.4cqw Georgia, serif;
-  color: #4a2a14;
-  white-space: nowrap;
+.mute-info {
+  display: flex;
+  flex-direction: column;
 }
 
 .mute-title {
-  position: absolute;
-  left: 39%;
-  top: 15%;
-  font: bold 1.9cqw Georgia, serif;
+  font: bold clamp(13px, 1.8cqw, 17px) Georgia, serif;
   color: #4a2a14;
   white-space: nowrap;
 }
 
 .mute-desc {
-  position: absolute;
-  left: 39%;
-  top: 40%;
-  width: 58%;
-  margin: 0;
-  font: 1.35cqw / 1.25 Georgia, serif;
+  margin: 2px 0 0;
+  font: clamp(10px, 1.3cqw, 13px) / 1.25 Georgia, serif;
   color: #6e4d30;
+}
+
+.switch-state-mute {
+  font: clamp(10px, 1.3cqw, 13px) Georgia, serif;
+  color: #4a2a14;
+  margin-top: 2px;
 }
 
 .mural-notes-decor {
   position: absolute;
-  left: 60%;
-  top: 52%;
-  font: 1.8cqw Georgia, serif;
+  left: 42cqw;
+  top: 21cqh;
+  font: clamp(16px, 2cqw, 22px) Georgia, serif;
   color: #8b572a;
   letter-spacing: 0.6cqw;
   pointer-events: none;
@@ -817,53 +817,52 @@ body.large-text {
 /* ==========================================================================
    TELA 2: CONTROLES
    ========================================================================== */
+/* Página 1: Teclado */
 .mural-key-map {
   list-style: none;
   margin: 0;
   padding: 0;
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(5px, 1.3cqh, 10px);
+  width: 100%;
+  max-width: 58cqw;
 }
 
 .key-row {
-  position: absolute;
-  left: 12%;
-  width: 45cqw;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(130px, 18.5cqw) 1fr;
   align-items: center;
-  pointer-events: auto;
+  gap: 1.5cqw;
 }
-
-.key-row-1 { top: 38.0%; }
-.key-row-2 { top: 46.4%; }
-.key-row-3 { top: 54.8%; }
-.key-row-4 { top: 63.2%; }
-.key-row-5 { top: 71.6%; }
 
 .key-caps {
   display: inline-flex;
-  gap: 0.55cqw;
+  align-items: center;
+  gap: 0.4cqw;
+  flex-shrink: 0;
 }
 
 .key-caps kbd {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 3.5cqw;
-  height: 5.9cqh;
+  min-width: clamp(22px, 3.2cqw, 28px);
+  height: clamp(22px, 5.0cqh, 28px);
+  padding: 0 4px;
   box-sizing: border-box;
   background: #fdf4e2;
   border: 1px solid #784e2d;
-  border-radius: 3px;
+  border-radius: 4px;
   box-shadow: 0 2px 0 #966946;
-  font: bold 1.4cqw monospace;
+  font: bold clamp(11px, 1.4cqw, 15px) monospace;
   color: #4a2a14;
+  line-height: 1;
   transition: background 80ms, transform 80ms, box-shadow 80ms;
 }
 
 .key-caps kbd.key-esc {
-  width: 4.8cqw;
+  min-width: clamp(34px, 4.6cqw, 42px);
 }
 
 .key-caps kbd.is-pressed,
@@ -874,81 +873,85 @@ body.large-text {
 }
 
 .key-desc {
-  position: absolute;
-  left: 17.4cqw;
-  font: 1.7cqw Georgia, serif;
+  font: clamp(13px, 1.6cqw, 17px) Georgia, serif;
   color: #4a2a14;
   white-space: nowrap;
 }
 
 .mural-decor-controles {
   position: absolute;
-  left: 78.2%;
-  top: 34.9%;
-  width: 12.9cqw;
+  right: 6cqw;
+  top: 0;
+  width: clamp(60px, 12cqw, 95px);
   height: auto;
   object-fit: contain;
   pointer-events: none;
 }
 
-/* Página 2 */
-.mural-speed-header {
-  position: absolute;
-  left: 12%;
-  top: 31.1%;
+/* Página 2: Velocidade e Toque */
+.mural-speed-row {
   display: flex;
   align-items: center;
-  gap: 0.9cqw;
+  gap: 3cqw;
+  margin-bottom: 2.2cqh;
+}
+
+.speed-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8cqh;
+}
+
+.mural-speed-header {
+  display: flex;
+  align-items: center;
+  gap: 0.8cqw;
 }
 
 .speed-icon {
-  width: 2.9cqw;
-  height: 2.9cqw;
+  width: clamp(18px, 2.6cqw, 24px);
+  height: auto;
   object-fit: contain;
 }
 
 .speed-label {
-  font: bold 1.9cqw Georgia, serif;
+  font: bold clamp(14px, 1.8cqw, 18px) Georgia, serif;
   color: #4a2a14;
   white-space: nowrap;
 }
 
 .stepper-mural {
-  position: absolute;
-  left: 12%;
-  top: 38%;
   display: flex;
   align-items: center;
-  gap: 0.9cqw;
+  gap: 0.8cqw;
 }
 
 .stepper-mural .prev,
 .stepper-mural .next {
-  width: 5.5cqw;
-  height: 5.5cqw;
+  width: clamp(24px, 4.6cqw, 36px);
+  height: clamp(24px, 4.6cqw, 36px);
 }
 
 .stepper-value {
-  width: 20.2cqw;
-  height: 6.9cqh;
+  width: clamp(90px, 16cqw, 130px);
+  height: clamp(26px, 6.2cqh, 34px);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fdf4e2;
+  background: #fff8eb;
   border: 1px solid #784e2d;
   border-radius: 999px;
-  font: bold 1.8cqw Georgia, serif;
+  font: bold clamp(13px, 1.7cqw, 16px) Georgia, serif;
   color: #4a2a14;
-  text-align: center;
   box-sizing: border-box;
 }
 
 .mural-walk-box {
   position: absolute;
-  left: 73.6%;
-  top: 30.5%;
-  width: 18.4cqw;
-  height: 19.3cqh;
+  right: 6cqw;
+  top: 0;
+  width: clamp(90px, 16cqw, 130px);
+  height: clamp(60px, 17cqh, 85px);
   background: #e2cdaa;
   border: 1px solid #784e2d;
   border-radius: 6px;
@@ -960,59 +963,57 @@ body.large-text {
 }
 
 .walk-preview-hero {
-  height: 28px;
+  height: clamp(22px, 5cqh, 30px);
   image-rendering: pixelated;
 }
 
 .walk-preview-caption {
-  font: 1.2cqw Georgia, serif;
+  font: clamp(10px, 1.2cqw, 12px) Georgia, serif;
   color: #6e4d30;
   margin-top: 4px;
 }
 
+.mural-touch-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1cqh;
+}
+
 .mural-touch-header {
-  position: absolute;
-  left: 12%;
-  top: 49.2%;
-  width: 58cqw;
   display: flex;
   align-items: center;
-  gap: 0.9cqw;
+  gap: 0.8cqw;
 }
 
 .touch-icon {
-  width: 2.9cqw;
-  height: 2.9cqw;
+  width: clamp(18px, 2.6cqw, 24px);
+  height: auto;
   object-fit: contain;
 }
 
 .touch-title {
-  font: bold 1.9cqw Georgia, serif;
+  font: bold clamp(14px, 1.8cqw, 18px) Georgia, serif;
   color: #4a2a14;
   white-space: nowrap;
 }
 
 .touch-hint {
-  position: absolute;
-  left: 23cqw;
-  font: 1.4cqw Georgia, serif;
+  font: clamp(11px, 1.4cqw, 14px) Georgia, serif;
   color: #6e4d30;
-  white-space: nowrap;
+  margin-left: 0.6cqw;
 }
 
 .touch-choice {
-  position: absolute;
-  left: 12%;
-  top: 59.8%;
   display: flex;
   gap: 1.5cqw;
+  max-width: 58cqw;
 }
 
 .mural-touch-card {
   position: relative;
-  width: 16.9cqw;
-  height: 18.7cqh;
-  background: #fdf4e2;
+  width: clamp(75px, 14.5cqw, 110px);
+  height: clamp(55px, 15.5cqh, 78px);
+  background: #fff8eb;
   border: 1px solid #967355;
   border-radius: 6px;
   cursor: pointer;
@@ -1041,12 +1042,12 @@ body.large-text {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.6cqw;
-  height: 1.6cqw;
+  width: clamp(12px, 1.6cqw, 16px);
+  height: clamp(12px, 1.6cqw, 16px);
   background: #fff;
   border: 1px solid #784e2d;
   border-radius: 2px;
-  font: bold 1.0cqw monospace;
+  font: bold clamp(8px, 1.0cqw, 11px) monospace;
   color: #4a2a14;
 }
 
@@ -1060,517 +1061,48 @@ body.large-text {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 3.2cqw;
-  height: 3.2cqw;
+  width: clamp(20px, 3.2cqw, 26px);
+  height: clamp(20px, 3.2cqw, 26px);
   border: 2px solid #784e2d;
   border-radius: 50%;
 }
 
 .joystick-dot {
-  width: 1.4cqw;
-  height: 1.4cqw;
+  width: clamp(8px, 1.4cqw, 12px);
+  height: clamp(8px, 1.4cqw, 12px);
   background: #784e2d;
   border-radius: 50%;
 }
 
 .off-icon {
-  font-size: 2.5cqw;
+  font-size: clamp(16px, 2.4cqw, 22px);
   color: #784e2d;
 }
 
 .touch-name {
   position: absolute;
   left: 50%;
-  top: 85%;
-  transform: translate(-50%, -50%);
-  font: bold 1.7cqw Georgia, serif;
+  bottom: 6px;
+  transform: translateX(-50%);
+  font: bold clamp(11px, 1.5cqw, 14px) Georgia, serif;
   color: #4a2a14;
   white-space: nowrap;
 }
 
-/* ==========================================================================
-   TELA 3: IDIOMA
-   ========================================================================== */
-.language-cards {
-  position: absolute;
-  left: 12%;
-  top: 38.6%;
-  display: flex;
-  gap: 2.2cqw;
-}
-
-.mural-lang-card {
-  position: relative;
-  width: 18.4cqw;
-  aspect-ratio: 173 / 167;
-  background: transparent;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-  outline: none;
-}
-
-.lang-card-bg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  pointer-events: none;
-}
-
-.lang-en {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.mural-lang-card .flag {
-  position: absolute;
-  left: 50%;
-  top: 27%;
-  transform: translate(-50%, -50%);
-  width: 28px;
-  height: 19px;
-}
-
-.flag-br {
-  background: #009c3b;
-  position: relative;
-  border: 1px solid #784e2d;
-}
-.flag-br::before {
-  content: '';
-  position: absolute;
-  inset: 2px 4px;
-  background: #ffdf00;
-  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-}
-.flag-br::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 8px;
-  height: 8px;
-  background: #002776;
-  border-radius: 50%;
-}
-
-.flag-us {
-  background: repeating-linear-gradient(#b22234, #b22234 2px, #fff 2px, #fff 4px);
-  position: relative;
-  border: 1px solid #784e2d;
-}
-.flag-us::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 12px;
-  height: 10px;
-  background: #3c3b6e;
-}
-
-.lang-card-name {
-  position: absolute;
-  left: 50%;
-  top: 58%;
-  transform: translate(-50%, -50%);
-  font: bold 1.8cqw Georgia, serif;
-  color: #4a2a14;
-  white-space: nowrap;
-}
-
-.lang-card-sub {
-  position: absolute;
-  left: 50%;
-  top: 70%;
-  transform: translate(-50%, -50%);
-  font: 1.4cqw Georgia, serif;
-  color: #6e4d30;
-  white-space: nowrap;
-}
-
-.lang-check {
-  position: absolute;
-  left: 50%;
-  top: 85%;
-  transform: translate(-50%, -50%);
-  width: 2.2cqw;
-  height: 2.2cqw;
-  border-radius: 50%;
-  background: #4caf50;
-  color: #fff;
-  font: bold 1.4cqw sans-serif;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.lang-soon {
-  position: absolute;
-  left: 50%;
-  top: 85%;
-  transform: translate(-50%, -50%);
-  padding: 2px 8px;
-  background: #784e2d;
-  color: #faecc9;
-  border-radius: 999px;
-  font: bold 1.2cqw Georgia, serif;
-  white-space: nowrap;
-}
-
-.mural-decor-idioma {
-  position: absolute;
-  left: 56.1%;
-  top: 40.5%;
-  width: 12.9cqw;
-  height: auto;
-  object-fit: contain;
-  pointer-events: none;
-}
-
-.lang-note {
-  position: absolute;
-  left: 12%;
-  top: 71.6%;
-}
-
-/* ==========================================================================
-   TELA 4: ACESSIBILIDADE
-   ========================================================================== */
-.mural-access-card {
-  position: absolute;
-  left: 12%;
-  width: 59.2cqw;
-  height: 13.7cqh;
-  background: #fdf4e2;
-  border: 1px solid #784e2d;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  box-sizing: border-box;
-  padding: 0 1.5cqw;
-}
-
-.card-large-text { top: 39.2%; }
-.card-calm { top: 54.2%; }
-
-.switch-access {
-  width: 11.4%;
-  height: 60%;
-  cursor: pointer;
-  flex: none;
-}
-
-.switch-access .switch-img {
-  width: 100%;
-  height: 100%;
-  background: url('../assets/configuracoes/mural/ui/interruptor-desligado.webp') center / contain no-repeat;
-  display: block;
-}
-
-.switch-access[aria-checked="true"] .switch-img {
-  background-image: url('../assets/configuracoes/mural/ui/interruptor-ligado.webp');
-}
-
-.access-info {
-  display: flex;
-  flex-direction: column;
-  margin-left: 2.4cqw;
-  width: 36cqw;
-}
-
-.access-title {
-  font: bold 1.9cqw Georgia, serif;
-  color: #4a2a14;
-}
-
-.access-desc {
-  font: 1.4cqw / 1.25 Georgia, serif;
-  color: #6e4d30;
-}
-
-.access-state {
-  margin-left: auto;
-  font: 1.4cqw Georgia, serif;
-  color: #4a2a14;
-  white-space: nowrap;
-}
-
-.mural-decor-access {
-  position: absolute;
-  left: 77.3%;
-  top: 34.9%;
-  width: 13.2cqw;
-  height: auto;
-  object-fit: contain;
-  pointer-events: none;
-}
-
-.mural-access-preview {
-  position: absolute;
-  left: 12%;
-  top: 73.5%;
-  display: flex;
-  align-items: baseline;
-  gap: 1.5cqw;
-  pointer-events: none;
-}
-
-.preview-aa {
-  font: bold calc(var(--ts) * 3.5cqw) Georgia, serif;
-  color: #4a2a14;
-}
-
-.preview-text {
-  font: bold calc(var(--ts) * 1.9cqw) Georgia, serif;
-  color: #4a2a14;
-}
-
-/* ==========================================================================
-   TELA 5: COMO JOGAR
-   ========================================================================== */
-.mural-steps-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.step-row {
-  position: absolute;
-  left: 12%;
-  display: flex;
-  align-items: center;
-  gap: 1.6cqw;
-  pointer-events: auto;
-}
-
-.step-row-1 { top: 40.5%; }
-.step-row-2 { top: 45.8%; }
-.step-row-3 { top: 51.1%; }
-.step-row-4 { top: 56.4%; }
-
-.step-badge {
-  width: 2.2cqw;
-  height: 2.2cqw;
-  border-radius: 50%;
-  background: #fdf4e2;
-  border: 1px solid #784e2d;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  font: bold 1.4cqw Georgia, serif;
-  color: #4a2a14;
-}
-
-.step-text {
-  font: 1.7cqw Georgia, serif;
-  color: #4a2a14;
-  white-space: nowrap;
-}
-
-.mural-keys-grid {
-  position: absolute;
-  left: 63%;
-  top: 39%;
-  width: 11.5cqw;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.2cqw 1.8cqw;
-  pointer-events: none;
-}
-
-.mural-keys-grid img {
-  width: 4.2cqw;
-  height: auto;
-  transform: rotate(-90deg);
-  object-fit: contain;
-}
-
-.mural-btn-tutorial {
-  position: absolute;
-  left: 12%;
-  top: 63%;
-  width: 17cqw;
-  height: 6.5cqh;
-  background: transparent;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-  outline: none;
-}
-
-.tutorial-btn-bg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  pointer-events: none;
-}
-
-.mural-btn-tutorial span {
-  position: absolute;
-  left: 55%;
-  top: 48%;
-  transform: translate(-50%, -50%);
-  font: bold 1.5cqw Georgia, serif;
-  color: #faecc9;
-  white-space: nowrap;
-  text-shadow: 1px 1px 0 rgba(70, 38, 18, 0.6);
-  pointer-events: none;
-}
-  position: absolute;
-  left: 62%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  font: bold 1.8cqw Georgia, serif;
-  color: #faecc9;
-  white-space: nowrap;
-  text-shadow: 1px 1px 0 rgba(70, 38, 18, 0.6);
-  pointer-events: none;
-}
-
-/* ==========================================================================
-   TELA 6: SOBRE NÓS
-   ========================================================================== */
-.mural-about-list {
-  position: absolute;
-  left: 12%;
-  top: 41.1%;
-  width: 60cqw;
-  display: flex;
-  flex-direction: column;
-  gap: 2.5cqh;
-}
-
-.about-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 1.4cqw;
-}
-
-.about-icon {
-  width: 4.8cqw;
-  height: auto;
-  object-fit: contain;
-  flex: none;
-  margin-top: 0.2cqw;
-}
-
-.about-content strong {
-  font: bold 1.8cqw Georgia, serif;
-  color: #4a2a14;
-  display: block;
-}
-
-.about-content p {
-  margin: 0.2cqh 0 0;
-  font: 1.5cqw / 1.35 Georgia, serif;
-  color: #4a2a14;
-  width: 53cqw;
-}
-
-.mural-heart-decor {
-  position: absolute;
-  left: 78.2%;
-  top: 37.4%;
-  width: 11cqw;
-  font-size: 7cqw;
-  color: #c83c46;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-/* ==========================================================================
-   TELA 7: CRÉDITOS
-   ========================================================================== */
-.mural-blackboard {
-  position: absolute;
-  left: 74.5%;
-  top: 19.3%;
-  width: 19.3cqw;
-  height: 8.7cqh;
-  background: #283a32;
-  border: 3px solid #6e4b2d;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font: bold 1.8cqw Georgia, serif;
-  color: #faecc9;
-  pointer-events: none;
-}
-
-.mural-credits-list {
-  position: absolute;
-  left: 12%;
-  top: 31.1%;
-  width: 78cqw;
-  display: flex;
-  flex-direction: column;
-  gap: 2.5cqh;
-}
-
-.credits-row {
-  display: flex;
-  align-items: center;
-  height: 6.2cqh;
-}
-
-.credits-tag {
-  width: 23.5cqw;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #784e2d;
-  border-radius: 4px;
-  font: bold 1.6cqw Georgia, serif;
-  color: #4a2a14;
-  white-space: nowrap;
-  flex: none;
-  box-sizing: border-box;
-}
-
-.tag-yellow { background: #ffe578; }
-.tag-blue   { background: #b0d6eb; }
-.tag-pink   { background: #f5b9c3; }
-.tag-green  { background: #a0e6be; }
-
-.credits-desc {
-  margin-left: 1.7cqw;
-  font: 1.65cqw Georgia, serif;
-  color: #4a2a14;
-  white-space: nowrap;
-}
-
-/* ==========================================================================
-   RODAPÉ DE PAGINAÇÃO DA FOLHA (exibido apenas em Controles)
-   ========================================================================== */
+/* Rodapé de Paginação */
 .sheet-pagination {
   position: absolute;
-  left: 12%;
-  top: 85.3%;
-  width: 20.4cqw;
-  height: 4.8cqw;
+  left: 13.5cqw;
+  bottom: 2.2cqh;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 1.0cqw;
   z-index: 10;
 }
 
 .mural-page-arrow {
-  width: 4.8cqw;
-  height: 4.8cqw;
+  width: clamp(24px, 4.4cqw, 36px);
+  height: clamp(24px, 4.4cqw, 36px);
   background: transparent;
   border: 0;
   padding: 0;
@@ -1593,11 +1125,471 @@ body.large-text {
 }
 
 .sheet-page-num {
-  font: bold 1.7cqw Georgia, serif;
+  font: bold clamp(14px, 1.7cqw, 18px) Georgia, serif;
   color: #4a2a14;
-  min-width: 4cqw;
+  min-width: 3.5cqw;
   text-align: center;
 }
+
+/* ==========================================================================
+   TELA 3: IDIOMA
+   ========================================================================== */
+.language-content-row {
+  display: flex;
+  align-items: center;
+  gap: 3.0cqw;
+  margin-top: 1.0cqh;
+}
+
+.language-cards {
+  display: flex;
+  gap: 2.2cqw;
+}
+
+.mural-lang-card {
+  position: relative;
+  width: clamp(95px, 18cqw, 135px);
+  aspect-ratio: 173 / 167;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.lang-card-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+}
+
+.lang-en {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.mural-lang-card .flag {
+  position: absolute;
+  left: 50%;
+  top: 27%;
+  transform: translate(-50%, -50%);
+  width: clamp(24px, 3.4cqw, 30px);
+  height: clamp(16px, 2.2cqw, 20px);
+}
+
+.flag-br {
+  background: #009c3b;
+  position: relative;
+  border: 1px solid #784e2d;
+}
+
+.flag-br::before {
+  content: '';
+  position: absolute;
+  inset: 2px 4px;
+  background: #ffdf00;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
+
+.flag-br::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 7px;
+  height: 7px;
+  background: #002776;
+  border-radius: 50%;
+}
+
+.flag-us {
+  background: repeating-linear-gradient(#b22234, #b22234 2px, #fff 2px, #fff 4px);
+  position: relative;
+  border: 1px solid #784e2d;
+}
+
+.flag-us::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 11px;
+  height: 9px;
+  background: #3c3b6e;
+}
+
+.lang-card-name {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  transform: translate(-50%, -50%);
+  font: bold clamp(12px, 1.7cqw, 16px) Georgia, serif;
+  color: #4a2a14;
+  white-space: nowrap;
+}
+
+.lang-card-sub {
+  position: absolute;
+  left: 50%;
+  top: 70%;
+  transform: translate(-50%, -50%);
+  font: clamp(10px, 1.3cqw, 13px) Georgia, serif;
+  color: #6e4d30;
+  white-space: nowrap;
+}
+
+.lang-check {
+  position: absolute;
+  left: 50%;
+  top: 85%;
+  transform: translate(-50%, -50%);
+  width: clamp(16px, 2.2cqw, 20px);
+  height: clamp(16px, 2.2cqw, 20px);
+  border-radius: 50%;
+  background: #4caf50;
+  color: #fff;
+  font: bold clamp(10px, 1.3cqw, 12px) sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lang-soon {
+  position: absolute;
+  left: 50%;
+  top: 85%;
+  transform: translate(-50%, -50%);
+  padding: 2px 7px;
+  background: #784e2d;
+  color: #faecc9;
+  border-radius: 999px;
+  font: bold clamp(9px, 1.1cqw, 11px) Georgia, serif;
+  white-space: nowrap;
+}
+
+.mural-decor-idioma {
+  width: clamp(65px, 13cqw, 95px);
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.lang-note {
+  margin-top: 1.8cqh;
+}
+
+/* ==========================================================================
+   TELA 4: ACESSIBILIDADE
+   ========================================================================== */
+.access-cards-column {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(7px, 1.6cqh, 12px);
+  width: 100%;
+  max-width: 58cqw;
+}
+
+.mural-access-card {
+  position: relative;
+  width: 100%;
+  height: clamp(46px, 12.5cqh, 60px);
+  background: #fff8eb;
+  border: 1px solid #784e2d;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0 clamp(8px, 1.4cqw, 16px);
+  flex-shrink: 0;
+}
+
+.switch-access {
+  width: clamp(38px, 6.2cqw, 48px);
+  height: clamp(24px, 6cqh, 30px);
+  cursor: pointer;
+  flex-shrink: 0;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.switch-access .switch-img {
+  width: 100%;
+  height: 100%;
+  background: url('../assets/configuracoes/mural/ui/interruptor-desligado.webp') center / contain no-repeat;
+  display: block;
+}
+
+.switch-access[aria-checked="true"] .switch-img {
+  background-image: url('../assets/configuracoes/mural/ui/interruptor-ligado.webp');
+}
+
+.access-info {
+  display: flex;
+  flex-direction: column;
+  margin-left: 1.5cqw;
+}
+
+.access-title {
+  font: bold clamp(13px, 1.8cqw, 17px) Georgia, serif;
+  color: #4a2a14;
+  white-space: nowrap;
+}
+
+.access-desc {
+  font: clamp(10px, 1.3cqw, 13px) / 1.25 Georgia, serif;
+  color: #6e4d30;
+  margin-top: 1px;
+}
+
+.access-state {
+  margin-left: auto;
+  font: clamp(11px, 1.4cqw, 14px) Georgia, serif;
+  color: #4a2a14;
+  white-space: nowrap;
+}
+
+.mural-decor-access {
+  position: absolute;
+  right: 6cqw;
+  top: 0;
+  width: clamp(60px, 12.5cqw, 95px);
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.mural-access-preview {
+  margin-top: clamp(8px, 1.6cqh, 14px);
+  display: flex;
+  align-items: baseline;
+  gap: 1.2cqw;
+  pointer-events: none;
+}
+
+.preview-aa {
+  font: bold calc(var(--ts) * clamp(22px, 3.6cqw, 34px)) Georgia, serif;
+  color: #4a2a14;
+  line-height: 1;
+}
+
+.preview-text {
+  font: bold calc(var(--ts) * clamp(13px, 1.8cqw, 17px)) Georgia, serif;
+  color: #4a2a14;
+  line-height: 1;
+}
+
+/* ==========================================================================
+   TELA 5: COMO JOGAR
+   ========================================================================== */
+.mural-steps-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(5px, 1.1cqh, 9px);
+  max-width: 58cqw;
+}
+
+.step-row {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1.4cqw, 14px);
+}
+
+.step-badge {
+  width: clamp(18px, 2.2cqw, 24px);
+  height: clamp(18px, 2.2cqw, 24px);
+  border-radius: 50%;
+  background: #fff8eb;
+  border: 1px solid #784e2d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: bold clamp(11px, 1.35cqw, 14px) Georgia, serif;
+  color: #4a2a14;
+  flex-shrink: 0;
+}
+
+.step-text {
+  font: clamp(13px, 1.6cqw, 16px) Georgia, serif;
+  color: #4a2a14;
+  white-space: nowrap;
+}
+
+.mural-keys-grid {
+  position: absolute;
+  right: 7cqw;
+  top: 0;
+  width: clamp(65px, 12cqw, 95px);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.8cqw 1.2cqw;
+  pointer-events: none;
+}
+
+.mural-keys-grid img {
+  width: clamp(24px, 4cqw, 34px);
+  height: auto;
+  transform: rotate(-90deg);
+  object-fit: contain;
+}
+
+.mural-btn-tutorial {
+  position: relative;
+  margin-top: clamp(8px, 1.8cqh, 14px);
+  width: clamp(140px, 20cqw, 185px);
+  height: clamp(38px, 8.2cqh, 48px);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  outline: none;
+  align-self: flex-start;
+  transition: transform 120ms ease;
+}
+
+.mural-btn-tutorial:hover {
+  transform: scale(1.03);
+}
+
+.tutorial-btn-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+}
+
+.mural-btn-tutorial span {
+  position: absolute;
+  left: 60%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font: bold clamp(13px, 1.6cqw, 16px) Georgia, serif;
+  color: #faecc9;
+  white-space: nowrap;
+  text-shadow: 1px 1px 0 rgba(70, 38, 18, 0.7);
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   TELA 6: SOBRE NÓS
+   ========================================================================== */
+.mural-about-list {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(7px, 1.6cqh, 12px);
+  width: 100%;
+  max-width: 58cqw;
+}
+
+.about-item {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(8px, 1.4cqw, 14px);
+}
+
+.about-icon {
+  width: clamp(22px, 3.6cqw, 32px);
+  height: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.about-content strong {
+  font: bold clamp(13px, 1.7cqw, 17px) Georgia, serif;
+  color: #4a2a14;
+  display: block;
+}
+
+.about-content p {
+  margin: 1px 0 0;
+  font: clamp(11px, 1.4cqw, 14px) / 1.25 Georgia, serif;
+  color: #5c3818;
+}
+
+.mural-heart-decor {
+  position: absolute;
+  right: 7cqw;
+  top: 0;
+  font-size: clamp(32px, 6.5cqw, 52px);
+  color: #c83c46;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   TELA 7: CRÉDITOS
+   ========================================================================== */
+.mural-blackboard {
+  position: absolute;
+  right: 6cqw;
+  top: -7cqh;
+  width: clamp(80px, 15cqw, 120px);
+  height: clamp(26px, 6.5cqh, 34px);
+  background: #283a32;
+  border: 2px solid #6e4b2d;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: bold clamp(11px, 1.4cqw, 15px) Georgia, serif;
+  color: #faecc9;
+  pointer-events: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.mural-credits-list {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(5px, 1.2cqh, 9px);
+  width: 100%;
+  max-width: 58cqw;
+}
+
+.credits-row {
+  display: flex;
+  align-items: center;
+  gap: 1.2cqw;
+  height: clamp(24px, 5.2cqh, 30px);
+}
+
+.credits-tag {
+  min-width: clamp(100px, 17.5cqw, 140px);
+  padding: 0 clamp(6px, 1cqw, 10px);
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #784e2d;
+  border-radius: 4px;
+  font: bold clamp(9.5px, 1.25cqw, 13px) Georgia, serif;
+  color: #4a2a14;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.tag-yellow { background: #ffe578; }
+.tag-blue   { background: #b0d6eb; }
+.tag-pink   { background: #f5b9c3; }
+.tag-green  { background: #a0e6be; }
+
+.credits-desc {
+  font: clamp(11px, 1.4cqw, 14px) Georgia, serif;
+  color: #4a2a14;
+  white-space: nowrap;
+}
+
 
 /* ==========================================================================
    MODO DE CALIBRAÇÃO (?calibrar)
@@ -1656,6 +1648,601 @@ body.large-text {
 .calibrar-overflow {
   outline: 2px solid #ff1744 !important;
   background: rgba(255, 23, 68, 0.15) !important;
+}
+
+/* ==========================================================================
+   TUTORIAL NO MURAL DE CORTIÇA (#tutorial-view)
+   Folha pautada, bloco centralizado vertical e horizontalmente,
+   altura reservada unificada entre etapas (sem pular), teclas e botões ampliados,
+   respeito à reserva do gato (x >= 72% e y >= 60%) e sem rolagem em paisagem.
+   ========================================================================== */
+#tutorial-view.mural-tutorial {
+  position: absolute;
+  left: 2.0%;
+  top: 4.0%;
+  width: 96.0%;
+  height: 93.1%;
+  aspect-ratio: 584 / 345;
+  background: url('../assets/configuracoes/mural/ui/folha-caderno-com-gato.webp') center / 100% 100% no-repeat;
+  z-index: 20;
+  container-type: size;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.95fr);
+  grid-template-rows: 48cqh 1fr;
+  column-gap: 3.5cqw;
+  padding: 10.5cqh 7.0cqw 2.5cqh 14.0cqw;
+  overflow: hidden;
+  inset: auto;
+}
+
+/* Colunas com altura unificada de 48cqh: evita pulos de layout entre etapas */
+#tutorial-view .left-page,
+#tutorial-view .right-page.tutorial-practice {
+  height: 48cqh;
+  max-height: 48cqh;
+  min-height: 48cqh;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Coluna Esquerda: Cabeçalho fixo no topo, texto e teclas organizadas */
+#tutorial-view .left-page {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  border-top: 0;
+  padding: 0;
+  overflow: visible;
+}
+
+#tutorial-view .chapter {
+  display: block;
+  font: bold clamp(12px, 1.4cqw, 14px) Georgia, serif;
+  color: #8b572a;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin: 0 0 0.3cqh 0;
+  line-height: 1.2;
+}
+
+#tutorial-view #step-count {
+  float: none;
+  display: inline;
+  margin-left: 0.5ch;
+  font-weight: bold;
+  color: #5c3818;
+}
+
+#tutorial-view #tutorial-title {
+  margin: 0 0 0.6cqh 0;
+  padding: 0;
+  font: bold clamp(24px, 3.2cqw, 32px) Georgia, serif;
+  color: #4a2a14;
+  line-height: 1.12;
+}
+
+#tutorial-view .tutorial-copy {
+  margin: 0 0 0.8cqh 0;
+  font: calc(var(--ts) * clamp(15px, 1.7cqw, 17px)) / 1.35 Georgia, serif;
+  color: #4a2a14;
+  max-width: 34ch;
+}
+
+#tutorial-view .key-guide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4cqh;
+  margin: 0.3cqh 0 0.6cqh 0;
+  max-width: 34ch;
+}
+
+#tutorial-view .wasd-cluster {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+#tutorial-view .wasd-cluster > div {
+  display: flex;
+  gap: 3px;
+  justify-content: center;
+}
+
+#tutorial-view .key-guide kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(36px, 4.5cqw, 46px);
+  height: clamp(30px, 4.4cqh, 40px);
+  min-width: 36px;
+  min-height: 30px;
+  padding: 0;
+  background: #fdf4e2;
+  border: 1.5px solid #784e2d;
+  border-bottom: 3px solid #784e2d;
+  border-radius: 5px;
+  box-shadow: 0 1px 0 #966946;
+  font: bold clamp(14px, 1.8cqw, 18px) monospace;
+  color: #4a2a14;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+#tutorial-view .key-guide span {
+  font: clamp(14px, 1.6cqw, 16px) Georgia, serif;
+  color: #5c3818;
+  white-space: nowrap;
+  text-align: center;
+}
+
+#tutorial-view .tutorial-tip {
+  margin: 0.4cqh 0 0 0;
+  padding: 0.4cqh 0.8cqw;
+  background: #fff8eb;
+  border-left: 3px solid #784e2d;
+  border-radius: 0 4px 4px 0;
+  font: italic calc(var(--ts) * clamp(12px, 1.35cqw, 14.5px)) / 1.3 Georgia, serif;
+  color: #6e4d30;
+  max-width: 34ch;
+  box-sizing: border-box;
+}
+
+/* Coluna Direita: Área de Prática em moldura (Centralizada e Proporcional) */
+#tutorial-view .right-page.tutorial-practice {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-top: 0;
+  padding: 0;
+}
+
+#tutorial-view #movement-practice,
+#tutorial-view #interaction-practice,
+#tutorial-view #regions-practice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Etapa 0: Movimento */
+#tutorial-view .practice-board {
+  position: relative;
+  width: min(100%, 31cqw);
+  max-width: 215px;
+  aspect-ratio: 16 / 10;
+  height: auto;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 2px solid #784e2d;
+  border-radius: 8px;
+  background: url('../assets/ilha/tile-grama.png') repeat;
+  background-size: 48px;
+  box-shadow: inset 0 0 25px rgba(66, 88, 58, 0.45);
+  box-sizing: border-box;
+}
+
+#tutorial-view .practice-tree {
+  position: absolute;
+  height: 70%;
+  right: 5%;
+  top: 5%;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+#tutorial-view #practice-player {
+  position: absolute;
+  width: clamp(26px, 3.8cqw, 36px);
+  height: auto;
+  left: 42%;
+  top: 65%;
+  image-rendering: pixelated;
+  transition: left 100ms linear, top 100ms linear;
+  transform: translate(-50%, -100%);
+}
+
+#tutorial-view .direction-pad {
+  display: grid;
+  grid-template-columns: repeat(3, clamp(36px, 4.5cqw, 44px));
+  grid-template-rows: repeat(2, clamp(26px, 3.8cqh, 36px));
+  gap: 3px;
+  justify-content: center;
+  margin-top: clamp(2px, 0.4cqh, 5px);
+}
+
+#tutorial-view .direction-pad button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-width: 36px;
+  min-height: 26px;
+  background: #fdf4e2;
+  border: 1.5px solid #784e2d;
+  border-bottom: 3px solid #784e2d;
+  border-radius: 5px;
+  box-shadow: 0 2px 0 #966946, 0 2px 4px rgba(74, 42, 20, 0.2);
+  font: bold clamp(16px, 2.2cqw, 22px) sans-serif;
+  color: #4a2a14;
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+  transition: transform 80ms, background 80ms, box-shadow 80ms;
+}
+
+#tutorial-view .direction-pad button:hover {
+  background: #ffeec9;
+}
+
+#tutorial-view .direction-pad button:active {
+  transform: translateY(2px);
+  border-bottom-width: 1px;
+  box-shadow: 0 0 0 #966946;
+}
+
+#tutorial-view .direction-pad button:focus-visible {
+  outline: 2px dashed #4a2a14;
+  outline-offset: 2px;
+}
+
+#tutorial-view .direction-pad [data-move="up"] {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+#tutorial-view .direction-pad [data-move="left"] {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+#tutorial-view .direction-pad [data-move="down"] {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+#tutorial-view .direction-pad [data-move="right"] {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+#tutorial-view .practice-caption {
+  font: italic clamp(11.5px, 1.35cqw, 14px) Georgia, serif;
+  color: #6e4d30;
+  text-align: center;
+  margin: 1px 0 0 0;
+}
+
+/* Etapa 1: Interação */
+#tutorial-view .interaction-scene {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(14px, 2.2cqw, 26px);
+  width: min(100%, 31cqw);
+  max-width: 215px;
+  aspect-ratio: 16 / 10;
+  height: auto;
+  margin: 0 auto;
+  background: #fffdf8;
+  border: 2px solid #784e2d;
+  border-radius: 8px;
+  box-sizing: border-box;
+  padding: 0 10px 10px;
+  box-shadow: inset 0 0 20px rgba(120, 78, 45, 0.15);
+}
+
+#tutorial-view .interaction-scene img[src*="personagem"] {
+  height: clamp(44px, 9.5cqh, 58px);
+  width: auto;
+  image-rendering: pixelated;
+}
+
+#tutorial-view .key-pedestal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#tutorial-view #practice-key {
+  width: clamp(22px, 3.2cqw, 30px);
+  height: auto;
+  margin-bottom: 3px;
+  animation: practiceKeyFloat 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes practiceKeyFloat {
+  from { transform: translateY(0); }
+  to { transform: translateY(-6px); }
+}
+
+#tutorial-view .key-pedestal span {
+  display: block;
+  width: clamp(36px, 4.8cqw, 46px);
+  height: clamp(8px, 1.2cqh, 11px);
+  background: #a87a46;
+  border: 1px solid #784e2d;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(74, 42, 20, 0.35);
+}
+
+#tutorial-view #interact-button {
+  align-self: center;
+  width: fit-content;
+  max-width: max-content;
+  min-height: 48px;
+  height: clamp(48px, 7.8cqh, 52px);
+  padding: 0 clamp(18px, 2.4cqw, 28px);
+  background: #f7e0bc;
+  border: 2px solid #5c3818;
+  border-radius: 999px;
+  box-shadow: 0 2px 5px rgba(74, 42, 20, 0.35);
+  font: bold clamp(16px, 2.0cqw, 19px) Georgia, serif;
+  color: #4a2a14;
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+  margin: clamp(4px, 0.8cqh, 7px) auto 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 100ms ease, background-color 100ms ease, box-shadow 100ms ease;
+}
+
+#tutorial-view #interact-button:hover:not([disabled]) {
+  background: #ebd1aa;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(74, 42, 20, 0.45);
+}
+
+#tutorial-view #interact-button:active:not([disabled]) {
+  transform: translateY(1px);
+}
+
+#tutorial-view #interact-button:focus-visible {
+  outline: 3px dashed #4a2a14;
+  outline-offset: 3px;
+}
+
+#tutorial-view #interact-button[disabled] {
+  opacity: 0.6;
+  cursor: default;
+}
+
+#tutorial-view #interact-button kbd {
+  background: #fdf4e2;
+  border: 1px solid #784e2d;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font: bold clamp(11px, 1.4cqw, 14px) monospace;
+  box-shadow: 0 1px 0 #966946;
+}
+
+#tutorial-view #interaction-result {
+  font: clamp(12px, 1.45cqw, 15px) Georgia, serif;
+  color: #1e5622;
+  text-align: center;
+  margin: 2px auto 0;
+  max-width: 32ch;
+}
+
+/* Etapa 2: Regiões (Grade com botões ampliados e gato de resgate) */
+#tutorial-view #regions-practice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+#tutorial-view .region-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(4px, 0.8cqw, 8px);
+  width: 100%;
+  min-width: 0;
+}
+
+#tutorial-view .region-grid button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 0.8cqw, 8px);
+  padding: clamp(4px, 0.8cqh, 8px) clamp(6px, 1.0cqw, 12px);
+  min-width: 0;
+  min-height: 48px;
+  height: clamp(48px, 8.2cqh, 54px);
+  background: #fff8eb;
+  border: 1.5px solid #784e2d;
+  border-radius: 6px;
+  cursor: pointer;
+  font: bold clamp(13px, 1.6cqw, 16px) Georgia, serif;
+  color: #4a2a14;
+  box-shadow: 0 1px 3px rgba(74, 42, 20, 0.15);
+  box-sizing: border-box;
+  transition: background 120ms, border-color 120ms, transform 120ms;
+}
+
+#tutorial-view .region-grid button img {
+  width: clamp(20px, 2.6cqw, 26px);
+  height: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+#tutorial-view .region-grid button:hover,
+#tutorial-view .region-grid button[aria-pressed="true"] {
+  background: #ffe6a3;
+  border-color: #5c3818;
+  box-shadow: 0 2px 5px rgba(74, 42, 20, 0.25);
+}
+
+#tutorial-view #region-description {
+  font: clamp(12px, 1.4cqw, 14.5px) / 1.25 Georgia, serif;
+  color: #5c3818;
+  text-align: center;
+  margin: clamp(4px, 0.8cqh, 7px) 0 0 0;
+  min-height: 22px;
+  width: 100%;
+  min-width: 0;
+}
+
+#tutorial-view .rescue-cat {
+  display: block;
+  width: clamp(30px, 4.0cqw, 38px);
+  height: auto;
+  margin: clamp(3px, 0.5cqh, 6px) auto 0;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 2px 4px rgba(74, 42, 20, 0.25));
+}
+
+/* Barra Inferior de Ações: Voltar / Pontinhos / Próxima */
+#tutorial-view .book-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 58cqw; /* protege a reserva do gato x >= 72% e y >= 60% */
+  margin: auto 0 0 0;
+  padding: 0;
+  box-sizing: border-box;
+  z-index: 5;
+}
+
+#tutorial-view #previous-step {
+  min-height: 48px;
+  height: clamp(48px, 8.2cqh, 52px);
+  padding: 0 clamp(16px, 2.2cqw, 24px);
+  background: #f7e0bc;
+  border: 2px solid #5c3818;
+  border-radius: 999px;
+  box-shadow: 0 2px 5px rgba(74, 42, 20, 0.35);
+  font: bold clamp(18px, 2.2cqw, 20px) Georgia, serif;
+  color: #4a2a14;
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+  white-space: nowrap;
+  transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+#tutorial-view #previous-step:hover {
+  background: #ebd1aa;
+  transform: translateX(-2px);
+  box-shadow: 0 3px 7px rgba(74, 42, 20, 0.45);
+}
+
+#tutorial-view #previous-step:focus-visible {
+  outline: 3px dashed #4a2a14;
+  outline-offset: 3px;
+}
+
+#tutorial-view .page-dots {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1.2cqw, 14px);
+}
+
+#tutorial-view .page-dots button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  outline: none;
+}
+
+#tutorial-view .page-dots button::before {
+  content: '';
+  display: block;
+  width: clamp(9px, 1.3cqw, 13px);
+  height: clamp(9px, 1.3cqw, 13px);
+  border-radius: 50%;
+  background: #cbb292;
+  border: 1.5px solid #784e2d;
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+
+#tutorial-view .page-dots button[aria-current="step"]::before,
+#tutorial-view .page-dots button[aria-current]::before {
+  background: #5c3818;
+  transform: scale(1.4);
+}
+
+#tutorial-view .page-dots button:focus-visible {
+  outline: 2px dashed #4a2a14;
+  outline-offset: 2px;
+}
+
+#tutorial-view #next-step {
+  min-height: 48px;
+  height: clamp(48px, 8.2cqh, 52px);
+  padding: 0 clamp(20px, 2.6cqw, 32px);
+  background: #467a3c;
+  border: 2px solid #284e21;
+  border-radius: 999px;
+  box-shadow: 0 2px 5px rgba(40, 78, 33, 0.4);
+  font: bold clamp(18px, 2.2cqw, 20px) Georgia, serif;
+  color: #fff8eb;
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+#tutorial-view #next-step:hover {
+  background: #528c46;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(40, 78, 33, 0.5);
+}
+
+#tutorial-view #next-step:focus-visible {
+  outline: 3px dashed #1e3a18;
+  outline-offset: 3px;
+}
+
+/* Modo Retrato */
+@media (max-aspect-ratio: 1/1) {
+  #tutorial-view.mural-tutorial {
+    display: flex;
+    flex-direction: column;
+    aspect-ratio: auto;
+    height: 93.1%;
+    padding: 6.0cqh 5.0cqw 3.0cqh 13.5cqw;
+    overflow-y: auto;
+  }
+  #tutorial-view .left-page,
+  #tutorial-view .right-page.tutorial-practice {
+    width: 100%;
+    min-height: auto;
+    max-height: none;
+    height: auto;
+    align-self: auto;
+  }
+  #tutorial-view .book-actions {
+    max-width: 100%;
+    margin-top: 15px;
+  }
 }
 
 /* ==========================================================================

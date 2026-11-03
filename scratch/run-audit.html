@@ -1,0 +1,88 @@
+
+          <!DOCTYPE html>
+          <html>
+          <head><meta charset="utf-8"></head>
+          <body>
+            <iframe id="frame" src="file:///C:/Users/gpjac/Ilha-do-Conhecimento/index.html?tutorial&step=2&largeText&calibrar" style="width: 390px; height: 844px; border:0;"></iframe>
+            <script>
+              window.onload = () => {
+                setTimeout(() => {
+                  try {
+                    const win = document.getElementById('frame').contentWindow;
+                    const doc = win.document;
+                    const tut = doc.getElementById('tutorial-view');
+                    if (!tut) throw new Error('tutorial-view not found');
+                    
+                    const rect = tut.getBoundingClientRect();
+                    const isPortrait = 390 < 844;
+                    
+                    // Check cat zone (x >= 72% and y >= 60% of tut)
+                    const catZone = {
+                      left: rect.left + rect.width * 0.72,
+                      top: rect.top + rect.height * 0.60,
+                      right: rect.right,
+                      bottom: rect.bottom
+                    };
+                    
+                    const catViolations = [];
+                    // Check all interactive elements and text blocks in tut
+                    const checkElements = tut.querySelectorAll('button, p, h1, span, kbd, img, .practice-board, .interaction-scene, .direction-pad');
+                    for (const el of checkElements) {
+                      if (el.hidden || el.offsetParent === null) continue;
+                      const r = el.getBoundingClientRect();
+                      if (r.width === 0 || r.height === 0) continue;
+                      // Overlap with catZone?
+                      const xOverlap = Math.max(0, Math.min(r.right, catZone.right) - Math.max(r.left, catZone.left));
+                      const yOverlap = Math.max(0, Math.min(r.bottom, catZone.bottom) - Math.max(r.top, catZone.top));
+                      if (xOverlap > 4 && yOverlap > 4 && !isPortrait) {
+                        catViolations.push(el.tagName + (el.id ? '#' + el.id : '') + (el.className ? '.' + el.className : ''));
+                      }
+                    }
+                    
+                    // Check overflow on tut and main columns
+                    const overflows = [];
+                    if (!isPortrait) {
+                      if (tut.scrollHeight > tut.clientHeight + 2) {
+                        overflows.push('tut.scrollHeight (' + tut.scrollHeight + ' > ' + tut.clientHeight + ')');
+                      }
+                      if (tut.scrollWidth > tut.clientWidth + 2) {
+                        overflows.push('tut.scrollWidth (' + tut.scrollWidth + ' > ' + tut.clientWidth + ')');
+                      }
+                    }
+                    
+                    // Check minimum tap target requirements
+                    const prevBtn = doc.getElementById('previous-step');
+                    const nextBtn = doc.getElementById('next-step');
+                    const prevRect = prevBtn.getBoundingClientRect();
+                    const nextRect = nextBtn.getBoundingClientRect();
+                    
+                    const tapIssues = [];
+                    if (prevRect.height < 46) tapIssues.push('prevHeight: ' + prevRect.height);
+                    if (nextRect.height < 46) tapIssues.push('nextHeight: ' + nextRect.height);
+                    
+                    // Font sizes
+                    const titleEl = doc.getElementById('tutorial-title');
+                    const titleSize = parseFloat(win.getComputedStyle(titleEl).fontSize);
+                    const copyEl = doc.getElementById('tutorial-copy');
+                    const copySize = parseFloat(win.getComputedStyle(copyEl).fontSize);
+                    
+                    const fontIssues = [];
+                    if (titleSize < 21) fontIssues.push('titleFont: ' + titleSize);
+                    if (copySize < 13.5) fontIssues.push('copyFont: ' + copySize);
+
+                    const out = {
+                      catViolations,
+                      overflows,
+                      tapIssues,
+                      fontIssues
+                    };
+                    document.title = 'AUDIT_RES:' + JSON.stringify(out);
+                  } catch(e) {
+                    document.title = 'AUDIT_ERR:' + e.message;
+                  }
+                }, 500);
+              };
+            </script>
+          </body>
+          </html>
+        

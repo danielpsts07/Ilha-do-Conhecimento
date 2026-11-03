@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+<canvas id="c"></canvas>
+<script>
+async function run() {
+  const c = document.getElementById('c');
+  const ctx = c.getContext('2d');
+  const results = {};
+
+  const name = 'fase1_v3.webp';
+  const img = new Image();
+  await new Promise((res, rej) => {
+    img.onload = res;
+    img.onerror = rej;
+    img.src = '../assets/puzzles/labirinto/' + name;
+  });
+
+  c.width = img.width;
+  c.height = img.height;
+  ctx.drawImage(img, 0, 0);
+  const data = ctx.getImageData(0, 0, c.width, c.height).data;
+
+  // Let's sample every 32px in X: find where path exists in Y
+  const slices = [];
+  for (let x = 50; x < c.width; x += 30) {
+    const yList = [];
+    for (let y = 0; y < c.height; y++) {
+      const idx = (y * c.width + x) * 4;
+      const r = data[idx], g = data[idx+1], b = data[idx+2];
+      // Check for dirt color:
+      // In WebP images, let's see actual RGB values of dirt
+      const isDirt = (r > 160 && g > 135 && b > 85 && r > b + 25 && g > b + 10 && g < r + 15);
+      const diff = Math.max(Math.abs(r-g), Math.abs(g-b), Math.abs(r-b));
+      const isStone = (diff < 28 && r > 120 && r < 200 && g > 125 && g < 200 && b > 135 && b < 210);
+      if (isDirt || isStone) {
+        yList.push(y);
+      }
+    }
+    if (yList.length > 0) {
+      slices.push({
+        x,
+        minY: Math.min(...yList),
+        maxY: Math.max(...yList),
+        span: Math.max(...yList) - Math.min(...yList),
+        count: yList.length
+      });
+    } else {
+      slices.push({ x, none: true });
+    }
+  }
+
+  fetch('/result', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(slices, null, 2)
+  });
+}
+run();
+</script>
+</body>
+</html>

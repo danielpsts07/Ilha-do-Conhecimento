@@ -1,0 +1,133 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"></head>
+    <body>
+      <iframe id="test-frame" src="file:///C:/Users/gpjac/Ilha-do-Conhecimento/index.html" style="width: 1024px; height: 768px; border: 0;"></iframe>
+      <script>
+        window.addEventListener('message', async (e) => {
+          // not used
+        });
+        window.onload = () => {
+          setTimeout(async () => {
+            const frameDoc = document.getElementById('test-frame').contentWindow;
+            try {
+              const res = await frameDoc.eval(`
+    (async () => {
+      const results = [];
+      const $ = s => document.querySelector(s);
+      
+      // Open tutorial step 0
+      const openBtn = $('[data-open="tutorial"]');
+      if (!openBtn) throw new Error('Tutorial open button not found');
+      openBtn.click();
+      
+      const book = $('#book-dialog');
+      const tut = $('#tutorial-view');
+      if (!book.open || tut.hidden) results.push({ name: 'Tutorial Dialog Opened', pass: false });
+      else results.push({ name: 'Tutorial Dialog Opened', pass: true });
+      
+      // Step 0: Move player via D-pad
+      const player = $('#practice-player');
+      const initialPos = { left: player.style.left, top: player.style.top };
+      const rightBtn = $('[data-move="right"]');
+      rightBtn.click();
+      const posAfterRight = { left: player.style.left, top: player.style.top };
+      results.push({
+        name: 'D-pad Right Move',
+        pass: posAfterRight.left !== initialPos.left,
+        details: initialPos.left + ' -> ' + posAfterRight.left
+      });
+      
+      // Keyboard move (ArrowDown)
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      const posAfterDown = { left: player.style.left, top: player.style.top };
+      results.push({
+        name: 'Keyboard ArrowDown Move',
+        pass: posAfterDown.top !== posAfterRight.top,
+        details: posAfterRight.top + ' -> ' + posAfterDown.top
+      });
+      
+      // Check Step 0 Prev button says "Voltar ao menu"
+      const prevBtn = $('#previous-step');
+      results.push({
+        name: 'Step 0 Prev Button Label',
+        pass: prevBtn.textContent.trim() === 'Voltar ao menu',
+        details: prevBtn.textContent.trim()
+      });
+      
+      // Advance to Step 1 via Next button
+      const nextBtn = $('#next-step');
+      nextBtn.click();
+      const step1Title = $('#tutorial-title').textContent;
+      const step1Count = $('#step-count').textContent;
+      results.push({
+        name: 'Advance to Step 1',
+        pass: step1Count.includes('02') && step1Title === 'Encontre e interaja',
+        details: step1Count + ' - ' + step1Title
+      });
+      
+      // Interact on Step 1
+      const interactBtn = $('#interact-button');
+      interactBtn.click();
+      const resText = $('#interaction-result').textContent;
+      results.push({
+        name: 'Step 1 Interact Click',
+        pass: interactBtn.disabled && resText.includes('Você pegou a chave de prática!'),
+        details: resText
+      });
+      
+      // Advance to Step 2 via Next button
+      nextBtn.click();
+      const step2Title = $('#tutorial-title').textContent;
+      const step2Count = $('#step-count').textContent;
+      const step2NextLabel = nextBtn.textContent.trim();
+      results.push({
+        name: 'Advance to Step 2',
+        pass: step2Count.includes('03') && step2NextLabel === 'Entendi!',
+        details: step2Count + ' - Next label: ' + step2NextLabel
+      });
+      
+      // Test 4 region buttons on Step 2
+      const regButtons = document.querySelectorAll('.region-grid [data-region]');
+      const regDesc = $('#region-description');
+      let regionsOk = regButtons.length === 4;
+      for (let i = 0; i < regButtons.length; i++) {
+        regButtons[i].click();
+        if (regButtons[i].getAttribute('aria-pressed') !== 'true') regionsOk = false;
+      }
+      results.push({
+        name: 'Step 2 Region Buttons Interactive',
+        pass: regionsOk && regDesc.textContent.includes('Operações'),
+        details: regDesc.textContent
+      });
+      
+      // Test Step dot navigation
+      const dots = document.querySelectorAll('[data-step]');
+      dots[0].click();
+      results.push({
+        name: 'Dots Navigation to Step 0',
+        pass: $('#step-count').textContent.includes('01') && dots[0].getAttribute('aria-current') === 'step'
+      });
+      
+      // Test Escape closes
+      book.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      book.close(); // native dialog behavior on escape
+      results.push({
+        name: 'Escape Closes Dialog',
+        pass: !book.open
+      });
+      
+      return results;
+    })()
+  `);
+              document.title = 'TEST_RESULTS:' + JSON.stringify(res);
+            } catch(err) {
+              document.title = 'TEST_ERROR:' + err.message;
+            }
+          }, 800);
+        };
+      </script>
+    </body>
+    </html>
+  
