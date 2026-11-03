@@ -215,21 +215,7 @@ body.calm-motion .joystick-stick {
 }
 
 #island-interact-label {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  right: 50%;
-  transform: translateX(50%);
-  white-space: nowrap;
-  background: rgba(37, 61, 54, 0.92);
-  color: #f7e7c4;
-  border: 1px solid #927859;
-  border-radius: 4px;
-  padding: 3px 8px;
-  font: 600 clamp(10px, 1.8vh, 12px) system-ui;
-  pointer-events: none;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-  opacity: 1;
-  transition: opacity 120ms ease;
+  display: none;
 }
 
 /* Estado desabilitado (sem placa por perto) */
@@ -238,11 +224,6 @@ body.calm-motion .joystick-stick {
   box-shadow: none;
   cursor: default;
   filter: none;
-}
-
-.island-interact:disabled #island-interact-label {
-  opacity: 0;
-  visibility: hidden;
 }
 
 /* Estado ativo (perto de placa/interativo): opacidade 1.0 com leve pulso */
