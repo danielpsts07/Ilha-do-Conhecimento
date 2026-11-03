@@ -2,7 +2,7 @@
 window.IslandRenderer = (() => {
   'use strict';
   const T=48, types=IslandWorld.terrain, noise=IslandWorld.noise;
-  const sources={island:'ilha/ilha.jpeg',hero:HERO_SHEET.src,front:IslandArt.sources.front,back:IslandArt.sources.back,side:IslandArt.sources.side};
+  const sources={island:'ilha/ilha.jpeg',hero:HERO_SHEET.src,heroDiag:typeof HERO_DIAGONAL_SHEET!=='undefined'?HERO_DIAGONAL_SHEET.src:'personagem/menina-diagonal-8.webp',front:IslandArt.sources.front,back:IslandArt.sources.back,side:IslandArt.sources.side};
   function create(canvas,miniCanvas,mapCanvas,world) {
     const ctx=canvas.getContext('2d'),mini=miniCanvas.getContext('2d'),map=mapCanvas.getContext('2d');
     const images={},failed=[],patterns={};
@@ -26,7 +26,18 @@ window.IslandRenderer = (() => {
           catch(error){world.collision=null;console.error('[Colisão] Falha ao preparar terreno; movimento bloqueado.',error);failed.push('colisão do terreno');}
         }
         resolve();
-      };img.onerror=()=>{failed.push(path);resolve();};img.src=`assets/${path}`;
+      };img.onerror=()=>{
+        if(name==='heroDiag') {
+          const fallback=typeof HERO_DIAGONAL_SHEET!=='undefined'?HERO_DIAGONAL_SHEET.fallbackSrc:'personagem/menina-diagonal-8.png';
+          if(fallback&&!img._triedFallback) {
+            img._triedFallback=true;
+            img.src=`assets/${fallback}`;
+            return;
+          }
+          console.warn('[Personagem] Folha diagonal não carregou; usando fallback para direções ortogonais.');
+        }
+        failed.push(path);resolve();
+      };img.src=`assets/${path}`;
     }))).then(()=>window.IslandKeys?.load()).then(prepareHud);
     let width=960,height=600,dpr=1,debug=false,zoom=CAMERA_ZOOM;
     // Única escala mapa → tela; o mínimo de encaixe evita expor área fora do JPEG.
@@ -377,19 +388,30 @@ window.IslandRenderer = (() => {
       const shadow=HERO_SCALE/1.2;
       ellipse(player.x,player.y-2*shadow,9*shadow,3*shadow,'#3b593a55');
       const hero=images.hero;
-      if(hero?.complete&&hero.naturalWidth) {
+      const heroDiag=images.heroDiag;
+      const dir=player.dir||0;
+      const isDiag=dir>=4;
+      const diagLoaded=Boolean(heroDiag?.complete&&heroDiag.naturalWidth);
+      const activeSheet=(isDiag&&diagLoaded)?heroDiag:hero;
+
+      if(activeSheet?.complete&&activeSheet.naturalWidth) {
         // Quadro da folha: coluna = passo da animação, linha = direção; pés no pivô (24,52).
-        const {frameW:fw,frameH:fh,pivotX,pivotY}=HERO_SHEET,k=HERO_SCALE;
+        const sheetCfg=(isDiag&&diagLoaded)?HERO_DIAGONAL_SHEET:HERO_SHEET;
+        const {frameW:fw,frameH:fh,pivotX,pivotY}=sheetCfg,k=HERO_SCALE;
         // A coluna já vem de HeroAnimation (respeita "Menos animações").
-        const column=player.frame??HeroAnimation.IDLE,row=player.dir||0;
+        const column=player.frame??HeroAnimation.IDLE;
+        // Se for diagonal mas folha diagonal não carregou, usa fallback para esquerda (linha 1) ou direita (linha 2)
+        const row=(isDiag&&diagLoaded)?(dir-4):(isDiag?(dir===4||dir===6?1:2):dir);
         // Reduzida abaixo de 1:1, a arte perde pixels e cintila ao andar; suavizar só a personagem
         // mantém o contorno estável. Sem arredondar a posição, que faria a personagem tremer.
         ctx.save();
         if(k<1){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';}
-        ctx.drawImage(hero,column*fw,row*fh,fw,fh,player.x-pivotX*k,player.y-pivotY*k,fw*k,fh*k);
+        ctx.drawImage(activeSheet,column*fw,row*fh,fw,fh,player.x-pivotX*k,player.y-pivotY*k,fw*k,fh*k);
         ctx.restore();
       } else {
-        sprite(player.facing==='up'?'back':player.facing==='down'?'front':'side',player.x,player.y,PLAYER_HEIGHT,PLAYER_HEIGHT,player.facing==='left');
+        const side=(player.facing==='left'||player.facing==='down-left'||player.facing==='up-left');
+        const face=player.facing==='up'?'back':player.facing==='down'?'front':'side';
+        sprite(face,player.x,player.y,PLAYER_HEIGHT,PLAYER_HEIGHT,side);
       }
       if(debug) {
         ctx.strokeStyle='#ffff00';ctx.lineWidth=1;
@@ -402,11 +424,18 @@ window.IslandRenderer = (() => {
       if(debug) {
         ctx.save();ctx.font='14px monospace';ctx.textAlign='left';ctx.textBaseline='top';
         const curReg=(typeof getIslandRegion==='function')?getIslandRegion(player.x/WORLD_SCALE,player.y/WORLD_SCALE):IslandWorld.regionAt(player.x,player.y);
-        const lines=[`x: ${(player.x/WORLD_SCALE).toFixed(0)}  y: ${(player.y/WORLD_SCALE).toFixed(0)}`,
+        const DIRS_PT = ['baixo', 'esquerda', 'direita', 'cima', 'baixo-esq', 'baixo-dir', 'cima-esq', 'cima-dir'];
+        const spriteDirName = DIRS_PT[player.dir ?? 0] || player.facing || '';
+        const lines=[
+          `x: ${(player.x/WORLD_SCALE).toFixed(0)}  y: ${(player.y/WORLD_SCALE).toFixed(0)}`,
           `Região: ${curReg?.name||''}`,
+          `Intenção: ${player.intentName || '(nenhuma)'}`,
+          `Sprite: ${spriteDirName} (${player.facing || ''})`,
+          `Trocas/s: ${player.switchesPerSec ?? 0}`,
           `Célula: ${IslandWorld.cellAt(world,player.x,player.y)?'andável':'bloqueada'}`,
           `Zoom: ${zoom.toFixed(2)}${factor>zoom+.001?` (encaixe: ${factor.toFixed(2)})`:''} [+/-]`,
-          `Largura visível: ${(Math.min(1,view.width/world.width)*100).toFixed(2)}%`];
+          `Largura visível: ${(Math.min(1,view.width/world.width)*100).toFixed(2)}%`
+        ];
         const pw=Math.ceil(Math.max(...lines.map(line=>ctx.measureText(line).width)))+20,ph=lines.length*22+16;
         const right=DEBUG_PANEL_CORNER.endsWith('right'),top=DEBUG_PANEL_CORNER.startsWith('top');
         const spaces=overlaySpaces(8,true);

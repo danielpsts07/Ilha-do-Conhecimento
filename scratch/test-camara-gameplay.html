@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste Gameplay Câmara</title>
+</head>
+<body style="margin:0;padding:0;background:#000;overflow:hidden;">
+  <script src="../js/config.js"></script>
+  <script src="../js/hero-animation.js"></script>
+  <script>
+    async function runFullTest() {
+      const logs = [];
+      const steps = [];
+
+      let exitWon = null;
+      await window.loadMemoryMaze();
+      window.LabirintoPuzzle.open({
+        phase: 3,
+        onExit: (won) => {
+          exitWon = won;
+          logs.push('onExit called with won=' + won);
+        }
+      });
+
+      // 1. Initial State Check
+      await new Promise(r => setTimeout(r, 200));
+      steps.push({ step: 'init', active: window.LabirintoPuzzle.active });
+
+      // 2. Walk towards the central disc (Hold ArrowUp)
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+      // Wait while walking up (speed is 220 px/s, distance from 412 to 240 is 172 px -> ~800ms)
+      await new Promise(r => setTimeout(r, 900));
+      document.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowUp', bubbles: true }));
+
+      // Take screenshot while at the central disc or collecting
+      const cv = document.querySelector('canvas');
+      const shotCollecting = cv ? cv.toDataURL('image/png') : '';
+
+      // 3. Wait for auto-collect and portal walk (approx 2.5 seconds total)
+      await new Promise(r => setTimeout(r, 2200));
+
+      const shotPortal = cv ? cv.toDataURL('image/png') : '';
+
+      // 4. Wait for exit transition (entrance + white fade = 1.0s)
+      await new Promise(r => setTimeout(r, 1200));
+
+      fetch('/test-done', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          exitWon,
+          logs,
+          steps,
+          shotCollecting,
+          shotPortal
+        })
+      });
+    }
+    window.addEventListener('load', runFullTest);
+  </script>
+</body>
+</html>

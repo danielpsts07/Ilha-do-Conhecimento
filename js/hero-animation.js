@@ -19,5 +19,13 @@ window.HeroAnimation = (() => {
     if(calm) return IDLE;
     return IDLE + Math.floor((p.idle || 0) / IDLE_BREATH_TICKS) % 2;
   }
-  return Object.freeze({column, IDLE});
+  function resolveSheet(dir, hasDiagonal) {
+    if (dir >= 4) {
+      if (hasDiagonal) return { isDiagonal: true, row: dir - 4, fallback: false };
+      const row = (dir === 4 || dir === 6) ? 1 : 2; // dx < 0 esquerda, dx > 0 direita
+      return { isDiagonal: false, row, fallback: true };
+    }
+    return { isDiagonal: false, row: dir || 0, fallback: false };
+  }
+  return Object.freeze({column, resolveSheet, IDLE});
 })();
