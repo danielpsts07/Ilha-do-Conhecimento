@@ -180,6 +180,7 @@ window.IslandWorld = (() => {
       if(i%cols)visit(i-1);if(i%cols<cols-1)visit(i+1);
     }
     function flood(field,start,seen) {
+      if(!field[start])return 0;
       let head=0,tail=1;queue[0]=start;seen[start]=1;
       while(head<tail)neighbors(queue[head++],j=>{if(field[j]&&!seen[j]){seen[j]=1;queue[tail++]=j;}});
       return tail;
@@ -191,7 +192,7 @@ window.IslandWorld = (() => {
     }
     // Dilatação em oito direções (distância de Chebyshev), feita só no carregamento.
     const distance=new Uint16Array(n).fill(65535);let head=0,tail=0;
-    for(let i=0;i<n;i++)if(water[i]){distance[i]=0;queue[tail++]=i;cells[i]=0;}
+    for(let i=0;i<n;i++)if(WATER_AUTO_ENABLED&&water[i]){distance[i]=0;queue[tail++]=i;cells[i]=0;}
     while(head<tail) {
       const i=queue[head++],x=i%cols,y=Math.floor(i/cols);
       if(distance[i]>=WATER_MARGIN_CELLS)continue;
@@ -202,40 +203,68 @@ window.IslandWorld = (() => {
         }
       }
     }
-    const mask=await new Promise(resolve=>{
+    function loadMask(src) {return new Promise(resolve=>{
       const image=new Image();image.onload=()=>resolve(image);
-      image.onerror=()=>{console.warn('[Colisão] Máscara ausente: usando somente água automática.');resolve(null);};
-      image.src='assets/ilha/island_mask.png';
-    });
+      image.onerror=()=>resolve(null);image.src=src;
+    });}
+    let mask=await loadMask(HITBOX_MASK_SRC);
+    if(!mask) {
+      console.warn('[Colisão] island_hitbox.png ausente: usando island_mask.png antigo.');
+      mask=await loadMask('assets/ilha/island_mask.png');
+      if(!mask)console.warn('[Colisão] Máscara antiga ausente: usando somente água automática.');
+    }
     if(mask) {
       const maskW=mask.naturalWidth,maskH=mask.naturalHeight,canvas=document.createElement('canvas');
       canvas.width=maskW;canvas.height=maskH;
       try {
         const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(mask,0,0);
-        const rgba=ctx.getImageData(0,0,maskW,maskH).data; // Uma única leitura da máscara original.
+        let rgba=ctx.getImageData(0,0,maskW,maskH).data; // Uma única leitura da máscara original.
+        const sx=maskW/mapW,sy=maskH/mapH;
         for(let gy=0;gy<rows;gy++)for(let gx=0;gx<cols;gx++) {
-          // Célula → centro na imagem (gx*4+2) → máscara, pela razão maskW/mapW (idem Y).
-          const mx=Math.min(maskW-1,Math.floor((gx*C+C/2)*maskW/mapW));
-          const my=Math.min(maskH-1,Math.floor((gy*C+C/2)*maskH/mapH)),p=(my*maskW+mx)*4,i=gy*cols+gx;
-          const r=rgba[p],g=rgba[p+1],b=rgba[p+2];if(rgba[p+3]<=40)continue;
-          if(r>150&&g<110&&b<110)cells[i]=0;
-          if(g>150&&r<120&&b<120)free[i]=1;
+          // Célula de 4 px do mapa → todos os pixels sobrepostos da máscara.
+          // floor/ceil conservam até a linha fina que atravessa a quina entre células.
+          const x0=Math.floor(gx*C*sx),x1=Math.min(maskW,Math.ceil((gx+1)*C*sx));
+          const y0=Math.floor(gy*C*sy),y1=Math.min(maskH,Math.ceil((gy+1)*C*sy)),i=gy*cols+gx;
+          let red=0;
+          for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++) {
+            const p=(y*maskW+x)*4;if(rgba[p+3]<MASK_ALPHA_MIN)continue;
+            const r=rgba[p],g=rgba[p+1],b=rgba[p+2];
+            if(r>200&&g<80&&b<80)red++;
+            if(g>150&&r<120&&b<120)free[i]=1; // Verde antigo continua sempre livre.
+          }
+          if(red>=HITBOX_CELL_MIN_PIXELS)cells[i]=0;
         }
+        rgba=null; // A grade é suficiente daqui em diante; libera os pixels da máscara.
       } finally {canvas.width=canvas.height=0;}
     }
     // Verde vence inclusive a água dilatada; áreas transparentes mantêm a regra anterior.
     for(let i=0;i<n;i++)if(free[i])cells[i]=1;
     const overlay=document.createElement('canvas');overlay.width=cols;overlay.height=rows;
     const overlayCtx=overlay.getContext('2d'),pixels=overlayCtx.createImageData(cols,rows);
-    for(let i=0;i<n;i++)if(!cells[i]||free[i]) {
-      pixels.data[i*4]=free[i]?0:255;pixels.data[i*4+1]=free[i]?255:0;pixels.data[i*4+3]=96;
+    for(let i=0;i<n;i++)if(WATER_AUTO_ENABLED&&distance[i]<=WATER_MARGIN_CELLS&&!free[i]) {
+      pixels.data[i*4+1]=100;pixels.data[i*4+2]=255;pixels.data[i*4+3]=112;
     }
     overlayCtx.putImageData(pixels,0,0);
-    world.collision={cells,free,cols,rows,mapW,mapH,overlay};
-    function adjust(point,feet=false) {
+    world.collision={cells,free,cols,rows,mapW,mapH,overlay,mask,maskScaleX:mask?mask.naturalWidth/mapW:1,maskScaleY:mask?mask.naturalHeight/mapH:1};
+    function adjust(point,feet=false,downOnly=false) {
       const gx=Math.floor(point.x/C),gy=Math.floor(point.y/C);
       const valid=(x,y)=>x>=0&&x<cols&&y>=0&&y<rows&&cells[y*cols+x]&&(!feet||isWalkable(world,(x*C+C/2)*WORLD_SCALE,(y*C+C/2)*WORLD_SCALE));
       if(valid(gx,gy)&&(!feet||isWalkable(world,point.x*WORLD_SCALE,point.y*WORLD_SCALE)))return {...point};
+      if(downOnly) {
+        // Procura a menor distância no semiplano abaixo do pedido; nunca nasce acima dele.
+        // Empates favorecem descer, antes de deslocar para os lados.
+        let best=null,dist=Infinity;
+        for(let y=gy;y<rows;y++) {
+          const py=y*C+C/2,dy=py-point.y;if(dy<0)continue;if(dy*dy>dist)break;
+          for(let x=0;x<cols;x++) {
+            const px=x*C+C/2,d=(px-point.x)**2+dy*dy;
+            if(d>dist||!valid(x,y))continue;
+            if(d<dist||!best||py>best.y){dist=d;best={...point,x:px,y:py};}
+          }
+        }
+        if(best)return best;
+        throw new Error('[Colisão] Não há spawn andável abaixo do ponto pedido.');
+      }
       // Anéis quadrados em espiral; escolhe o centro mais próximo no primeiro anel livre.
       for(let radius=1;radius<=Math.max(cols,rows);radius++) {
         let best=null,dist=Infinity;
@@ -250,7 +279,8 @@ window.IslandWorld = (() => {
       }
       throw new Error('[Colisão] Não há célula andável para '+point.name);
     }
-    const spawn=adjust({...SPAWN,name:'SPAWN'},true);
+    const spawn=adjust({...SPAWN_POINT,name:'SPAWN'},true,true);
+    console.info(`spawn pedido (${SPAWN_POINT.x},${SPAWN_POINT.y}) -> spawn real (${spawn.x},${spawn.y})`);
     world.spawn.x=spawn.x*WORLD_SCALE;world.spawn.y=spawn.y*WORLD_SCALE;world.spawnPending=true;
     world.checkpoints=CHECKPOINTS.map(point=>adjust(point,true));
     const seen=new Uint8Array(n),start=Math.floor(spawn.y/C)*cols+Math.floor(spawn.x/C);
@@ -270,9 +300,31 @@ window.IslandWorld = (() => {
     console.info('[Colisão] Regiões isoladas com mais de 500 células (exemplos em px da imagem):',isolated);
     // Diagnóstico adicional: conexões de uma célula podem não comportar a pegada inteira.
     const footCells=cells.map((value,i)=>value&&isWalkable(world,(i%cols*C+C/2)*WORLD_SCALE,(Math.floor(i/cols)*C+C/2)*WORLD_SCALE)?1:0);
-    const footSeen=new Uint8Array(n);flood(footCells,start,footSeen);
+    const footSeen=new Uint8Array(n),reachableCount=flood(footCells,start,footSeen);
     world.collision.report.footUnreachable=world.checkpoints.filter(p=>!footSeen[Math.floor(p.y/C)*cols+Math.floor(p.x/C)]);
     if(world.collision.report.footUnreachable.length)console.warn('[Colisão] Acessos estreitos para a pegada:',world.collision.report.footUnreachable.map(p=>p.name));
+    // BFS usa isWalkable, a mesma consulta de pegada usada por movePlayer.
+    // Distâncias dos alvos são medidas em mundo; suas coordenadas ficam em pixels do mapa.
+    const targets=[{name:'Geometria',x:1944,y:362},{name:'Lógica',x:631,y:592},
+      {name:'Álgebra',x:715,y:952},{name:'Operações',x:2226,y:922},{name:'Cela',x:1288,y:478}];
+    let leak=false;
+    for(let i=0;i<n;i++)if(footSeen[i]) {
+      const x=i%cols,y=Math.floor(i/cols);
+      if(!x||!y||x===cols-1||y===rows-1||water[i])leak=true;
+    }
+    for(const target of targets) {
+      let nearest=Infinity;
+      for(let i=0;i<n;i++)if(footSeen[i]) {
+        const dx=((i%cols)*C+C/2-target.x)*WORLD_SCALE;
+        const dy=(Math.floor(i/cols)*C+C/2-target.y)*WORLD_SCALE;
+        nearest=Math.min(nearest,dx*dx+dy*dy);
+      }
+      target.distance=Math.sqrt(nearest);target.reachable=target.distance<=INTERACT_RADIUS;
+      console.info(`[Hitbox] ${target.name}: ${target.reachable?'OK':'FALHA'} (distância ${target.distance.toFixed(1)} de mundo; raio ${INTERACT_RADIUS}).`);
+    }
+    Object.assign(world.collision.report,{reachableCount,leak,targets});
+    console.info(`[Hitbox] BFS dos pés a partir de (${spawn.x}, ${spawn.y}): ${reachableCount} células alcançáveis.`);
+    (leak?console.warn:console.info)(`[Hitbox] ${leak?'VAZAMENTO':'OK: sem vazamento'} para borda/água.`);
   }
   function cellAt(world,x,y) {
     // Mundo → imagem → célula: a câmera projeta esse mesmo mundo, sem alterar a física.
