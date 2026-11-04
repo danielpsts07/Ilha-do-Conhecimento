@@ -28,14 +28,25 @@ const KEYS = [
 ];
 // Colisão: coordenadas da imagem, exceto a pegada em px de tela/mundo.
 const COLLISION_CELL_SIZE = 4;
+const HITBOX_MASK_SRC = 'assets/ilha/island_hitbox.png'; // Vermelho bloqueia; máscara antiga é fallback.
+const OCCLUSION_MASK_SRC = 'assets/ilha/island_occlusion.png'; // Roxo marca objetos que cobrem a personagem.
+const OCCLUSION_ALPHA_MIN = 1; // Toda tinta rosa visível cobre, incluindo a borda suave; não muda a hitbox.
+const MASK_ALPHA_MIN = 128; // Ignora a parte quase transparente das bordas suavizadas.
+const HITBOX_CELL_MIN_PIXELS = 1; // Um pixel vermelho já fecha a célula, preservando diagonais finas.
 const FOOT_W = 3; // Largura da pegada, centrada nos pés (unidades de mundo).
 const FOOT_H = 2; // Altura acima da base dos pés (unidades de mundo).
 const CORNER_NUDGE = 3; // Ajuste lateral máximo para contornar cantos (unidades de mundo).
 const WATER_H_MIN = 190, WATER_H_MAX = 222;
 const WATER_S_MIN = 0.5, WATER_V_MIN = 0.6;
 const WATER_MIN_COMPONENT_CELLS = 30;
-const WATER_MARGIN_CELLS = 5; // Margem de proteção ao redor da água, em células.
-const SPAWN = {x:1290,y:945};
+const WATER_AUTO_ENABLED = true; // Água por cor continua como rede de segurança da máscara.
+const WATER_MARGIN_CELLS = 0; // O contorno vermelho já faz a proteção da margem.
+const OCCLUSION_RUN_GAP_PX = 4; // Buracos tolerados no trecho vertical roxo, em pixels do mapa.
+const OCCLUSION_MARGIN_PX = 2; // Distância dos pés à base do objeto para decidir a profundidade.
+const OCCLUSION_PATCH_W = 96, OCCLUSION_PATCH_H = 112; // Recorte em pixels nativos do mapa.
+const OCCLUSION_GHOST_ALPHA = 0.3; // Visibilidade atrás dos objetos; zero desliga o fantasma.
+const SPAWN_POINT = {x:1290,y:955}; // Pixels nativos da imagem, como x/y do F3; Y cresce para baixo.
+const SPAWN = SPAWN_POINT; // Compatibilidade com as consultas existentes da ilha.
 const CHECKPOINTS = [
   {name:'Entrada do labirinto',x:630,y:650}, {name:'Fonte da vila',x:690,y:1035},
   {name:'Platô do deserto',x:1700,y:470}, {name:'Moinho',x:1880,y:915},

@@ -2,7 +2,18 @@
 window.IslandRenderer = (() => {
   'use strict';
   const T=48, types=IslandWorld.terrain, noise=IslandWorld.noise;
+
   const sources={island:'ilha/ilha.jpeg',hero:HERO_SHEET.src,heroDiag:typeof HERO_DIAGONAL_SHEET!=='undefined'?HERO_DIAGONAL_SHEET.src:'personagem/menina-diagonal-8.webp',front:IslandArt.sources.front,back:IslandArt.sources.back,side:IslandArt.sources.side};
+  let occlusionLoading;
+  function loadOcclusion() {
+    if(window.IslandOcclusion)return Promise.resolve(window.IslandOcclusion);
+    return occlusionLoading ||= new Promise(resolve=>{
+      const script=document.createElement('script');script.src='js/island-occlusion.js';
+      script.onload=()=>resolve(window.IslandOcclusion);script.onerror=()=>{
+        console.warn('[Oclusão] Falha ao carregar módulo: sem oclusão.');resolve(null);
+      };document.head.appendChild(script);
+    });
+  }
   function create(canvas,miniCanvas,mapCanvas,world) {
     const ctx=canvas.getContext('2d'),mini=miniCanvas.getContext('2d'),map=mapCanvas.getContext('2d');
     const images={},failed=[],patterns={};
@@ -11,7 +22,7 @@ window.IslandRenderer = (() => {
     const hudPrevious=new Uint8Array(4),hudPop=new Float64Array(4).fill(-Infinity);
     const hudBox={x:0,y:0,w:0,h:0,s:1},slotW=Math.ceil(HUD_KEY_H*229/482);
     const overlayNodes=Array.from(document.querySelectorAll('.island-place, .island-minimap, .island-gear, .island-touch'));
-    let hudWidth=0,hudDirty=true;
+    let hudWidth=0,hudDirty=true,occlusion=null;
     if(HUD_KEYS_CORNER===DEBUG_PANEL_CORNER)console.warn('[HUD] HUD_KEYS_CORNER e DEBUG_PANEL_CORNER são iguais; o F3 será reposicionado para evitar sobreposição.');
     if(typeof ResizeObserver!=='undefined') {
       const observer=new ResizeObserver(()=>{hudDirty=true;});overlayNodes.forEach(node=>observer.observe(node));
@@ -24,6 +35,8 @@ window.IslandRenderer = (() => {
           overviewCtx.drawImage(img,0,0,overview.width,overview.height);
           try {await IslandWorld.buildCollision(world,img);}
           catch(error){world.collision=null;console.error('[Colisão] Falha ao preparar terreno; movimento bloqueado.',error);failed.push('colisão do terreno');}
+          try {occlusion=await (await loadOcclusion())?.create(img);}
+          catch(error){console.warn('[Oclusão] Não foi possível preparar a máscara; sem oclusão.',error);}
         }
         resolve();
       };img.onerror=()=>{
@@ -38,13 +51,20 @@ window.IslandRenderer = (() => {
         }
         failed.push(path);resolve();
       };img.src=`assets/${path}`;
-    }))).then(()=>window.IslandKeys?.load()).then(prepareHud);
-    let width=960,height=600,dpr=1,debug=false,zoom=CAMERA_ZOOM;
+    }))).then(()=>{occlusion?.setHero(images.hero,images.heroDiag);return window.IslandKeys?.load();}).then(prepareHud);
+    let width=960,height=600,dpr=1,debug=false,hitboxOverlay=true,occlusionOverlay=false,zoom=CAMERA_ZOOM;
+
     // Única escala mapa → tela; o mínimo de encaixe evita expor área fora do JPEG.
     const scale=()=>Math.max(WORLD_SCALE*zoom,width/(images.island?.naturalWidth||Infinity),height/(images.island?.naturalHeight||Infinity));
     const viewSize=()=>{const s=scale();return {width:width*WORLD_SCALE/s,height:height*WORLD_SCALE/s};};
     document.addEventListener('keydown',event=>{
       if(!debug||canvas.closest('[hidden]')||document.querySelector('dialog[open]')||event.ctrlKey||event.altKey||event.metaKey)return;
+      if(event.key.toLowerCase()==='h') {
+        event.preventDefault();if(!event.repeat)hitboxOverlay=!hitboxOverlay;return;
+      }
+      if(event.key.toLowerCase()==='o') {
+        event.preventDefault();if(!event.repeat)occlusionOverlay=!occlusionOverlay;return;
+      }
       if(!['+','=','-','_'].includes(event.key))return;
       event.preventDefault();
       zoom=Math.max(.8,Math.min(2,Math.round((zoom+(['-','_'].includes(event.key)?-.05:.05))*100)/100));
@@ -368,6 +388,17 @@ window.IslandRenderer = (() => {
       }
       marker(target,player.x*sx,player.y*sy,large?6:3);
     }
+    function drawHero(player) {
+      const hero=images.hero;
+      if(hero?.complete&&hero.naturalWidth) {
+        const {frameW:fw,frameH:fh,pivotX,pivotY}=HERO_SHEET,k=HERO_SCALE;
+        const column=player.frame??HeroAnimation.IDLE,row=player.dir||0;
+        ctx.save();
+        if(k<1){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';}
+        ctx.drawImage(hero,column*fw,row*fh,fw,fh,player.x-pivotX*k,player.y-pivotY*k,fw*k,fh*k);
+        ctx.restore();
+      } else sprite(player.facing==='up'?'back':player.facing==='down'?'front':'side',player.x,player.y,PLAYER_HEIGHT,PLAYER_HEIGHT,player.facing==='left');
+    }
     function draw(player,camera,near,time,reducedMotion,visited) {
       if(world.spawnPending){Object.assign(player,world.spawn);world.spawnPending=false;}
       const view=viewSize(),factor=scale()/WORLD_SCALE;
@@ -377,13 +408,8 @@ window.IslandRenderer = (() => {
       const background=images.island,vw=Math.min(view.width,world.width-camera.x),vh=Math.min(view.height,world.height-camera.y);
       if(background.naturalWidth&&vw>0&&vh>0) {
         // Câmera em px do mundo → JPEG: sx = cam.x / WORLD_SCALE (idem y e tamanho).
-        ctx.drawImage(background,camera.x/WORLD_SCALE,camera.y/WORLD_SCALE,vw/WORLD_SCALE,vh/WORLD_SCALE,camera.x,camera.y,vw,vh);
-        if(debug&&world.collision) {
-          const unit=COLLISION_CELL_SIZE*WORLD_SCALE;
-          ctx.drawImage(world.collision.overlay,camera.x/unit,camera.y/unit,vw/unit,vh/unit,camera.x,camera.y,vw,vh);
-        }
+        ctx.drawImage(occlusion?.backgroundCanvas||background,camera.x/WORLD_SCALE,camera.y/WORLD_SCALE,vw/WORLD_SCALE,vh/WORLD_SCALE,camera.x,camera.y,vw,vh);
       }
-      window.IslandKeys?.draw(ctx,world,player,camera,view,factor,time,reducedMotion);
       // Sombra acompanha o tamanho da personagem (9×3 era para HERO_SCALE 1,2).
       const shadow=HERO_SCALE/1.2;
       ellipse(player.x,player.y-2*shadow,9*shadow,3*shadow,'#3b593a55');
@@ -413,8 +439,26 @@ window.IslandRenderer = (() => {
         const face=player.facing==='up'?'back':player.facing==='down'?'front':'side';
         sprite(face,player.x,player.y,PLAYER_HEIGHT,PLAYER_HEIGHT,side);
       }
+   
+      occlusion?.update(player.x/WORLD_SCALE,player.y/WORLD_SCALE,player.frame??HeroAnimation.IDLE,player.dir||0);
+      player.behind=!!occlusion?.behind;
+      occlusion?.draw(ctx,camera.x,camera.y,vw,vh);
+      window.IslandKeys?.draw(ctx,world,player,camera,view,factor,time,reducedMotion);
       if(debug) {
-        ctx.strokeStyle='#ffff00';ctx.lineWidth=1;
+        const c=world.collision;
+        if(c&&vw>0&&vh>0) {
+          if(hitboxOverlay&&c.mask) {
+            ctx.globalAlpha=.35;
+            ctx.drawImage(c.mask,camera.x/WORLD_SCALE*c.maskScaleX,camera.y/WORLD_SCALE*c.maskScaleY,
+              vw/WORLD_SCALE*c.maskScaleX,vh/WORLD_SCALE*c.maskScaleY,camera.x,camera.y,vw,vh);
+            ctx.globalAlpha=1;
+          }
+          const unit=COLLISION_CELL_SIZE*WORLD_SCALE;
+          ctx.drawImage(c.overlay,camera.x/unit,camera.y/unit,vw/unit,vh/unit,camera.x,camera.y,vw,vh);
+        }
+        if(occlusionOverlay&&occlusion&&vw>0&&vh>0)ctx.drawImage(occlusion.overlay,
+          camera.x/WORLD_SCALE,camera.y/WORLD_SCALE,vw/WORLD_SCALE,vh/WORLD_SCALE,camera.x,camera.y,vw,vh);
+        ctx.strokeStyle='#00ff70';ctx.lineWidth=1;
         ctx.strokeRect(player.x-FOOT_W/2,player.y-FOOT_H,FOOT_W,FOOT_H);
       }
       ctx.restore();
@@ -433,6 +477,7 @@ window.IslandRenderer = (() => {
           `Sprite: ${spriteDirName} (${player.facing || ''})`,
           `Trocas/s: ${player.switchesPerSec ?? 0}`,
           `Célula: ${IslandWorld.cellAt(world,player.x,player.y)?'andável':'bloqueada'}`,
+          `atrás: ${player.behind?'sim':'não'} [O] | máscara [H]`,
           `Zoom: ${zoom.toFixed(2)}${factor>zoom+.001?` (encaixe: ${factor.toFixed(2)})`:''} [+/-]`,
           `Largura visível: ${(Math.min(1,view.width/world.width)*100).toFixed(2)}%`
         ];
