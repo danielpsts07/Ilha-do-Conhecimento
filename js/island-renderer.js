@@ -39,7 +39,7 @@ window.IslandRenderer = (() => {
         }
         resolve();
       };img.onerror=()=>{failed.push(path);resolve();};img.src=`assets/${path}`;
-    }))).then(()=>window.IslandKeys?.load()).then(prepareHud);
+    }))).then(()=>{occlusion?.setHero(images.hero);return window.IslandKeys?.load();}).then(prepareHud);
     let width=960,height=600,dpr=1,debug=false,hitboxOverlay=true,occlusionOverlay=false,zoom=CAMERA_ZOOM;
     // Única escala mapa → tela; o mínimo de encaixe evita expor área fora do JPEG.
     const scale=()=>Math.max(WORLD_SCALE*zoom,width/(images.island?.naturalWidth||Infinity),height/(images.island?.naturalHeight||Infinity));
@@ -395,18 +395,15 @@ window.IslandRenderer = (() => {
       const background=images.island,vw=Math.min(view.width,world.width-camera.x),vh=Math.min(view.height,world.height-camera.y);
       if(background.naturalWidth&&vw>0&&vh>0) {
         // Câmera em px do mundo → JPEG: sx = cam.x / WORLD_SCALE (idem y e tamanho).
-        ctx.drawImage(background,camera.x/WORLD_SCALE,camera.y/WORLD_SCALE,vw/WORLD_SCALE,vh/WORLD_SCALE,camera.x,camera.y,vw,vh);
+        ctx.drawImage(occlusion?.backgroundCanvas||background,camera.x/WORLD_SCALE,camera.y/WORLD_SCALE,vw/WORLD_SCALE,vh/WORLD_SCALE,camera.x,camera.y,vw,vh);
       }
       // Sombra acompanha o tamanho da personagem (9×3 era para HERO_SCALE 1,2).
       const shadow=HERO_SCALE/1.2;
       ellipse(player.x,player.y-2*shadow,9*shadow,3*shadow,'#3b593a55');
       drawHero(player);
-      occlusion?.update(player.x/WORLD_SCALE,player.y/WORLD_SCALE);
+      occlusion?.update(player.x/WORLD_SCALE,player.y/WORLD_SCALE,player.frame??HeroAnimation.IDLE,player.dir||0);
       player.behind=!!occlusion?.behind;
-      occlusion?.draw(ctx);
-      if(player.behind&&OCCLUSION_GHOST_ALPHA>0) {
-        ctx.globalAlpha=OCCLUSION_GHOST_ALPHA;drawHero(player);ctx.globalAlpha=1;
-      }
+      occlusion?.draw(ctx,camera.x,camera.y,vw,vh);
       window.IslandKeys?.draw(ctx,world,player,camera,view,factor,time,reducedMotion);
       if(debug) {
         const c=world.collision;

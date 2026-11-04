@@ -27,6 +27,7 @@ const KEYS = [
 const COLLISION_CELL_SIZE = 4;
 const HITBOX_MASK_SRC = 'assets/ilha/island_hitbox.png'; // Vermelho bloqueia; máscara antiga é fallback.
 const OCCLUSION_MASK_SRC = 'assets/ilha/island_occlusion.png'; // Roxo marca objetos que cobrem a personagem.
+const OCCLUSION_ALPHA_MIN = 1; // Toda tinta rosa visível cobre, incluindo a borda suave; não muda a hitbox.
 const MASK_ALPHA_MIN = 128; // Ignora a parte quase transparente das bordas suavizadas.
 const HITBOX_CELL_MIN_PIXELS = 1; // Um pixel vermelho já fecha a célula, preservando diagonais finas.
 const FOOT_W = 3; // Largura da pegada, centrada nos pés (unidades de mundo).
