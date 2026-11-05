@@ -205,6 +205,16 @@ window.loadOperacoes = () => operacoesLoading ||= (async()=>{
 })().catch(error=>{operacoesLoading=null;throw error;});
 
 // Balança: espelhos locais mantêm index.html funcional também em file://.
+// Tempo de equilíbrio contínuo e estoque disponível ao jogador em cada fase.
+// null libera cópias dos itens já oferecidos; os itens fixos não gastam estoque.
+const ALGEBRA = {
+  ASSENTA_S: 0.8, // Segundos equilibrado, sem arrastar e com o estoque utilizado.
+  FASES: [
+    { estoque: null },
+    { estoque: { rubi: 1, safira: 1, esmeralda: 0, topazio: 0 } },
+    { estoque: { rubi: 1, safira: 1, esmeralda: 1, topazio: 0 } }
+  ]
+};
 window.MOSTRAR_PESOS = false;
 const ALGEBRA_LOCAL = {fases:[
   {tipo:'equilibrar',missao:'Deixe os dois lados equilibrados!',peso_caixa:null,esq:['rubi','rubi','rubi'],dir:['rubi'],bandeja:['rubi'],caixa_na_bandeja:false},
