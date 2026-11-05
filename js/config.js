@@ -210,15 +210,15 @@ window.loadOperacoes = () => operacoesLoading ||= (async()=>{
 const ALGEBRA = {
   ASSENTA_S: 0.8, // Segundos equilibrado, sem arrastar e com o estoque utilizado.
   FASES: [
-    { estoque: null },
-    { estoque: { rubi: 1, safira: 1, esmeralda: 0, topazio: 0 } },
-    { estoque: { rubi: 1, safira: 1, esmeralda: 1, topazio: 0 } }
+    { estoque: { rubi: 2, safira: 1, esmeralda: 0, topazio: 0 } },
+    { estoque: { rubi: 1, safira: 1, esmeralda: 1, topazio: 0 } },
+    { estoque: { rubi: 0, safira: 2, esmeralda: 1, topazio: 1 } }
   ]
 };
 window.MOSTRAR_PESOS = false;
 const ALGEBRA_LOCAL = {fases:[
-  {tipo:'equilibrar',missao:'Deixe os dois lados equilibrados!',peso_caixa:null,esq:['rubi','rubi','rubi'],dir:['rubi'],bandeja:['rubi'],caixa_na_bandeja:false},
-  {tipo:'equilibrar',missao:'Quanto pesa a caixa misteriosa?',peso_caixa:3,esq:['caixa_misteriosa'],dir:[],bandeja:['rubi','safira','esmeralda','topazio'],caixa_na_bandeja:false},
+  {tipo:'equilibrar',missao:'Deixe os dois lados equilibrados!',peso_caixa:null,esq:['rubi','rubi','rubi'],dir:['rubi'],bandeja:['rubi','safira'],caixa_na_bandeja:false},
+  {tipo:'equilibrar',missao:'Quanto pesa a caixa misteriosa?',peso_caixa:4,esq:['caixa_misteriosa'],dir:[],bandeja:['rubi','safira','esmeralda','topazio'],caixa_na_bandeja:false},
   {tipo:'equilibrar',missao:'Equilibre a balança!',peso_caixa:2,esq:['caixa_misteriosa','safira','rubi'],dir:['caixa_misteriosa','topazio'],bandeja:['rubi','safira','esmeralda','topazio'],caixa_na_bandeja:false}
 ]};
 const ALGEBRA_LAYOUT_LOCAL = {

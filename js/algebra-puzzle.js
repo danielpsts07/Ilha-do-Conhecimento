@@ -4,7 +4,7 @@ window.AlgebraPuzzle = (() => {
   const names=['fundo_vila','bandeja','caixa_misteriosa','coluna','corrente','esmeralda','prato','rubi','safira','topazio','travessa_frames','chave'];
   const types=['rubi','safira','esmeralda','topazio','caixa_misteriosa'];
   const art={},frames=new Float32Array(31*4);let ready,data,layout,b,glow,current;
-  // Enumeração pura: cada bit escolhe o prato de uma joia; nenhuma renderização.
+  // Enumeração pura por tipo: joias iguais não multiplicam as soluções.
   function solutions(f,stock,model) {
     const sum=list=>list.reduce((total,type)=>total+model.weight(type,f.peso_caixa),0);
     const left=sum(f.esq),right=sum(f.dir),gems=[];
@@ -13,12 +13,19 @@ window.AlgebraPuzzle = (() => {
       return {count:f.bandeja.includes('rubi')&&Number.isInteger(rubies)&&rubies>0&&rubies+(left<right?f.esq.length:f.dir.length)<=8?1:0,rubies,side:left<right?0:1};
     }
     for(let i=0;i<4;i++)for(let n=0;n<(stock[types[i]]||0);n++)gems.push(types[i]);
-    let count=0,first=-1;
-    for(let mask=0;mask<2**gems.length;mask++){
-      let l=left,r=right,nl=f.esq.length,nr=f.dir.length;
-      for(let i=0;i<gems.length;i++){
-        const weight=model.weight(gems[i],f.peso_caixa);
-        if(mask&(1<<i)){l+=weight;nl++;}else{r+=weight;nr++;}
+    const counts=types.slice(0,4).map(type=>stock[type]||0);
+    let count=0,first=-1,combinations=1;
+    for(let i=0;i<4;i++)combinations*=counts[i]+1;
+    // Cada tipo envia de zero até todas as suas joias para o prato esquerdo.
+    for(let code=0;code<combinations;code++){
+      let value=code,l=left,r=right,nl=f.esq.length,nr=f.dir.length,mask=0,offset=0;
+      for(let i=0;i<4;i++){
+        const total=counts[i],take=value%(total+1),weight=model.weight(types[i],f.peso_caixa);
+        value=Math.floor(value/(total+1));
+        l+=take*weight;r+=(total-take)*weight;nl+=take;nr+=total-take;
+        // A máscara continua disponível para a tecla N montar uma solução.
+        for(let j=0;j<take;j++)mask|=1<<(offset+j);
+        offset+=total;
       }
       if(l===r&&nl<=8&&nr<=8){if(!count)first=mask;count++;}
     }
@@ -29,7 +36,7 @@ window.AlgebraPuzzle = (() => {
       for(let i=0;i<data.fases.length;i++){
         const stock=ALGEBRA.FASES[i].estoque,result=solutions(data.fases[i],stock,b);
         if(!result.count)throw Error('Fase '+(i+1)+' sem solução usando todo o estoque');
-        console.info('[Álgebra] Fase '+(i+1)+': '+(stock===null?'combinação de rubis encontrada':result.count+' distribuição(ões) equilibrada(s) usando todas as joias')+'.');
+        console.info('[Álgebra] Fase '+(i+1)+': '+(stock===null?'combinação de rubis encontrada':result.count+' distribuição(ões) por tipo equilibrada(s) usando todas as joias')+'.');
       }
       console.info('[Álgebra] PASSOU: soluções de todas as fases.');
       return true;
