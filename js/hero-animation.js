@@ -1,31 +1,21 @@
-/* Escolhe a coluna da folha da personagem a cada tick (60 por segundo).
-   Folha menina-caminhada-8.png: colunas 0–3 = passo A (apoio, desce, passagem, sobe),
-   4–7 = passo B, 8–9 = respiração parada. Sem DOM: testável fora do navegador. */
+/* Escolhe a coluna da folha da personagem a cada tick ou frame.
+   Folha personagem_spritesheet_8_direcoes_v2.png (4 colunas × 8 linhas de 48×56):
+   Colunas: 0 parado, 1 passo A, 2 parado, 3 passo B.
+   Linhas: 0 baixo, 1 esquerda, 2 direita, 3 cima, 4 baixo-esq, 5 baixo-dir, 6 cima-esq, 7 cima-dir. */
 window.HeroAnimation = (() => {
   'use strict';
-  const FRAMES_PER_STEP = 4, IDLE = 8;
-  function column(p, calm) {
-    if(p.moving) {
-      // Quadro preso ao progresso do passo: 4 quadros iguais em qualquer velocidade.
-      const phase = Math.min(FRAMES_PER_STEP - 1, Math.floor((p.prog - 1) / p.dur * FRAMES_PER_STEP));
-      const shown = calm ? phase & ~1 : phase; // Menos animações: sem os quadros de sobe/desce.
-      return (p.steps % 2) * FRAMES_PER_STEP + shown;
+  const FRAMES = 4, IDLE = 0;
+  function column(p) {
+    if (p.moving || (p.walk && p.walk > 0)) {
+      if (typeof p.animTime === 'number' && typeof WalkAnimation !== 'undefined') {
+        return WalkAnimation.frameColumn(true, p.animTime);
+      }
+      return Math.floor((p.walk || 0) / 8) % FRAMES;
     }
-    if(p.walk > 0) {
-      // Andando no lugar (encostada numa parede): mesmo ciclo, 4 ticks por quadro.
-      const index = Math.floor((p.walk - 1) / TICKS_PER_FRAME) % 8;
-      return calm ? index & ~1 : index;
-    }
-    if(calm) return IDLE;
-    return IDLE + Math.floor((p.idle || 0) / IDLE_BREATH_TICKS) % 2;
+    return IDLE;
   }
-  function resolveSheet(dir, hasDiagonal) {
-    if (dir >= 4) {
-      if (hasDiagonal) return { isDiagonal: true, row: dir - 4, fallback: false };
-      const row = (dir === 4 || dir === 6) ? 1 : 2; // dx < 0 esquerda, dx > 0 direita
-      return { isDiagonal: false, row, fallback: true };
-    }
-    return { isDiagonal: false, row: dir || 0, fallback: false };
+  function resolveSheet(dir) {
+    return { isDiagonal: dir >= 4, row: dir || 0, fallback: false };
   }
   return Object.freeze({column, resolveSheet, IDLE});
 })();

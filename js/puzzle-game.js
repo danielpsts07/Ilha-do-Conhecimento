@@ -464,6 +464,7 @@ window.PuzzleGame = (() => {
     if (!PuzzleData.regions[id]) return false;
     stop();
     regionId = id;
+    if (id === 'geometria') window.GameAudio?.playGeometryMusic?.();
     callbacks = options;
     active = true;
     if (!progress.has(id)) {
@@ -493,6 +494,7 @@ window.PuzzleGame = (() => {
   }
 
   function stop() {
+    if (regionId === 'geometria') window.GameAudio?.stopGeometryMusic?.();
     if (active && observing && region().kind === 'sequence') {
       state().demoSeen = false;
       state().interrupted = true;

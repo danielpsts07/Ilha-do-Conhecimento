@@ -135,6 +135,7 @@ window.GeometriaPuzzle = (() => {
     }
     function close(complete=false) {
       if(closed)return;closed=true;cancelAnimationFrame(raf);
+      window.GameAudio?.stopGeometryMusic?.();
       canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',release);canvas.removeEventListener('pointercancel',cancel);canvas.removeEventListener('lostpointercapture',cancel);
       document.removeEventListener('keydown',key,true);window.removeEventListener('resize',resize);host.remove();current=null;options.onExit(complete);
     }

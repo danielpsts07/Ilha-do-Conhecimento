@@ -39,17 +39,17 @@ OK   cima col 6: sem fundo (borda 0, claros no contorno 0, semi 0), buracos 0=0,
 OK   cima col 7: sem fundo (borda 0, claros no contorno 0, semi 0), buracos 0=0, pés y52=52, olhos/brilhos 0=0, opacos 969~939 (±60)
 OK   cima col 8: sem fundo (borda 0, claros no contorno 0, semi 0), buracos 0=0, pés y52=52, olhos/brilhos 0=0, opacos 939~939 (±60)
 OK   cima col 9: sem fundo (borda 0, claros no contorno 0, semi 0), buracos 0=0, pés y52=52, olhos/brilhos 0=0, opacos 909~939 (±60)
-1 s andando, normal (coluna por tick): 0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,6,6,6,6,7,7,7,7,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,6,6,6,6
-OK   normal: cada quadro fica 4 ticks (4)
-OK   normal: 15 trocas de quadro em 1 s (esperado 15)
-OK   ciclo completo 0→7 em 32 ticks = 2 passos
-OK   devagar: passo de 23 ticks mostra os 8 quadros (0×6 1×6 2×6 3×5 4×6 5×6 6×6 7×5)
-OK   rápido: passo de 12 ticks mostra os 8 quadros (0×3 1×3 2×3 3×3 4×3 5×3 6×3 7×3)
-OK   menos animações: só quadros principais (0,2,4,6)
-OK   encostada na parede: anda no lugar com os 8 quadros
-OK   parada: respiração alterna colunas 8 e 9 (8×35 9×36 8×36 9×36 8×1)
-OK   parada com menos animações: coluna 8 fixa
-OK   island-game.js usa HeroAnimation.column a cada tick
+1 s andando, normal (coluna por tick): 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+FALHA normal: cada quadro fica 8 ticks (60)
+FALHA normal: 1 trocas de quadro em 1 s (esperado 7.5)
+FALHA ciclo completo 0→7 em 32 ticks = 2 passos
+FALHA devagar: passo de 6 ticks mostra os 8 quadros (0×12)
+FALHA rápido: passo de 3 ticks mostra os 8 quadros (0×6)
+OK   menos animações: só quadros principais (0)
+FALHA encostada na parede: anda no lugar com os 8 quadros
+FALHA parada: respiração alterna colunas 8 e 9 (0×144)
+FALHA parada com menos animações: coluna 8 fixa
+FALHA island-game.js usa HeroAnimation.column a cada tick
 OK   index.html carrega hero-animation.js antes do jogo
 
-TUDO OK
+9 FALHA(S)
