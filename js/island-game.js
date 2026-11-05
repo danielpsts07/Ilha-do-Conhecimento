@@ -8,13 +8,18 @@ window.GameIsland = (() => {
   const INV_SQRT2 = 1 / Math.SQRT2;
   const DIRS = ['down', 'left', 'right', 'up', 'down-left', 'down-right', 'up-left', 'up-right'];
   const DIRS_PT = ['baixo', 'esquerda', 'direita', 'cima', 'baixo-esq', 'baixo-dir', 'cima-esq', 'cima-dir'];
-  const DX = [0, -1, 1, 0, -INV_SQRT2, INV_SQRT2, -INV_SQRT2, INV_SQRT2];
-  const DY = [1, 0, 0, -1, INV_SQRT2, INV_SQRT2, -INV_SQRT2, -INV_SQRT2];
+  const DX = [0, -1, 1, 0, -1, 1, -1, 1];
+  const DY = [1, 0, 0, -1, 1, 1, -1, -1];
+  const ROW_TO_SECTOR = [6, 4, 0, 2, 5, 7, 3, 1];
   const player = {
     ...world.spawn,
     facing: 'down',
     dir: 0,
+    row: 0,
+    sector: 6,
     moving: false,
+    inStep: false,
+    animTime: 0,
     frame: HeroAnimation.IDLE,
     steps: 0,
     idle: 0,
@@ -35,6 +40,15 @@ window.GameIsland = (() => {
   const heldCodes = new Set();
   const touchWalkHeld = new Set();
   const transitionHistory = [];
+  const wasdOrder = [];
+  const arrowOrder = [];
+  const touchWalkOrder = [];
+  let lastInputSource = null;
+  let releaseGraceTicks = 0;
+  let lastDiagonalDir = null;
+  let joystickActive = false;
+  let joystickSector = null;
+  const SECTOR_TO_DIR = [2, 7, 3, 6, 1, 4, 0, 5];
   const MOVEMENT_CODES = new Set([
     'KeyW', 'KeyA', 'KeyS', 'KeyD',
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'
@@ -73,29 +87,48 @@ window.GameIsland = (() => {
     clearInput(); screen.hidden = false; renderer.resize(); updateCamera(true); lastTime = 0;
     updateProgress(); (trigger || canvas).focus();
   }
-  let joystickSector = null;
-  const SECTOR_CENTERS = [90, 180, 0, 270, 135, 45, 225, 315]; // dir index -> deg
-  const ANGLE_TO_DIR = [2, 5, 0, 4, 1, 6, 3, 7]; // 45° sectors around [0, 45, 90, 135, 180, 225, 270, 315]
-
   function angleDiff(a, b) {
     let d = (a - b + 180) % 360 - 180;
     return d < -180 ? d + 360 : d;
   }
 
   function resolveJoystickDir(vx, vy) {
-    if (Math.hypot(vx, vy) < 0.20) {
-      joystickSector = null;
-      return null;
+    const mag = Math.hypot(vx, vy);
+    if (!joystickActive) {
+      if (mag < 0.25) return null;
+      joystickActive = true;
+    } else {
+      if (mag < 0.20) {
+        joystickActive = false;
+        joystickSector = null;
+        return null;
+      }
     }
-    const deg = (Math.atan2(vy, vx) * 180 / Math.PI + 360) % 360;
-    // Histerese angular pequena de ≈ 6° (margem nominal 22.5° + 6° = 28.5°) para não oscilar na fronteira
+
+    let deg = (Math.atan2(-vy, vx) * 180 / Math.PI) % 360;
+    if (deg < 0) deg += 360;
+
+    if (typeof WalkAnimation !== 'undefined') {
+      joystickSector = WalkAnimation.sectorFromVector(vx, vy, joystickSector, 6);
+      return WalkAnimation.rowFromSector(joystickSector);
+    }
+
     if (joystickSector !== null) {
-      const center = SECTOR_CENTERS[joystickSector];
-      if (Math.abs(angleDiff(deg, center)) <= 28.5) return joystickSector;
+      const center = joystickSector * 45;
+      if (Math.abs(angleDiff(deg, center)) <= 28.5) {
+        return SECTOR_TO_DIR[joystickSector];
+      }
     }
-    const sectorIdx = Math.floor(((deg + 22.5) % 360) / 45);
-    joystickSector = ANGLE_TO_DIR[sectorIdx];
-    return joystickSector;
+
+    joystickSector = Math.round(deg / 45) % 8;
+    return SECTOR_TO_DIR[joystickSector];
+  }
+
+  let cmdStartX = 0, cmdStartY = 0;
+  function recordCommandStart() {
+    cmdStartX = player.x;
+    cmdStartY = player.y;
+    player.distSinceCommand = 0;
   }
 
   function recordDirectionSwitch() {
@@ -117,50 +150,141 @@ window.GameIsland = (() => {
 
   function clearInput() {
     joystickSector = null;
+    joystickActive = false;
+    wasdOrder.length = 0;
+    arrowOrder.length = 0;
+    touchWalkOrder.length = 0;
+    lastInputSource = null;
+    releaseGraceTicks = 0;
+    lastDiagonalDir = null;
     heldCodes.clear();
     touchWalkHeld.clear();
     pointers.clear();
     resetJoystick();
     // Para no ponto atual do passo: o mapa não é uma grade fixa, então não há salto.
-    Object.assign(player, { moving: false, prog: 0, walk: 0, turn: 0, was: false, steps: 0, idle: 0, frame: HeroAnimation.IDLE, intentName: '(nenhuma)' });
+    Object.assign(player, { moving: false, inStep: false, animTime: 0, prog: 0, walk: 0, turn: 0, was: false, steps: 0, idle: 0, frame: 0, intentName: '(nenhuma)' });
   }
 
-  function computeIntent() {
-    // 1. Joystick analógico: se ativo fora da zona morta (20%), ele define a intenção
+  function readGamepadInput() {
+    if (typeof navigator !== 'undefined' && typeof navigator.getGamepads === 'function') {
+      const gamepads = navigator.getGamepads();
+      if (gamepads) {
+        for (let i = 0; i < gamepads.length; i++) {
+          const gp = gamepads[i];
+          if (!gp) continue;
+          const up = gp.buttons[12]?.pressed;
+          const down = gp.buttons[13]?.pressed;
+          const left = gp.buttons[14]?.pressed;
+          const right = gp.buttons[15]?.pressed;
+          if (up || down || left || right) {
+            if (up) return { dir: 3, ix: 0, iy: -1, name: 'Gamepad D-Pad ↑' };
+            if (down) return { dir: 0, ix: 0, iy: 1, name: 'Gamepad D-Pad ↓' };
+            if (left) return { dir: 1, ix: -1, iy: 0, name: 'Gamepad D-Pad ←' };
+            if (right) return { dir: 2, ix: 1, iy: 0, name: 'Gamepad D-Pad →' };
+          }
+          if (gp.axes && gp.axes.length >= 2) {
+            const ax = gp.axes[0], ay = gp.axes[1];
+            const joyDir = resolveJoystickDir(ax, ay);
+            if (joyDir !== null) {
+              return { dir: joyDir, ix: DX[joyDir], iy: DY[joyDir], name: `Gamepad Analógico ${DIRS_PT[joyDir]}` };
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  function computeRawIntent() {
+    // 1. Joystick analógico / touch ou gamepad: se ativo fora da zona morta, define a intenção
     for (const value of pointers.values()) {
       if (!value || (!value.x && !value.y)) continue;
       const joyDir = resolveJoystickDir(value.x, value.y);
       if (joyDir !== null) {
-        return { dir: joyDir, ix: Math.round(DX[joyDir]), iy: Math.round(DY[joyDir]), name: `Joystick ${DIRS_PT[joyDir]}` };
+        return { dir: joyDir, ix: DX[joyDir], iy: DY[joyDir], name: `Joystick ${DIRS_PT[joyDir]}` };
       }
     }
+    const gpIntent = readGamepadInput();
+    if (gpIntent) return gpIntent;
 
-    // 2. Teclado e data-walk: vetor dx = D - A, dy = S - W (teclas opostas se anulam)
-    const right = heldCodes.has('KeyD') || heldCodes.has('ArrowRight') || touchWalkHeld.has('right');
-    const left = heldCodes.has('KeyA') || heldCodes.has('ArrowLeft') || touchWalkHeld.has('left');
-    const down = heldCodes.has('KeyS') || heldCodes.has('ArrowDown') || touchWalkHeld.has('down');
-    const up = heldCodes.has('KeyW') || heldCodes.has('ArrowUp') || touchWalkHeld.has('up');
+    // 2. Setas do teclado: SOMENTE 4 direções, nunca diagonal; última pressionada manda
+    if (arrowOrder.length > 0 && (wasdOrder.length === 0 || lastInputSource === 'arrow')) {
+      const lastArrow = arrowOrder[arrowOrder.length - 1];
+      if (lastArrow === 'ArrowUp') return { dir: 3, ix: 0, iy: -1, name: '↑' };
+      if (lastArrow === 'ArrowDown') return { dir: 0, ix: 0, iy: 1, name: '↓' };
+      if (lastArrow === 'ArrowLeft') return { dir: 1, ix: -1, iy: 0, name: '←' };
+      if (lastArrow === 'ArrowRight') return { dir: 2, ix: 1, iy: 0, name: '→' };
+    }
 
-    const ix = (right ? 1 : 0) - (left ? 1 : 0);
-    const iy = (down ? 1 : 0) - (up ? 1 : 0);
+    // 3. Teclado WASD: diagonais suportadas; teclas opostas resolvem pela última pressionada no eixo
+    if (wasdOrder.length > 0) {
+      let ix = 0, iy = 0;
+      for (let i = wasdOrder.length - 1; i >= 0; i--) {
+        const code = wasdOrder[i];
+        if (ix === 0 && code === 'KeyA') ix = -1;
+        if (ix === 0 && code === 'KeyD') ix = 1;
+        if (iy === 0 && code === 'KeyW') iy = -1;
+        if (iy === 0 && code === 'KeyS') iy = 1;
+      }
+      const keys = [];
+      if (wasdOrder.includes('KeyW')) keys.push('W');
+      if (wasdOrder.includes('KeyA')) keys.push('A');
+      if (wasdOrder.includes('KeyS')) keys.push('S');
+      if (wasdOrder.includes('KeyD')) keys.push('D');
+      const name = keys.join('+');
 
-    const keys = [];
-    if (up) keys.push('W');
-    if (left) keys.push('A');
-    if (down) keys.push('S');
-    if (right) keys.push('D');
-    const name = keys.length ? keys.join('+') : '(nenhuma)';
+      if (ix === 0 && iy > 0) return { dir: 0, ix, iy, name }; // baixo
+      if (ix < 0 && iy === 0) return { dir: 1, ix, iy, name }; // esquerda
+      if (ix > 0 && iy === 0) return { dir: 2, ix, iy, name }; // direita
+      if (ix === 0 && iy < 0) return { dir: 3, ix, iy, name }; // cima
+      if (ix < 0 && iy > 0) return { dir: 4, ix, iy, name };   // baixo-esq
+      if (ix > 0 && iy > 0) return { dir: 5, ix, iy, name };   // baixo-dir
+      if (ix < 0 && iy < 0) return { dir: 6, ix, iy, name };   // cima-esq
+      if (ix > 0 && iy < 0) return { dir: 7, ix, iy, name };   // cima-dir
+      return { dir: null, ix: 0, iy: 0, name: '(nenhuma)' };
+    }
 
-    if (ix === 0 && iy === 0) return { dir: null, ix: 0, iy: 0, name };
-    if (ix === 0 && iy > 0) return { dir: 0, ix, iy, name }; // baixo
-    if (ix < 0 && iy === 0) return { dir: 1, ix, iy, name }; // esquerda
-    if (ix > 0 && iy === 0) return { dir: 2, ix, iy, name }; // direita
-    if (ix === 0 && iy < 0) return { dir: 3, ix, iy, name }; // cima
-    if (ix < 0 && iy > 0) return { dir: 4, ix, iy, name };   // baixo-esq
-    if (ix > 0 && iy > 0) return { dir: 5, ix, iy, name };   // baixo-dir
-    if (ix < 0 && iy < 0) return { dir: 6, ix, iy, name };   // cima-esq
-    if (ix > 0 && iy < 0) return { dir: 7, ix, iy, name };   // cima-dir
-    return { dir: null, ix: 0, iy: 0, name };
+    // 4. Direcional tátil (data-walk): SOMENTE 4 direções, última pressionada
+    if (touchWalkOrder.length > 0) {
+      const lastTouch = touchWalkOrder[touchWalkOrder.length - 1];
+      if (lastTouch === 'up') return { dir: 3, ix: 0, iy: -1, name: 'Toque ↑' };
+      if (lastTouch === 'down') return { dir: 0, ix: 0, iy: 1, name: 'Toque ↓' };
+      if (lastTouch === 'left') return { dir: 1, ix: -1, iy: 0, name: 'Toque ←' };
+      if (lastTouch === 'right') return { dir: 2, ix: 1, iy: 0, name: 'Toque →' };
+    }
+
+    return { dir: null, ix: 0, iy: 0, name: '(nenhuma)' };
+  }
+
+  function computeIntent() {
+    const raw = computeRawIntent();
+    const rawDir = raw.dir;
+
+    // Se o vetor atual é diagonal, renova o registro da diagonal e zera a tolerância
+    if (rawDir !== null && rawDir >= 4) {
+      releaseGraceTicks = 0;
+      lastDiagonalDir = rawDir;
+      return raw;
+    }
+
+    // Tolerância ao soltar teclas: se a personagem andava na diagonal e uma tecla foi solta (passou para reta),
+    // espera 3 ticks (~50 ms) antes de assumir a direção reta.
+    if (rawDir !== null && rawDir < 4) {
+      if (lastDiagonalDir !== null && player.was) {
+        releaseGraceTicks++;
+        if (releaseGraceTicks < 3) {
+          return { dir: lastDiagonalDir, ix: DX[lastDiagonalDir], iy: DY[lastDiagonalDir], name: raw.name };
+        }
+      }
+      lastDiagonalDir = null;
+      releaseGraceTicks = 0;
+      return raw;
+    }
+
+    // rawDir === null (teclas soltas): para na última direção
+    lastDiagonalDir = null;
+    releaseGraceTicks = 0;
+    return raw;
   }
 
   // Procura o passo: inteiro se livre; senão contorna cantos de lado; senão anda até a parede.
@@ -173,55 +297,45 @@ window.GameIsland = (() => {
   function findStep(dir) {
     const { x, y } = player;
     if (dir < 4) {
-      const dx = DX[dir], dy = DY[dir], px = -dy, py = dx;
-      if (pathFree(x, y, x + dx * STEP_TILE, y + dy * STEP_TILE)) return { x: x + dx * STEP_TILE, y: y + dy * STEP_TILE, len: 1 };
-      for (let o = 2; o <= STEP_TILE / 2; o += 2) for (const s of [1, -1]) {
-        const lx = x + px * o * s, ly = y + py * o * s;
-        if (pathFree(x, y, lx, ly) && pathFree(lx, ly, lx + dx * STEP_TILE, ly + dy * STEP_TILE)) return { x: lx + dx * STEP_TILE, y: ly + dy * STEP_TILE, len: 1 };
+      const dx = DX[dir], dy = DY[dir];
+      if (pathFree(x, y, x + dx * STEP_TILE, y + dy * STEP_TILE)) return { x: x + dx * STEP_TILE, y: y + dy * STEP_TILE, len: 1, isDiag: false };
+      const px = -dy, py = dx;
+      for (const s of [1, -1]) {
+        const lx = x + px * s, ly = y + py * s;
+        if (pathFree(x, y, lx, ly) && pathFree(lx, ly, lx + dx * STEP_TILE, ly + dy * STEP_TILE)) return { x: lx + dx * STEP_TILE, y: ly + dy * STEP_TILE, len: 1, isDiag: false };
       }
       let free = 0; while (free < STEP_TILE && IslandWorld.isWalkable(world, x + dx * (free + 1), y + dy * (free + 1))) free++;
-      return free >= 4 ? { x: x + dx * free, y: y + dy * free, len: free / STEP_TILE } : null;
+      return free >= 1 ? { x: x + dx * free, y: y + dy * free, len: free / STEP_TILE, isDiag: false } : null;
     }
 
-    // Movimento em diagonal (fator 1/√2 por eixo para velocidade linear idêntica à ortogonal)
-    const dx = DX[dir] * STEP_TILE, dy = DY[dir] * STEP_TILE;
-    const signX = DX[dir] < 0 ? -1 : 1, signY = DY[dir] < 0 ? -1 : 1;
+    // Movimento em diagonal
+    const signX = DX[dir], signY = DY[dir];
+    const stepX = signX * STEP_TILE, stepY = signY * STEP_TILE;
 
     // Prevenção de corte de quina: as duas células vizinhas e o ponto final precisam estar livres
-    const xFree = pathFree(x, y, x + dx, y);
-    const yFree = pathFree(x, y, x, y + dy);
-    const diagFree = pathFree(x, y, x + dx, y + dy);
+    const xFree = pathFree(x, y, x + stepX, y);
+    const yFree = pathFree(x, y, x, y + stepY);
+    const diagFree = pathFree(x, y, x + stepX, y + stepY);
 
     if (xFree && yFree && diagFree) {
-      return { x: x + dx, y: y + dy, len: 1 };
+      return { x: x + stepX, y: y + stepY, len: 1, isDiag: true };
     }
 
-    // Diagonal bloqueada: deslize pelo eixo livre (resolvendo X e Y separadamente)
-    // O sprite continua sendo a direção da intenção (p.facing permanece DIRS[want])
-    const fullXFree = pathFree(x, y, x + signX * STEP_TILE, y);
-    const fullYFree = pathFree(x, y, x, y + signY * STEP_TILE);
-
-    if (fullXFree && !fullYFree) {
-      return { x: x + signX * STEP_TILE, y, len: 1 };
+    // Diagonal bloqueada: deslize pelo eixo livre (resolvendo X e Y separadamente), sem cortar quina
+    if (xFree && !yFree) {
+      return { x: x + stepX, y, len: 1, isDiag: false };
     }
-    if (fullYFree && !fullXFree) {
-      return { x, y: y + signY * STEP_TILE, len: 1 };
+    if (yFree && !xFree) {
+      return { x, y: y + stepY, len: 1, isDiag: false };
     }
-    if (fullXFree && fullYFree) {
-      return { x: x + signX * STEP_TILE, y, len: 1 };
-    }
-
-    // Passo parcial em caso de colisão próxima
-    let freeX = 0;
-    while (freeX < STEP_TILE && IslandWorld.isWalkable(world, x + signX * (freeX + 1), y)) freeX++;
-    if (freeX >= 4) return { x: x + signX * freeX, y, len: freeX / STEP_TILE };
-
-    let freeY = 0;
-    while (freeY < STEP_TILE && IslandWorld.isWalkable(world, x, y + signY * (freeY + 1))) freeY++;
-    if (freeY >= 4) return { x, y: y + signY * freeY, len: freeY / STEP_TILE };
 
     return null;
   }
+
+  const calcStepDur = (step) => {
+    const base = step.isDiag ? (typeof TICKS_PER_DIAGONAL !== 'undefined' ? TICKS_PER_DIAGONAL : 24) : TICKS_PER_TILE;
+    return Math.max(1, Math.round(base / (window.GameSettings?.walkSpeed || 1) * step.len));
+  };
 
   // Um tick de 1/60 s: direção derivada puramente do estado da entrada no tick atual.
   function advance(want) {
@@ -229,7 +343,7 @@ window.GameIsland = (() => {
 
     // Caso 1: Sem intenção de movimento (teclas soltas / joystick na zona morta)
     if (want === null) {
-      if (!p.moving) {
+      if (!p.inStep) {
         p.walk = 0;
         p.was = false;
         p.turn = 0;
@@ -238,7 +352,7 @@ window.GameIsland = (() => {
         return;
       }
       p.prog++;
-      p.walk = 0;
+      p.walk++;
       const t = Math.min(1, p.prog / p.dur);
       p.x = p.fromX + (p.toX - p.fromX) * t;
       p.y = p.fromY + (p.toY - p.fromY) * t;
@@ -247,14 +361,17 @@ window.GameIsland = (() => {
 
     p.idle = 0;
 
-    // Caso 2: Em repouso absoluto (!p.moving && !p.was) - toque rápido só vira
-    if (!p.moving && !p.was) {
+    // Caso 2: Em repouso absoluto (!p.inStep && !p.was) - toque rápido só vira
+    if (!p.inStep && !p.was) {
       if (want !== p.dir) {
         p.dir = want;
+        p.row = want;
         p.facing = DIRS[want];
+        p.sector = ROW_TO_SECTOR[want];
         p.turn = TURN_TICKS;
         p.walk = 0;
         recordDirectionSwitch();
+        recordCommandStart();
         return;
       }
       if (p.turn > 0) {
@@ -262,56 +379,58 @@ window.GameIsland = (() => {
         if (p.turn > 0) return;
       }
       p.dir = want;
+      p.row = want;
       p.facing = DIRS[want];
+      p.sector = ROW_TO_SECTOR[want];
       const step = findStep(want);
       if (!step) { p.walk++; p.was = true; return; }
       Object.assign(p, {
-        moving: true,
+        inStep: true,
         prog: 0,
-        dur: Math.max(1, Math.round(ticksPerTile() * step.len)),
+        dur: calcStepDur(step),
+        fromX: p.x,
+        fromY: p.y,
+        toX: step.x,
+        toY: step.y
+      });
+      recordCommandStart();
+    }
+    // Caso 3: Mudança de direção enquanto já está em movimento
+    // Troca IMEDIATA: não completa mais o passo longo na direção antiga!
+    else if (want !== p.dir) {
+      p.dir = want;
+      p.row = want;
+      p.facing = DIRS[want];
+      p.sector = ROW_TO_SECTOR[want];
+      p.turn = 0;
+      recordDirectionSwitch();
+      recordCommandStart();
+
+      const step = findStep(want);
+      if (!step) {
+        p.inStep = false;
+        p.walk++;
+        p.was = true;
+        return;
+      }
+      Object.assign(p, {
+        inStep: true,
+        prog: 0,
+        dur: calcStepDur(step),
         fromX: p.x,
         fromY: p.y,
         toX: step.x,
         toY: step.y
       });
     }
-    // Caso 3: Mudança de direção enquanto já está em movimento (inclusive no meio de um passo)
-    // Recalcula o passo a partir da posição atual sem teleporte nem salto visual
-    else if (want !== p.dir) {
-      p.dir = want;
-      p.facing = DIRS[want];
-      p.turn = 0;
-      recordDirectionSwitch();
-
-      const step = findStep(want);
-      if (!step) {
-        p.moving = false;
-        p.walk++;
-        p.was = true;
-        return;
-      }
-      const newDur = Math.max(1, Math.round(ticksPerTile() * step.len));
-      // Preserva a fase do ciclo de caminhada da coluna de animação
-      const frac = (p.moving && p.dur > 0) ? (p.prog / p.dur) : 0;
-      const targetProg = Math.min(newDur - 1, Math.max(0, Math.round(frac * newDur)));
-      const dx = step.x - p.x;
-      const dy = step.y - p.y;
-      p.fromX = p.x - dx * (targetProg / newDur);
-      p.fromY = p.y - dy * (targetProg / newDur);
-      p.toX = p.fromX + dx;
-      p.toY = p.fromY + dy;
-      p.dur = newDur;
-      p.prog = targetProg;
-      p.moving = true;
-    }
     // Caso 4: Continua na mesma direção
-    else if (!p.moving) {
+    else if (!p.inStep) {
       const step = findStep(want);
       if (!step) { p.walk++; p.was = true; return; }
       Object.assign(p, {
-        moving: true,
+        inStep: true,
         prog: 0,
-        dur: Math.max(1, Math.round(ticksPerTile() * step.len)),
+        dur: calcStepDur(step),
         fromX: p.x,
         fromY: p.y,
         toX: step.x,
@@ -320,8 +439,8 @@ window.GameIsland = (() => {
     }
 
     p.prog++;
+    p.walk++;
     p.was = true;
-    p.walk = 0;
     const t = Math.min(1, p.prog / p.dur);
     p.x = p.fromX + (p.toX - p.fromX) * t;
     p.y = p.fromY + (p.toY - p.fromY) * t;
@@ -332,17 +451,26 @@ window.GameIsland = (() => {
     updateSwitchesPerSec();
     const intent = computeIntent();
     player.intentName = intent.name;
+    const isMoving = intent.dir !== null;
+    player.moving = isMoving;
+    if (isMoving) {
+      player.dir = intent.dir;
+      player.row = intent.dir;
+      player.facing = DIRS[intent.dir];
+      player.sector = ROW_TO_SECTOR[intent.dir];
+    }
     advance(intent.dir);
-    // O quadro sai antes de fechar o passo, para o último quadro do passo também aparecer.
     const p = player;
-    p.frame = HeroAnimation.column(p,calmMotion());
-    if (p.moving && p.prog >= p.dur) {
+    p.frame = HeroAnimation.column(p, calmMotion());
+    if (p.inStep && p.prog >= p.dur) {
       p.x = p.toX;
       p.y = p.toY;
-      p.moving = false;
+      p.inStep = false;
       p.prog = 0;
       p.steps++;
     }
+    p.distSinceCommand = Math.hypot(p.x - cmdStartX, p.y - cmdStartY);
+    p.speed = p.moving ? (p.inStep && p.dur > 0 ? (Math.hypot(p.toX - p.fromX, p.toY - p.fromY) / (p.dur * TICK_MS / 1000)) : (STEP_TILE / (TICKS_PER_TILE * TICK_MS / 1000))) : 0;
   }
 
   function resetJoystick() {
@@ -451,6 +579,12 @@ window.GameIsland = (() => {
       while (acc >= TICK_MS - 1e-6) { tick(); acc -= TICK_MS; } // 1e-6 absorve o arredondamento de 1000/60
       updateLocation(elapsed); updateNearby();
     }
+    if (player.moving) {
+      player.animTime = (player.animTime || 0) + dt;
+    } else {
+      player.animTime = 0;
+    }
+    player.frame = HeroAnimation.column(player, calmMotion());
     updateCamera(false, dt); renderer.draw(player, camera, near, time, calmMotion(), visited);
     if (loaded) window.preloadPuzzles?.(() => active && !blocked());
     frame = requestAnimationFrame(loop);
@@ -579,7 +713,20 @@ window.GameIsland = (() => {
     const code = event.code || KEY_FALLBACK_TO_CODE[key];
     if (code && MOVEMENT_CODES.has(code)) {
       event.preventDefault();
-      if (!event.repeat) heldCodes.add(code);
+      if (!event.repeat) {
+        heldCodes.add(code);
+        if (code.startsWith('Key')) {
+          const idx = wasdOrder.indexOf(code);
+          if (idx !== -1) wasdOrder.splice(idx, 1);
+          wasdOrder.push(code);
+          lastInputSource = 'wasd';
+        } else if (code.startsWith('Arrow')) {
+          const idx = arrowOrder.indexOf(code);
+          if (idx !== -1) arrowOrder.splice(idx, 1);
+          arrowOrder.push(code);
+          lastInputSource = 'arrow';
+        }
+      }
     }
     else if (key === 'e') { event.preventDefault(); if (!event.repeat) interact(); }
     else if (key === 'm') { event.preventDefault(); if (!event.repeat) openMap(); }
@@ -589,7 +736,16 @@ window.GameIsland = (() => {
   document.addEventListener('keyup', event => {
     const key = event.key.toLowerCase();
     const code = event.code || KEY_FALLBACK_TO_CODE[key];
-    if (code) heldCodes.delete(code);
+    if (code) {
+      heldCodes.delete(code);
+      if (code.startsWith('Key')) {
+        const idx = wasdOrder.indexOf(code);
+        if (idx !== -1) wasdOrder.splice(idx, 1);
+      } else if (code.startsWith('Arrow')) {
+        const idx = arrowOrder.indexOf(code);
+        if (idx !== -1) arrowOrder.splice(idx, 1);
+      }
+    }
   });
   // Direcional por toque (data-walk): multitoque para diagonais combinando botões
   document.querySelectorAll('[data-walk]').forEach(button => {
@@ -599,10 +755,16 @@ window.GameIsland = (() => {
       event.preventDefault(); button.focus(); button.classList.add('is-pressed');
       button.setPointerCapture(event.pointerId);
       touchWalkHeld.add(dirName);
+      const idx = touchWalkOrder.indexOf(dirName);
+      if (idx !== -1) touchWalkOrder.splice(idx, 1);
+      touchWalkOrder.push(dirName);
+      lastInputSource = 'touch';
     });
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(type, () => {
       button.classList.remove('is-pressed');
       touchWalkHeld.delete(dirName);
+      const idx = touchWalkOrder.indexOf(dirName);
+      if (idx !== -1) touchWalkOrder.splice(idx, 1);
     });
     // Enter/Espaço no botão: segura o tempo de virar e dar um passo.
     button.addEventListener('click', event => {
@@ -650,6 +812,6 @@ window.GameIsland = (() => {
     if (active) updateCamera(true);
     if (renderer.failed.length) $('#island-loading').textContent = 'Algumas imagens não abriram. Confira se a pasta assets está junto do index.html.';
   });
-  function teleport(imgX, imgY) { player.x = imgX * WORLD_SCALE; player.y = imgY * WORLD_SCALE; player.moving = false; updateCamera(true); updateLocation(16); }
-  return { start, stop, teleport, get active() { return active; } };
+  function teleport(imgX, imgY) { player.x = imgX * WORLD_SCALE; player.y = imgY * WORLD_SCALE; player.moving = false; player.inStep = false; player.prog = 0; updateCamera(true); updateLocation(16); }
+  return { start, stop, teleport, get active() { return active; }, get player() { return player; }, get renderer() { return renderer; } };
 })();

@@ -8,14 +8,15 @@ const PLAYER_HEIGHT = 40;
 // Caminhada estilo Pokémon 2D: folha 10×4 de 48×56, pés em (24,52).
 // Linhas: 0 baixo, 1 esquerda, 2 direita, 3 cima. Colunas 0–7 = ciclo de 8 quadros
 // (gerado de menina-caminhada.png por assets/ferramentas-sprites/gerar-ciclo-8.cjs); 8–9 = respiração.
-const HERO_SHEET = {src:'personagem/menina-caminhada-8.png',frameW:48,frameH:56,pivotX:24,pivotY:52};
+const HERO_SHEET = {src:'personagem/personagem_spritesheet_8_direcoes_v2.png',frameW:48,frameH:56,pivotX:24,pivotY:52};
 // Folha diagonal 10×4 de 48×56: 0 baixo-esq, 1 baixo-dir, 2 cima-esq, 3 cima-dir.
-const HERO_DIAGONAL_SHEET = {src:'personagem/menina-diagonal-8.webp',fallbackSrc:'personagem/menina-diagonal-8.png',frameW:48,frameH:56,pivotX:24,pivotY:52};
+const HERO_DIAGONAL_SHEET = {src:'personagem/personagem_spritesheet_8_direcoes_v2.png',fallbackSrc:'personagem/personagem_spritesheet_8_direcoes.png',frameW:48,frameH:56,pivotX:24,pivotY:52};
 const INV_SQRT2 = 1 / Math.SQRT2;
 const TICK_HZ = 60;            // Lógica em passo fixo de 60 ticks por segundo.
-const STEP_TILE = 32 * (0.5 - 0.17); // Passo em unidades de mundo: 0,33 dos 32 originais (≈10,56).
-const TICKS_PER_TILE = 16;     // Um passo dura 16 ticks na velocidade normal.
-const TICKS_PER_FRAME = 4;     // 4 quadros por passo: cada um fica 4 ticks (15 trocas por segundo).
+const STEP_TILE = 32 * (0.5 - 0.17) / 4; // Passo em unidades de mundo: 1/4 do passo anterior (≈2,64 px de mundo, 4,4 px de imagem).
+const TICKS_PER_TILE = 4;
+const TICKS_PER_DIAGONAL = 6;     // Um passo dura 16 ticks na velocidade normal.
+const TICKS_PER_FRAME = 8;     // 4 quadros por passo: cada um fica 4 ticks (15 trocas por segundo).
 const IDLE_BREATH_TICKS = 36;  // Parada, a respiração alterna a cada 0,6 s.
 const TURN_TICKS = 6;          // Toque rápido só vira a personagem; segurar depois disso anda.
 const HERO_SCALE = 1.2 / 7 * 3.5; // Quadro 48×56 → unidades de mundo: 0,6 (~33,6 de altura).
@@ -148,6 +149,7 @@ const GEOMETRIA_LOCAL = {
 };
 let geometriaLoading;
 window.loadGeometria = () => geometriaLoading ||= (async()=>{
+  try { window.GameAudio?.preloadGeometryMusic?.(); } catch (_) {}
   let data=GEOMETRIA_LOCAL;
   if(window.location.protocol!=='file:') {
     const response=await fetch('data/geometria.json');if(!response.ok)throw Error('Não foi possível abrir data/geometria.json');data=await response.json();

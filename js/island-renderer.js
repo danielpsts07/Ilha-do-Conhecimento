@@ -52,7 +52,7 @@ window.IslandRenderer = (() => {
         failed.push(path);resolve();
       };img.src=`assets/${path}`;
     }))).then(()=>{occlusion?.setHero(images.hero,images.heroDiag);return window.IslandKeys?.load();}).then(prepareHud);
-    let width=960,height=600,dpr=1,debug=false,hitboxOverlay=true,occlusionOverlay=false,zoom=CAMERA_ZOOM;
+    let width=960,height=600,dpr=1,debug=true,hitboxOverlay=true,occlusionOverlay=false,zoom=CAMERA_ZOOM;
 
     // Única escala mapa → tela; o mínimo de encaixe evita expor área fora do JPEG.
     const scale=()=>Math.max(WORLD_SCALE*zoom,width/(images.island?.naturalWidth||Infinity),height/(images.island?.naturalHeight||Infinity));
@@ -392,10 +392,10 @@ window.IslandRenderer = (() => {
       const hero=images.hero;
       if(hero?.complete&&hero.naturalWidth) {
         const {frameW:fw,frameH:fh,pivotX,pivotY}=HERO_SHEET,k=HERO_SCALE;
-        const column=player.frame??HeroAnimation.IDLE,row=player.dir||0;
+        const column=player.frame??HeroAnimation.IDLE,row=player.row??player.dir??0;
         ctx.save();
-        if(k<1){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';}
-        ctx.drawImage(hero,column*fw,row*fh,fw,fh,player.x-pivotX*k,player.y-pivotY*k,fw*k,fh*k);
+        ctx.imageSmoothingEnabled=false;
+        ctx.drawImage(hero,column*fw,row*fh,fw,fh,Math.round(player.x-pivotX*k),Math.round(player.y-pivotY*k),fw*k,fh*k);
         ctx.restore();
       } else sprite(player.facing==='up'?'back':player.facing==='down'?'front':'side',player.x,player.y,PLAYER_HEIGHT,PLAYER_HEIGHT,player.facing==='left');
     }
@@ -414,25 +414,17 @@ window.IslandRenderer = (() => {
       const shadow=HERO_SCALE/1.2;
       ellipse(player.x,player.y-2*shadow,9*shadow,3*shadow,'#3b593a55');
       const hero=images.hero;
-      const heroDiag=images.heroDiag;
       const dir=player.dir||0;
-      const isDiag=dir>=4;
-      const diagLoaded=Boolean(heroDiag?.complete&&heroDiag.naturalWidth);
-      const activeSheet=(isDiag&&diagLoaded)?heroDiag:hero;
 
-      if(activeSheet?.complete&&activeSheet.naturalWidth) {
+      if(hero?.complete&&hero.naturalWidth) {
         // Quadro da folha: coluna = passo da animação, linha = direção; pés no pivô (24,52).
-        const sheetCfg=(isDiag&&diagLoaded)?HERO_DIAGONAL_SHEET:HERO_SHEET;
-        const {frameW:fw,frameH:fh,pivotX,pivotY}=sheetCfg,k=HERO_SCALE;
+        const {frameW:fw,frameH:fh,pivotX,pivotY}=HERO_SHEET,k=HERO_SCALE;
         // A coluna já vem de HeroAnimation (respeita "Menos animações").
         const column=player.frame??HeroAnimation.IDLE;
-        // Se for diagonal mas folha diagonal não carregou, usa fallback para esquerda (linha 1) ou direita (linha 2)
-        const row=(isDiag&&diagLoaded)?(dir-4):(isDiag?(dir===4||dir===6?1:2):dir);
-        // Reduzida abaixo de 1:1, a arte perde pixels e cintila ao andar; suavizar só a personagem
-        // mantém o contorno estável. Sem arredondar a posição, que faria a personagem tremer.
+        const row=dir;
         ctx.save();
-        if(k<1){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';}
-        ctx.drawImage(activeSheet,column*fw,row*fh,fw,fh,player.x-pivotX*k,player.y-pivotY*k,fw*k,fh*k);
+        ctx.imageSmoothingEnabled=false;
+        ctx.drawImage(hero,column*fw,row*fh,fw,fh,player.x-pivotX*k,player.y-pivotY*k,fw*k,fh*k);
         ctx.restore();
       } else {
         const side=(player.facing==='left'||player.facing==='down-left'||player.facing==='up-left');
@@ -466,9 +458,32 @@ window.IslandRenderer = (() => {
       renderOverview(player,camera,visited);
       world.devScreen?.draw(ctx,width,height,time);
       if(debug) {
+        ctx.save();
+        ctx.fillStyle = '#000c';
+        ctx.fillRect(8, 8, 310, 96);
+        ctx.strokeStyle = '#ffe36b';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(8, 8, 310, 96);
+        ctx.fillStyle = '#fff';
+        ctx.font = '12px monospace';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        const dRow = player.row ?? player.dir ?? 0;
+        const dCol = player.frame ?? 0;
+        const DIRS_PT = ['baixo', 'esquerda', 'direita', 'cima', 'baixo-esq', 'baixo-dir', 'cima-esq', 'cima-dir'];
+        const dDirName = DIRS_PT[dRow] || '';
+        const dSpeed = (player.speed || 0).toFixed(1);
+        const dDist = (player.distSinceCommand || 0).toFixed(1);
+        ctx.fillText(`linha: ${dRow} (${dDirName})  coluna: ${dCol}`, 16, 16);
+        ctx.fillText(`velocidade: ${dSpeed} px/s  distância: ${dDist} px`, 16, 34);
+        ctx.fillText(`andando: ${player.moving ? 'sim' : 'não'}  setor: ${player.sector ?? '-'}`, 16, 52);
+        ctx.fillText(`animTime: ${(player.animTime || 0).toFixed(3)}s`, 16, 70);
+        ctx.fillStyle = '#ffe36b';
+        ctx.fillText('F3 liga/desliga este painel', 16, 86);
+        ctx.restore();
+
         ctx.save();ctx.font='14px monospace';ctx.textAlign='left';ctx.textBaseline='top';
         const curReg=(typeof getIslandRegion==='function')?getIslandRegion(player.x/WORLD_SCALE,player.y/WORLD_SCALE):IslandWorld.regionAt(player.x,player.y);
-        const DIRS_PT = ['baixo', 'esquerda', 'direita', 'cima', 'baixo-esq', 'baixo-dir', 'cima-esq', 'cima-dir'];
         const spriteDirName = DIRS_PT[player.dir ?? 0] || player.facing || '';
         const lines=[
           `x: ${(player.x/WORLD_SCALE).toFixed(0)}  y: ${(player.y/WORLD_SCALE).toFixed(0)}`,
