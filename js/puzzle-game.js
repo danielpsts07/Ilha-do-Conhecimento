@@ -465,6 +465,7 @@ window.PuzzleGame = (() => {
     stop();
     regionId = id;
     if (id === 'geometria') window.GameAudio?.playGeometryMusic?.();
+    window.Music?.entrarNaCena?.(id);
     callbacks = options;
     active = true;
     if (!progress.has(id)) {
@@ -495,6 +496,7 @@ window.PuzzleGame = (() => {
 
   function stop() {
     if (regionId === 'geometria') window.GameAudio?.stopGeometryMusic?.();
+    window.Music?.sairDaCena?.(regionId);
     if (active && observing && region().kind === 'sequence') {
       state().demoSeen = false;
       state().interrupted = true;

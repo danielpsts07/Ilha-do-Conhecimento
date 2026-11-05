@@ -162,6 +162,7 @@ window.loadGeometria = () => geometriaLoading ||= (async()=>{
 
 let memoryMazeLoading;
 window.loadMemoryMaze = () => memoryMazeLoading ||= (async()=>{
+  try { window.Music?.precarregarCena?.('labirinto'); } catch (_) {}
   let data=LABIRINTO_LOCAL;
   if(window.location.protocol!=='file:') {
     const response=await fetch('data/labirinto.json');if(!response.ok)throw Error('Falha ao abrir data/labirinto.json');data=await response.json();

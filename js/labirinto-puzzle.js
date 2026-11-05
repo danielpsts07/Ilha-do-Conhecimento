@@ -143,6 +143,7 @@ window.LabirintoPuzzle = (() => {
 
   function open(options = {}) {
     if (current) current(false);
+    window.Music?.entrarNaCena?.('labirinto');
     const L = window.LabirintoLogica, cfg = LABIRINTO_CONFIG, m = data.metrics, c = data.camara, ids = data.runas.map(r => r.id), returnFocus = document.activeElement;
     const host = document.createElement('div'), frame = document.createElement('div'), canvas = document.createElement('canvas'), ctx = canvas.getContext('2d'), status = document.createElement('p');
     host.style.cssText = 'position:fixed;inset:0;z-index:1000;background:#0d1814;display:flex;justify-content:center;align-items:center;overflow:hidden;';
@@ -187,7 +188,7 @@ window.LabirintoPuzzle = (() => {
       else if (next === 'ANDAR') say(`Escolha o ${phase + 1}º símbolo da sequência!`);
       else if (next === 'ERRO') say('Ainda não é essa! Vamos recomeçar!');
       else if (next === 'FEEDBACK_CERTO') say(`Muito bem! Caminho ${completed} de 3 concluído.`);
-      else if (next === 'CAMARA_ANDAR') say('Pegue a chave! Aproxime-se do pedestal.');
+      else if (next === 'CAMARA_ANDAR') { window.Music?.entrarNaCena?.('camara'); say('Pegue a chave! Aproxime-se do pedestal.'); }
       else if (next === 'PEGAR_CHAVE') say('Chave encontrada!');
       else if (next === 'PORTAL') say('O portal está aberto! Vamos voltar à ilha.');
       else if (next === 'ENTRAR_PORTAL') say('Entrando no portal...');
@@ -351,6 +352,7 @@ window.LabirintoPuzzle = (() => {
     function close(won = false) {
       if (closed) return;
       closed = true; held.fill(0); route = empty;
+      window.Music?.sairDaCena?.('labirinto');
       cancelAnimationFrame(raf);
       canvas.removeEventListener('pointerdown', down);
       document.removeEventListener('keydown', key, true);
