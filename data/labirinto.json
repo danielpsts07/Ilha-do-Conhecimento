@@ -5,8 +5,7 @@
     "speed": 220,
     "footW": 8,
     "footH": 4,
-    "heroH": 75.6,
-    "memorizeSeconds": 4
+    "heroH": 75.6
   },
   "runas": [
     {
@@ -262,5 +261,30 @@
       ],
       "raio": 78
     }
+  },
+  "LABIRINTO": {
+    "ERRO_NOVA_SEQUENCIA": false,
+    "CRUZAMENTOS": [
+      {
+        "cenario": 1,
+        "pedestais": 2
+      },
+      {
+        "cenario": 1,
+        "pedestais": 2
+      },
+      {
+        "cenario": 2,
+        "pedestais": 3
+      },
+      {
+        "cenario": 2,
+        "pedestais": 3
+      },
+      {
+        "cenario": 3,
+        "pedestais": 4
+      }
+    ]
   }
 }
