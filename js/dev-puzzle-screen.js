@@ -45,6 +45,7 @@ window.DevPuzzleScreen = (() => {
           scene.open({...options,onExit:(won,...args)=>{
             if(closing)return;closing=true;
             if(key.id==='geometria')window.GameAudio?.stopGeometryMusic?.();
+            window.Music?.sairDaCena?.(key.id);
             // close() já removeu a cena: conserva seu último quadro durante o fade, sem reabri-la.
             host.inert=true;document.body.appendChild(host);
             transition(()=>null,()=>{host.remove();if(won&&key.id!=='montanha')award(key);options.onExit?.(won,...args);},()=>canvas)
@@ -52,9 +53,10 @@ window.DevPuzzleScreen = (() => {
           }});
           host=document.body.lastElementChild;
           if(key.id==='geometria')window.GameAudio?.playGeometryMusic?.();
+          window.Music?.entrarNaCena?.(key.id);
         },()=>host?.querySelector('canvas')||canvas);
       } catch(error) {
-        if(key.id==='geometria')window.GameAudio?.stopGeometryMusic?.();
+        if(key.id==='geometria')window.GameAudio?.stopGeometryMusic?.(); window.Music?.sairDaCena?.(key.id);
         sceneActive=false;host?.remove();const message='Não foi possível abrir o puzzle. Tente de novo.';
         announce(message);document.querySelector('#island-announcement').textContent=message;console.error(`[Puzzle ${key.id}]`,error);
       }
@@ -72,6 +74,7 @@ window.DevPuzzleScreen = (() => {
     function close(complete=false) {
       if(!current)return;
       if(current.id==='geometria')window.GameAudio?.stopGeometryMusic?.();
+      window.Music?.sairDaCena?.(current.id);
       if(complete)award(current);
       current=null;pending=null;buttons=[];hover=-1;canvas.style.cursor='';clearInput();canvas.focus();
       canvas.setAttribute('aria-label','Ilha do Conhecimento. WASD ou setas para explorar, E para interagir.');

@@ -83,7 +83,7 @@ window.GameAudio = (() => {
   }
 
   function toggleMusic() {
-    if (geometryActive) return false; // Não sobrepor música em execução
+    if (geometryActive || window.Music?.isTocando?.()) return false; // Não sobrepor música em execução
     if (!prepare()) return false;
     enabled = !enabled;
     clearTimeout(musicTimer);
@@ -239,6 +239,7 @@ window.GameAudio = (() => {
 
   function playGeometryMusic() {
     if (geometryActive && geometryAudio && !geometryAudio.paused && !geometryFading) return;
+    window.Music?.sairDaCena?.();
     geometryActive = true;
     geometryPendingPlay = false;
 
@@ -316,6 +317,7 @@ window.GameAudio = (() => {
       }
       geometryAudio.volume = target;
     }
+    window.Music?.atualizarVolume?.();
   }
 
   /* Pausa quando a aba fica oculta e retoma ao voltar */

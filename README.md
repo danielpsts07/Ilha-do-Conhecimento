@@ -53,6 +53,46 @@ Pontos antigos (mundo): guia (2424,2088), portal (2136,2088), floresta (1032,112
 - Tutorial (`#tutorial-view`): reformulado para viver dentro do tema Mural de Cortiça, compartilhando a folha pautada (`folha-caderno-com-gato.webp`) e container queries. Bloco de conteúdo centralizado vertical e horizontalmente entre o cabeçalho e a barra inferior, com altura comum reservada de 48cqh nas duas colunas (sem saltos de layout ao trocar de etapa). Em paisagem, usa layout em duas colunas com gap de 3.5–4cqw: esquerda com cabeçalho seguro abaixo do alfinete e da fita ('COMO JOGAR 01 / 03'), título com clamp(24px, 3.2cqw, 32px), texto de corpo com max-width de 34ch, guia de teclas WASD em cruz com teclas mecânicas estilizadas (`kbd`) e legenda legível logo abaixo, e dica em caixa destacada (`#tutorial-tip`); direita com moldura de prática contida na folha para movimento (área de 16:10 ocupando ~42–45% da altura útil, com grama, árvore, personagem e botões de seta em teclas estilo WASD em cruz), interação (caixa em 16:10, personagem e chave ampliados, pedestal, botão 'Interagir E' com largura fit-content centralizado e mensagem de resultado) e regiões (grade 2×2 com botões ampliados, descrição dinâmica e gato de resgate). Barra inferior com Voltar ('Voltar ao menu' na etapa inicial e 'Voltar' nas demais; altura ≥ 48 px, texto ≥ 18 px), pontinhos de etapa com alvo de toque de 28 px e botão verde Próxima ('Próxima' / 'Entendi!'; altura ≥ 48 px, texto ≥ 18 px). Proteção estrita da reserva do gato (`x >= 72%` e `y >= 60%`) e suporte a retrato (empilhamento em uma coluna), sem rolagem em todas as resoluções testadas (667×375 até 1920×1080 com e sem "Letras maiores").
 - Movimento em 8 direções e redução de passo com troca imediata: a ilha utiliza a folha unificada `assets/personagem/personagem_spritesheet_8_direcoes_v2.png` (192×448 px, 4 colunas × 8 linhas de 48×56 px, pés em 24, 52) com ciclo de 4 quadros (0 parado, 1 passo A, 2 parado, 3 passo B) a 7,5 quadros/s (8 ticks por quadro) por tempo contínuo (`animTime += dt`). Ao parar, fixa a coluna 0 preservando a direção olhada. O passo foi reduzido a 1/4 do valor anterior: `STEP_TILE = 32 * (0.5 - 0.17) / 4` (≈ 2,64 px de mundo, 4,4 px de imagem) com 4 ticks por passo na reta e 6 ticks na diagonal normalizada, mantendo a velocidade média estritamente inalterada (39,6 px/s na reta e 37,3 px/s na diagonal). A troca de direção é imediata no mesmo tick da nova tecla/comando, recalculando o vetor de destino a partir da posição atual sem terminar o passo antigo (latência ≤ 1 tick / 16,7 ms). Entrada por teclado: WASD suporta diagonais em ordem de pressão; setas direcionais são restritas a 4 direções ortogonais (a última pressionada prevalece, nunca diagonal). Tolerância de 50 ms ao soltar diagonais do WASD. Joystick analógico com zona morta histerética (0,25/0,20) e histerese angular de 6°. Colisão resolve eixos X e Y separadamente com deslizamento em paredes e bloqueio de quinas. O painel F3 exibe linha, coluna, velocidade real (px/s), distância percorrida desde o comando, estado andando, setor e `animTime`. Testes automatizados em `walk-animation.test.js`, `scratch/test-step-reduction.cjs` e `scratch/test-browser-acceptance.cjs`.
 
+## Áudio e Gerenciador de Música
+
+- **Gerenciador central (`js/music.js`)**: singleton `window.Music` responsável pela reprodução de trilhas musicais no jogo, desacoplado da lógica interna dos puzzles e 100% compatível com execução local via `file://` (sem `fetch`, sem bibliotecas externas e sem dependências de compilação).
+  - **API Pública**:
+    - `Music.entrarNaCena(nome)`: inicia a trilha mapeada para a cena com fade-in suave (800 ms). Se a cena atual já estiver com a mesma faixa tocando (ex.: avanço de fase ou transição para a câmara da chave), a música continua sem interrupção nem reinício.
+    - `Music.sairDaCena(nome)`: realiza fade-out suave (600 ms), pausa a reprodução e redefine `currentTime = 0`.
+    - `Music.atualizarVolume()`: recalcula o volume em tempo real baseado nas preferências ativas de `#music-volume` e `#toggle-mute`.
+    - `Music.precarregarFaixa(faixaId)` / `Music.precarregarCena(nome)`: pré-carrega os arquivos com `audio.load()`.
+    - `Music.isTocando()`: informa se há música sendo reproduzida no momento.
+  - **Como adicionar novas trilhas**:
+    1. Registre os arquivos e o ganho em `FAIXAS`:
+       ```javascript
+       FAIXAS.minha_faixa = {
+         arquivos: ['assets/audio/minha-faixa.ogg', 'assets/audio/minha-faixa.mp3'],
+         ganho: 1.0 // ajuste de ganho se a gravação for mais alta ou mais baixa
+       };
+       ```
+    2. Mapeie as cenas correspondentes em `CENAS`:
+       ```javascript
+       CENAS.operacoes = 'minha_faixa';
+       ```
+    3. Chame `window.Music.entrarNaCena('operacoes')` e `window.Music.sairDaCena('operacoes')` na abertura e encerramento do puzzle.
+- **Trilha exclusiva do Labirinto (Floresta)**:
+  - Arquivo primário: `assets/audio/musica-labirinto.ogg` (Opus, 48 kHz, estéreo, exatamente 90,000 s).
+  - Arquivo reserva: `assets/audio/musica-labirinto.mp3` (fallback transparente via detecção `canPlayType`).
+  - Métrica musical: 96 BPM em 4/4 (90 s correspondem com exatidão a 36 compassos de 4 tempos, garantindo emenda sem perda de pulso).
+  - Modo de loop: `LOOP_MODO = 'nativo'` (`audio.loop = true`). A emenda de 90 s repete de forma contínua e sem engasgos perceptíveis.
+- **Ciclo de vida e navegação**:
+  - Entrada: fade-in suave de 0 até o volume final ao longo de 800 ms.
+  - Persistência: a música permanece contínua sem reiniciar ao avançar entre os cruzamentos (fases 1 → 2 → 3), ao reiniciar o desafio no botão (↻), ao abrir o menu de Configurações sobre a cena ou durante pausas.
+  - Câmara da chave: ao concluir o 3º cruzamento e entrar na câmara ("Pegue a chave!"), a cena transiciona para `camara` mapeada para `FAIXA_CENA_CHAVE = 'labirinto'`, mantendo a música contínua.
+  - Saída: fade-out suave de 600 ms até 0, pausando e zerando `currentTime = 0` ao clicar em X, pressionar Escape, cruzar o portal de saída concluído ou qualquer saída programática.
+  - Proteção contra saída/entrada rápida: tokens sequenciais (`fadeToken`) invalidam imediatamente fades anteriores, impedindo sobreposição ou encerramentos tardios indevidos.
+- **Configurações e Volume**:
+  - Fórmula: `volumeFinal = (musicVolume / 100) * (muted ? 0 : 1) * MUSIC_GANHO_MESTRE * ganhoFaixa`, com `MUSIC_GANHO_MESTRE = 0.8` e ganho da faixa 1.0 (resultando em 0.28 no padrão de 35%).
+  - O slider "Som" (#sound-volume) afeta unicamente efeitos sonoros, sem interferir na música.
+  - Ajustes em tempo real: movimentar o controle deslizante de Música ou alternar Silenciar com o labirinto aberto atualiza o volume instantaneamente.
+  - Acessibilidade e Resiliência: modo "Menos animações" (`calm`) aplica volumes de forma imediata (sem rampa de fade); bloqueios de autoplay pelo navegador são capturados sem erro e retomados no primeiro clique/toque/tecla do usuário; abas em segundo plano pausam o áudio e o retomam com fade suave ao retornar; o botão "Ouvir música de teste" de `js/audio.js` é bloqueado enquanto o labirinto estiver ativo para evitar sobreposição.
+- **Testes automatizados**: suíte completa em `scratch/test-music-manager.cjs` com 10 testes cobrindo todo o ciclo de vida, idempotência, fades, configurações, resiliência e bloqueio de teste.
+
 ## Áudio e Música de Geometria
 
 - **Trilha exclusiva de Geometria**: `assets/audio/musica-geometria.ogg` (Opus 48 kHz estéreo) com fallback transparente para `musica-geometria.mp3`.
