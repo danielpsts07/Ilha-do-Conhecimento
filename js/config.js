@@ -179,11 +179,15 @@ window.loadMemoryMaze = () => memoryMazeLoading ||= (async()=>{
 })().catch(error=>{memoryMazeLoading=null;throw error;});
 
 // Checkpoint 1 do Moinho: espelhos dos JSONs para abrir também em file://.
-const OPERACOES_LOCAL = {fases:[
-  {tipo:'completar',titulo:'Pedido',numero:5,texto:'sacos no moinho',item:'saco_trigo',alvo:5,ja_no_moinho:2,na_mesa:4},
-  {tipo:'retirar',titulo:'O carrinho leva',numero:6,texto:'sacos',item:'saco_trigo',limite:6,no_carrinho:8},
-  {tipo:'repartir',titulo:'Reparta',numero:12,texto:'sacos igualmente',item:'saco_farinha',total:12,carrocas:['vermelha','azul','verde'],celulas:6}
+const OPERACOES = {FASES:[
+  // Dobro: calcular duas vezes a quantidade inicial; as fontes têm sacos de sobra.
+  {tipo:'dobro',moinho:2,mesa:3,carrinho:2},
+  // Metade e mais: calcular a metade do estoque inicial e acrescentar mais.
+  {tipo:'metadeMais',carrinhoTem:14,mais:1},
+  // Checkpoint 2 pendente: a divisão antiga continua jogável até a troca por valores.
+  {tipo:'divisao',sacos:15,carrocas:3}
 ]};
+const OPERACOES_LOCAL = {fases:OPERACOES.FASES}; // Fonte dos números, inclusive sob HTTP.
 const OPERACOES_LAYOUT_LOCAL = {
   tela:{w:1024,h:572},velas:{eixo:[518,55],frames:16,frame_px:224,escala_sugerida:1.3},
   plataforma_moinho:{x:390,y:222,w:262,h:84,slots:5},mesa_suprimento:{x:217,y:345,w:185,h:127},area_terra:{x:410,y:330,w:560,h:150},
@@ -194,9 +198,8 @@ let operacoesLoading;
 window.loadOperacoes = () => operacoesLoading ||= (async()=>{
   let data=OPERACOES_LOCAL,layout=OPERACOES_LAYOUT_LOCAL;
   if(window.location.protocol!=='file:') {
-    [data,layout]=await Promise.all(['data/operacoes.json','assets/puzzles/operacoes/layout.json'].map(async src=>{
-      const response=await fetch(src);if(!response.ok)throw Error(`Falha ao abrir ${src}`);return response.json();
-    }));
+    const response=await fetch('assets/puzzles/operacoes/layout.json');
+    if(!response.ok)throw Error('Falha ao abrir o layout de Operações');layout=await response.json();
   }
   for(const src of ['js/operacoes-layout.js','js/operacoes-puzzle.js'])if(!document.querySelector(`script[src="${src}"]`))await new Promise((resolve,reject)=>{
     const script=document.createElement('script');script.src=src;script.onload=resolve;script.onerror=()=>{script.remove();reject(Error(`Falha ao carregar ${src}`));};document.head.appendChild(script);
