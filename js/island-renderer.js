@@ -52,7 +52,7 @@ window.IslandRenderer = (() => {
         failed.push(path);resolve();
       };img.src=`assets/${path}`;
     }))).then(()=>{occlusion?.setHero(images.hero,images.heroDiag);return window.IslandKeys?.load();}).then(prepareHud);
-    let width=960,height=600,dpr=1,debug=true,hitboxOverlay=true,occlusionOverlay=false,zoom=CAMERA_ZOOM;
+    let width=960,height=600,dpr=1,debug=false,hitboxOverlay=false,occlusionOverlay=false,zoom=CAMERA_ZOOM;
 
     // Única escala mapa → tela; o mínimo de encaixe evita expor área fora do JPEG.
     const scale=()=>Math.max(WORLD_SCALE*zoom,width/(images.island?.naturalWidth||Infinity),height/(images.island?.naturalHeight||Infinity));
@@ -510,7 +510,7 @@ window.IslandRenderer = (() => {
         ctx.restore();
       }
     }
-    return {ready,failed,resize,draw,renderOverview,toggleDebug(){debug=!debug;},get debug(){return debug;},get width(){return viewSize().width;},get height(){return viewSize().height;}};
+    return {ready,failed,resize,draw,renderOverview,toggleDebug(){debug=!debug;hitboxOverlay=debug;occlusionOverlay=debug;},get debug(){return debug;},get width(){return viewSize().width;},get height(){return viewSize().height;}};
   }
   return {create};
 })();

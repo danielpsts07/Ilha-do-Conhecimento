@@ -1,4 +1,4 @@
-/* Labirinto das runas: três cruzamentos (1024×434 _v3), câmara (1024×434) e portal; contrato onExit preservado. */
+/* Labirinto das runas: cruzamentos configuráveis (1024×434 _v3), câmara (1024×434) e portal; contrato onExit preservado. */
 window.LabirintoPuzzle = (() => {
   'use strict';
   const base = 'assets/puzzles/labirinto/', cache = new Map(), art = {}, surfaces = [], runes = {};
@@ -34,6 +34,39 @@ window.LabirintoPuzzle = (() => {
     return cache.get(src);
   }
 
+  // Sorteio puro: executado uma vez por tentativa, nunca durante o desenho.
+  function makeAttempt(ids, crossings, previous) {
+    const shuffle = window.LabirintoLogica.shuffle;
+    const seq = previous || shuffle(ids).slice(0, crossings.length);
+    const outside = ids.find(id => !seq.includes(id));
+    const pedestals = crossings.map((crossing, i) => {
+      const correct = seq[i], count = crossing.pedestais;
+      const required = i === 0 ? outside : shuffle(seq.filter(id => id !== correct))[0];
+      const rest = shuffle(ids.filter(id => id !== correct && id !== required));
+      return shuffle([correct, required, ...rest.slice(0, count - 2)]);
+    });
+    return { seq, outside, pedestals };
+  }
+
+  function randomTest(ids, crossings) {
+    try {
+      for (let n = 0; n < 1000; n++) {
+        const a = makeAttempt(ids, crossings);
+        if (a.seq.length !== crossings.length || new Set(a.seq).size !== a.seq.length || !a.outside || a.seq.includes(a.outside)) throw Error('sequência ou runa de fora');
+        for (let i = 0; i < crossings.length; i++) {
+          const p = a.pedestals[i], correct = a.seq[i], distractors = p.filter(id => id !== correct);
+          if (p.length !== crossings[i].pedestais || new Set(p).size !== p.length || p.filter(id => id === correct).length !== 1 || p.some(id => !ids.includes(id))) throw Error('pedestais do cruzamento ' + (i + 1));
+          if (i === 0 ? distractors.length !== 1 || distractors[0] !== a.outside : !distractors.some(id => a.seq.includes(id))) throw Error('distratores do cruzamento ' + (i + 1));
+        }
+      }
+      console.info('[Labirinto] PASSOU: 1000 gerações aleatórias.');
+      return true;
+    } catch (error) {
+      console.error('[Labirinto] FALHOU: ' + error.message);
+      return false;
+    }
+  }
+
   function prepare(input) {
     return ready ||= (async () => {
       const cfg = LABIRINTO_CONFIG, c = input.camara;
@@ -50,7 +83,12 @@ window.LabirintoPuzzle = (() => {
         }
       };
       const L = window.LabirintoLogica, m = data.metrics, ids = data.runas.map(r => r.id);
-      console.info(`[Labirinto] ${L.randomTest(ids)}`);
+      const crossings = data.LABIRINTO.CRUZAMENTOS;
+      if (!crossings.length || crossings.length >= ids.length || LABIRINTO.MEM_S <= 0 ||
+          crossings.some((r, i) => !Number.isInteger(r.cenario) || !data.fases[r.cenario - 1] ||
+            !Number.isInteger(r.pedestais) || r.pedestais < 2 || r.pedestais > data.fases[r.cenario - 1].saidas.length || (i === 0 && r.pedestais !== 2))) {
+        throw Error('Configuração de cruzamentos inválida.');
+      }
 
       // Carrega as lajes dos símbolos e pré-gera os brilhos radiais
       await Promise.all(data.runas.map(async r => {
@@ -145,6 +183,7 @@ window.LabirintoPuzzle = (() => {
     if (current) current(false);
     window.Music?.entrarNaCena?.('labirinto');
     const L = window.LabirintoLogica, cfg = LABIRINTO_CONFIG, m = data.metrics, c = data.camara, ids = data.runas.map(r => r.id), returnFocus = document.activeElement;
+    const crossings = data.LABIRINTO.CRUZAMENTOS, N = crossings.length;
     const host = document.createElement('div'), frame = document.createElement('div'), canvas = document.createElement('canvas'), ctx = canvas.getContext('2d'), status = document.createElement('p');
     host.style.cssText = 'position:fixed;inset:0;z-index:1000;background:#0d1814;display:flex;justify-content:center;align-items:center;overflow:hidden;';
     frame.style.cssText = 'position:relative;width:100%;height:100%;overflow:hidden;';
@@ -178,9 +217,13 @@ window.LabirintoPuzzle = (() => {
     const skipMem = Boolean(options.skipMemorize || (typeof location !== 'undefined' && location.search.includes('pular_memoria')));
 
     let s = 1, offsetX = 0, offsetY = 0, state = '', elapsed = 0, time = 0, last = 0, raf = 0, closed = false, debug = false;
-    let seq = [], ped = [], order = [], route = empty, waypoint = 0, chosen = -1, completed = 0;
-    let phase = options.phase || 0, f = surfaces[phase], claimed = false, sparkColor = '#4ade80';
+    let attempt, seq = [], ped = [], order = [], sequenceNames = '', debugLine = '', route = empty, waypoint = 0, chosen = -1, completed = 0;
+    let phase = 0, f = surfaces[0], claimed = false, sparkColor = '#4ade80';
     let routeTime = 0, routeX = 0, routeY = 0, targetX = 0, targetY = 0, routeRetried = false;
+    const slabFlags = { chosenHere: false, success: false, error: false, idle: false };
+    const memoryFlags = { chosenHere: true }, dashed = [6, 6];
+    const surfaceIndex = () => phase === N ? 3 : crossings[phase].cenario - 1;
+    const isDebug = () => options.debug ? options.debug() : debug;
     const dirs = { arrowleft: 0, a: 1, arrowright: 2, d: 3, arrowup: 4, w: 5, arrowdown: 6, s: 7 };
 
     function say(message) { status.textContent = message; canvas.setAttribute('aria-label', `${message} WASD/setas ou toque para andar. Escape sai. F3 depura; N avança com F3.`); }
@@ -194,9 +237,10 @@ window.LabirintoPuzzle = (() => {
       controls[2].hidden = next !== 'MEMORIZAR'; controls[2].disabled = true; controls[3].hidden = true;
       help.disabled = next !== 'ANDAR' && next !== 'CAMARA_ANDAR'; help.style.opacity = help.disabled ? '.45' : '1';
       if (next === 'MEMORIZAR') say(`Memorize a ordem dos símbolos! 1º: ${runes[seq[0]].nome}; 2º: ${runes[seq[1]].nome}; 3º: ${runes[seq[2]].nome}.`);
+      if (next === 'MEMORIZAR') say('Memorize a ordem dos símbolos! ' + sequenceNames);
       else if (next === 'ANDAR') say(`Escolha o ${phase + 1}º símbolo da sequência!`);
       else if (next === 'ERRO') say('Ainda não é essa! Vamos recomeçar!');
-      else if (next === 'FEEDBACK_CERTO') say(`Muito bem! Caminho ${completed} de 3 concluído.`);
+      else if (next === 'FEEDBACK_CERTO') say(`Muito bem! Caminho ${completed} de ${N} concluído.`);
       else if (next === 'CAMARA_ANDAR') { window.Music?.entrarNaCena?.('camara'); say('Pegue a chave! Aproxime-se do pedestal.'); }
       else if (next === 'PEGAR_CHAVE') say('Chave encontrada!');
       else if (next === 'PORTAL') say('O portal está aberto! Vamos voltar à ilha.');
@@ -204,18 +248,20 @@ window.LabirintoPuzzle = (() => {
     }
 
     function round(memorize = true) {
-      f = surfaces[phase];
-      ped = phase < 3 ? L.pedestals(ids, seq, phase + 1) : empty;
-      order = f.exits.map((_, i) => i).sort((a, b) => f.exits[a].y - f.exits[b].y);
+      f = surfaces[surfaceIndex()];
+      ped = phase < N ? attempt.pedestals[phase] : empty;
+      order = f.exits.slice(0, ped.length).map((_, i) => i).sort((a, b) => f.exits[a].y - f.exits[b].y);
+      debugLine = `${phase === N ? "Câmara" : `cruz ${phase + 1}/${N}`} · S: ${sequenceNames} · correta: ${phase < N ? runes[seq[phase]].nome : "—"}`;
       hero.x = f.spawn[0]; hero.y = f.spawn[1]; hero.dir = 3; hero.idle = 0;
       chosen = -1; particles.fill(0);
       resize();
-      change(phase === 3 ? 'CAMARA_ANDAR' : (memorize && !skipMem) ? 'MEMORIZAR' : 'ANDAR');
+      change(phase === N ? 'CAMARA_ANDAR' : (memorize && !skipMem) ? 'MEMORIZAR' : 'ANDAR');
     }
 
     function restart() {
-      seq = L.sequence(ids);
-      completed = phase = options.phase || 0;
+      attempt = makeAttempt(ids, crossings); seq = attempt.seq;
+      sequenceNames = seq.map((id, i) => `${i + 1}: ${runes[id].nome}`).join(" → ");
+      completed = phase = 0;
       claimed = false;
       round(!skipMem);
       canvas.focus();
@@ -227,7 +273,7 @@ window.LabirintoPuzzle = (() => {
       canvas.width = Math.round(vw * dpr);
       canvas.height = Math.round(vh * dpr);
 
-      const curF = surfaces[phase] || surfaces[0];
+      const curF = f;
       const W = curF.w, H = curF.h;
       const coverScale = Math.max(canvas.width / W, canvas.height / H);
       const maxScaleSafe = Math.min(canvas.width / curF.safeW, canvas.height / (curF.safeH || H));
@@ -244,11 +290,11 @@ window.LabirintoPuzzle = (() => {
       // Botão "Já memorizei" centralizado
       controls[2].style.left = '50%';
       controls[2].style.transform = 'translateX(-50%)';
-      controls[2].style.top = `${Math.round((offsetY + (phase === 3 ? 518 : 310) * s) / dpr)}px`;
+      controls[2].style.top = `${Math.round((offsetY + (phase === N ? 518 : 310) * s) / dpr)}px`;
       controls[2].style.width = '200px';
 
       // Botão "Pegar chave"
-      if (phase === 3) {
+      if (phase === N) {
         controls[3].style.left = `${Math.round((offsetX + c.chave.centro[0] * s) / dpr)}px`;
         controls[3].style.transform = 'translateX(-50%)';
         controls[3].style.top = `${Math.round((offsetY + (c.chave.centro[1] - c.chave.altura / 2 - 44) * s) / dpr)}px`;
@@ -343,9 +389,12 @@ window.LabirintoPuzzle = (() => {
       }
       if (event.repeat) return;
       if (k === 'escape') close(false);
-      else if (k === 'f3') { if (options.toggleDebug) options.toggleDebug(); else debug = !debug; }
+      else if (k === 'f3') {
+        if (options.toggleDebug) options.toggleDebug(); else debug = !debug;
+        if (isDebug()) randomTest(ids, crossings);
+      }
       else if ((k === 'e' || k === 'enter') && state === 'CAMARA_ANDAR') collect();
-      else if (k === 'n' && (options.debug ? options.debug() : debug)) {
+      else if (k === 'n' && isDebug()) {
         if (state === 'CAMARA_ANDAR') collect(true);
         else if (state === 'ANDAR' || state === 'MEMORIZAR') {
           if (state === 'MEMORIZAR') change('ANDAR');
@@ -405,7 +454,7 @@ window.LabirintoPuzzle = (() => {
         }
         routeX = hero.x; routeY = hero.y; routeTime = 0;
       }
-      if (state === 'ANDAR') for (let i = 0; i < f.exits.length; i++) {
+      if (state === 'ANDAR') for (let i = 0; i < ped.length; i++) {
         if (L.hit(hero, f.exits[i].zone, m.footW, m.footH)) { choose(i); break; }
       }
       if (state === 'CAMARA_ANDAR' && canTake()) {
@@ -418,13 +467,14 @@ window.LabirintoPuzzle = (() => {
       time += dt; elapsed += dt;
       if (state === 'MEMORIZAR') {
         controls[2].disabled = elapsed < 1.5;
-        if (elapsed >= m.memorizeSeconds) change('ANDAR');
+        if (elapsed >= LABIRINTO.MEM_S) change('ANDAR');
       } else if (state === 'ANDAR' || state === 'CAMARA_ANDAR') walk(dt);
       else if (state === 'FEEDBACK_CERTO' && elapsed >= .9) change('ESCURECER_CERTO');
       else if (state === 'ERRO' && elapsed >= 1.1) change('ESCURECER_ERRO');
       else if (state === 'ESCURECER_ERRO' && elapsed >= .4) {
         completed = phase = 0; claimed = false;
-        if (cfg.ERRO_NOVA_SEQUENCIA) seq = L.sequence(ids);
+        attempt = makeAttempt(ids, crossings, data.LABIRINTO.ERRO_NOVA_SEQUENCIA ? null : seq); seq = attempt.seq;
+        sequenceNames = seq.map((id, i) => `${i + 1}: ${runes[id].nome}`).join(' → ');
         round();
       } else if (state === 'ESCURECER_CERTO' && elapsed >= .4) change('TRANSICAO');
       else if (state === 'TRANSICAO' && elapsed >= 1) { phase++; round(false); }
@@ -457,12 +507,12 @@ window.LabirintoPuzzle = (() => {
 
     // Desenha uma laje de símbolo assentada no quadrado de pedra do cenário
     // Largura = 62% do quadrado de pedra (~74 px em 1024 px = ~46 px), centralizada pela face de cima
-    function drawSlab(id, x, y, customWidth = null, alpha = 1, opts = {}) {
+    function drawSlab(id, x, y, customWidth = null, alpha = 1, opts = memoryFlags) {
       const r = runes[id]; if (!r) return;
       const img = r.slabImage;
       const { chosenHere = false, success = false, error = false, idle = false } = opts;
       const stateScale = (chosenHere || success) ? 1.05 : 1.0;
-      const stoneW = phase === 3 ? 137.6 : 74;
+      const stoneW = phase === N ? 137.6 : 74;
       const baseW = customWidth || (stoneW * SIMBOLO_ESCALA_NA_PRACA);
       const w = baseW * stateScale;
       const h = img ? w * (img.naturalHeight / img.naturalWidth) : w;
@@ -514,12 +564,10 @@ window.LabirintoPuzzle = (() => {
       const isError = chosenHere && state === 'ERRO' && elapsed < .3;
       const shake = !calm && isError ? Math.sin(elapsed * 90) * 4 : 0;
       const x = e.x + shake, y = e.y;
-      drawSlab(ped[index], x, y, null, alpha, {
-        chosenHere: chosenHere && (state === 'FEEDBACK_CERTO' || success),
-        success: success && chosenHere,
-        error: isError,
-        idle: state === 'ANDAR'
-      });
+      slabFlags.chosenHere = chosenHere && (state === 'FEEDBACK_CERTO' || success);
+      slabFlags.success = success && chosenHere; slabFlags.error = isError;
+      slabFlags.idle = state === 'ANDAR';
+      drawSlab(ped[index], x, y, null, alpha, slabFlags);
     }
 
     function keyArt() {
@@ -592,7 +640,7 @@ window.LabirintoPuzzle = (() => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
 
       // Fundo: usa 2x quando largura de exibição passar de 1100 px na câmara
-      const activeBg = (phase === 3)
+      const activeBg = (phase === N)
         ? ((canvas.width > 1100 && art.bgCamara2x) ? art.bgCamara2x : (art.bgCamara1x || f.bg))
         : f.bg;
 
@@ -622,7 +670,7 @@ window.LabirintoPuzzle = (() => {
       else { ctx.fillStyle = '#304e39'; ctx.fillRect(0, 0, W, H); }
 
       let drawn = false;
-      if (phase === 3) {
+      if (phase === N) {
         portalArt();
         const discY = c.disco ? c.disco[1] : 239.6;
         if (hero.y < discY) { player(); drawn = true; }
@@ -650,7 +698,7 @@ window.LabirintoPuzzle = (() => {
       if (options.debug ? options.debug() : debug) {
         ctx.drawImage(f.overlay, 0, 0, W, H);
         ctx.lineWidth = 2;
-        for (let i = 0; i < f.exits.length; i++) {
+        for (let i = 0; i < ped.length; i++) {
           const e = f.exits[i], z = e.zone;
           ctx.strokeStyle = ped[i] === seq[phase] ? '#28ff35' : '#ffe230';
           ctx.strokeRect(z[0], z[1], z[2], z[3]);
@@ -661,7 +709,7 @@ window.LabirintoPuzzle = (() => {
             ctx.strokeRect(e.arco[0] - 16, e.arco[1] - 16, 32, 32);
           }
         }
-        if (phase === 3) {
+        if (phase === N) {
           const discX = c.disco ? c.disco[0] : 512, discY = c.disco ? c.disco[1] : 239.6;
           ctx.strokeStyle = '#28ff35'; ctx.beginPath(); ctx.arc(discX, discY, c.interacao || 39, 0, Math.PI * 2); ctx.stroke();
           ctx.strokeStyle = '#ffe230'; ctx.strokeRect(c.soleira[0], c.soleira[1], c.soleira[2], c.soleira[3]);
@@ -671,39 +719,40 @@ window.LabirintoPuzzle = (() => {
         ctx.fillStyle = '#fff'; ctx.fillRect(f.spawn[0] - 4, f.spawn[1] - 4, 8, 8);
 
         // Indicador de zona segura
-        ctx.strokeStyle = '#ff880088'; ctx.lineWidth = 1; ctx.setLineDash([6, 6]);
+        ctx.strokeStyle = '#ff880088'; ctx.lineWidth = 1; ctx.setLineDash(dashed);
         ctx.strokeRect(f.safeXMin, f.safeYMin || 0, f.safeW, f.safeH || H);
-        ctx.setLineDash([]);
+        ctx.setLineDash(empty);
 
-        panel(112, H - 46, 800, 36);
-        text(`${phase === 3 ? 'Câmara' : `Cruzamento ${phase + 1}`} · S: ${seq.join(' → ')} · (${hero.x.toFixed(1)}, ${hero.y.toFixed(1)}) · N avança`, W / 2, H - 23, 15);
+        panel(12, H - 46, W - 24, 36);
+        text(`${debugLine} · (${hero.x.toFixed(1)}, ${hero.y.toFixed(1)}) · N avança`, W / 2, H - 23, 15);
       }
 
       // Tela de memorização
       if (state === 'MEMORIZAR') {
         ctx.fillStyle = '#000000a8'; ctx.fillRect(0, 0, W, H);
-        const startX = W / 2 - 140;
+        const spacing = Math.min(140, (W * 0.76 - 74) / Math.max(1, N - 1));
+        const startX = W / 2 - (N - 1) * spacing / 2;
         const slabY = H * 0.44;
-        for (let i = 0; i < 3; i++) {
-          const sx = startX + i * 140;
-          drawSlab(seq[i], sx, slabY, 74, 1, { chosenHere: true });
+        for (let i = 0; i < N; i++) {
+          const sx = startX + i * spacing;
+          drawSlab(seq[i], sx, slabY, 74, 1, memoryFlags);
           text(`${i + 1}ª`, sx, slabY + 54, 22);
         }
         const barW = Math.min(360, W * 0.4);
         ctx.fillStyle = '#d8e7c444'; ctx.fillRect(W / 2 - barW / 2, slabY + 76, barW, 8);
-        ctx.fillStyle = '#b4ed92'; ctx.fillRect(W / 2 - barW / 2, slabY + 76, barW * Math.max(0, 1 - elapsed / m.memorizeSeconds), 8);
+        ctx.fillStyle = '#b4ed92'; ctx.fillRect(W / 2 - barW / 2, slabY + 76, barW * Math.max(0, 1 - elapsed / LABIRINTO.MEM_S), 8);
       }
 
       // Cabeçalho da fase
-      const compact = phase === 1 || phase === 2;
+      const compact = surfaceIndex() === 1 || surfaceIndex() === 2;
       const headerY = compact ? 8 : 12;
-      const headerW = phase === 3 ? 560 : 440;
+      const headerW = phase === N ? 560 : 440;
       panel(W / 2 - headerW / 2, headerY, headerW, 36);
-      text(state === 'MEMORIZAR' ? 'Memorize a ordem das runas!' : phase === 3 ? (claimed ? 'Chave conquistada!' : 'Pegue a chave!') : `Escolha o ${phase + 1}º símbolo da sequência!`,
+      text(state === 'MEMORIZAR' ? 'Memorize a ordem das runas!' : phase === N ? (claimed ? 'Chave conquistada!' : 'Pegue a chave!') : `Escolha o ${phase + 1}º símbolo da sequência!`,
         W / 2, headerY + 24, compact ? 17 : 19);
 
       // Indicadores circulares de progresso
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < N; i++) {
         ctx.beginPath(); ctx.arc(28 + i * 30, 24, 10, 0, Math.PI * 2);
         ctx.fillStyle = i < completed ? '#4ade80' : '#14362ddd'; ctx.fill();
         ctx.strokeStyle = '#a5dfac'; ctx.lineWidth = 2; ctx.stroke();
@@ -720,7 +769,7 @@ window.LabirintoPuzzle = (() => {
       }
       if (state === 'TRANSICAO') {
         ctx.fillStyle = '#0b1c18'; ctx.fillRect(0, 0, W, H);
-        text(completed === 3 ? 'Câmara da chave' : `Caminho ${completed + 1} de 3`, W / 2, H / 2, 32);
+        text(completed === N ? 'Câmara da chave' : `Fase ${completed + 1} de ${N}`, W / 2, H / 2, 32);
       }
       if (warning) {
         ctx.fillStyle = '#17271deb'; ctx.fillRect(0, H - 16, W, 16);
@@ -775,6 +824,7 @@ window.LabirintoPuzzle = (() => {
       });
       if (!aberto && state === 'AGUARDANDO_TUTORIAL') change(inicial);
     }
+    if (isDebug()) randomTest(ids, crossings);
     resize();
     raf = requestAnimationFrame(loop);
   }

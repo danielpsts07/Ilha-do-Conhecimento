@@ -142,9 +142,9 @@ const GEOMETRIA_LOCAL = {
     '06':{matrix:['.#.','###','.#.'],sprite:'assets/puzzles/geometria/pecas/peca_06.png'}
   },
   cycles:[
-    {cols:4,rows:3,pieces:['02','04','05'],solution:[['02','02','05','05'],['02','05','05','04'],['02','05','04','04']]},
-    {cols:5,rows:3,pieces:['01','02','03','04'],solution:[['01','01','02','02','02'],['04','01','01','03','02'],['04','04','03','03','03']]},
-    {cols:5,rows:4,pieces:['01','02','03','04','05'],solution:[['01','01','02','02','02'],['03','01','01','05','02'],['03','03','05','05','04'],['03','05','05','04','04']]}
+    {cols:4,rows:3,pieces:['02','04','05'],travadas:[],solution:[['02','02','05','05'],['02','05','05','04'],['02','05','04','04']]},
+    {cols:5,rows:3,pieces:['01','02','03','04'],travadas:[{id:'01',rotation:1,col:1,row:0}],solution:[['02','02','01','04','04'],['02','01','01','03','04'],['02','01','03','03','03']]},
+    {cols:5,rows:4,pieces:['01','02','03','04','05'],travadas:[{id:'05',rotation:1,col:0,row:0},{id:'04',rotation:3,col:3,row:2}],solution:[['05','03','03','03','01'],['05','05','03','01','01'],['02','05','05','01','04'],['02','02','02','04','04']]}
   ]
 };
 let geometriaLoading;
@@ -179,11 +179,15 @@ window.loadMemoryMaze = () => memoryMazeLoading ||= (async()=>{
 })().catch(error=>{memoryMazeLoading=null;throw error;});
 
 // Checkpoint 1 do Moinho: espelhos dos JSONs para abrir também em file://.
-const OPERACOES_LOCAL = {fases:[
-  {tipo:'completar',titulo:'Pedido',numero:5,texto:'sacos no moinho',item:'saco_trigo',alvo:5,ja_no_moinho:2,na_mesa:4},
-  {tipo:'retirar',titulo:'O carrinho leva',numero:6,texto:'sacos',item:'saco_trigo',limite:6,no_carrinho:8},
-  {tipo:'repartir',titulo:'Reparta',numero:12,texto:'sacos igualmente',item:'saco_farinha',total:12,carrocas:['vermelha','azul','verde'],celulas:6}
+const OPERACOES = {FASES:[
+  // Dobro: calcular duas vezes a quantidade inicial; as fontes têm sacos de sobra.
+  {tipo:'dobro',moinho:2,mesa:3,carrinho:2},
+  // Metade e mais: calcular a metade do estoque inicial e acrescentar mais.
+  {tipo:'metadeMais',carrinhoTem:14,mais:1},
+  // Checkpoint 2 pendente: a divisão antiga continua jogável até a troca por valores.
+  {tipo:'divisao',sacos:15,carrocas:3}
 ]};
+const OPERACOES_LOCAL = {fases:OPERACOES.FASES}; // Fonte dos números, inclusive sob HTTP.
 const OPERACOES_LAYOUT_LOCAL = {
   tela:{w:1024,h:572},velas:{eixo:[518,55],frames:16,frame_px:224,escala_sugerida:1.3},
   plataforma_moinho:{x:390,y:222,w:262,h:84,slots:5},mesa_suprimento:{x:217,y:345,w:185,h:127},area_terra:{x:410,y:330,w:560,h:150},
@@ -194,9 +198,8 @@ let operacoesLoading;
 window.loadOperacoes = () => operacoesLoading ||= (async()=>{
   let data=OPERACOES_LOCAL,layout=OPERACOES_LAYOUT_LOCAL;
   if(window.location.protocol!=='file:') {
-    [data,layout]=await Promise.all(['data/operacoes.json','assets/puzzles/operacoes/layout.json'].map(async src=>{
-      const response=await fetch(src);if(!response.ok)throw Error(`Falha ao abrir ${src}`);return response.json();
-    }));
+    const response=await fetch('assets/puzzles/operacoes/layout.json');
+    if(!response.ok)throw Error('Falha ao abrir o layout de Operações');layout=await response.json();
   }
   for(const src of ['js/operacoes-layout.js','js/operacoes-puzzle.js'])if(!document.querySelector(`script[src="${src}"]`))await new Promise((resolve,reject)=>{
     const script=document.createElement('script');script.src=src;script.onload=resolve;script.onerror=()=>{script.remove();reject(Error(`Falha ao carregar ${src}`));};document.head.appendChild(script);
@@ -205,10 +208,20 @@ window.loadOperacoes = () => operacoesLoading ||= (async()=>{
 })().catch(error=>{operacoesLoading=null;throw error;});
 
 // Balança: espelhos locais mantêm index.html funcional também em file://.
+// Tempo de equilíbrio contínuo e estoque disponível ao jogador em cada fase.
+// null libera cópias dos itens já oferecidos; os itens fixos não gastam estoque.
+const ALGEBRA = {
+  ASSENTA_S: 0.8, // Segundos equilibrado, sem arrastar e com o estoque utilizado.
+  FASES: [
+    { estoque: { rubi: 2, safira: 1, esmeralda: 0, topazio: 0 } },
+    { estoque: { rubi: 1, safira: 1, esmeralda: 1, topazio: 0 } },
+    { estoque: { rubi: 0, safira: 2, esmeralda: 1, topazio: 1 } }
+  ]
+};
 window.MOSTRAR_PESOS = false;
 const ALGEBRA_LOCAL = {fases:[
-  {tipo:'equilibrar',missao:'Deixe os dois lados equilibrados!',peso_caixa:null,esq:['rubi','rubi','rubi'],dir:['rubi'],bandeja:['rubi'],caixa_na_bandeja:false},
-  {tipo:'equilibrar',missao:'Quanto pesa a caixa misteriosa?',peso_caixa:3,esq:['caixa_misteriosa'],dir:[],bandeja:['rubi','safira','esmeralda','topazio'],caixa_na_bandeja:false},
+  {tipo:'equilibrar',missao:'Deixe os dois lados equilibrados!',peso_caixa:null,esq:['rubi','rubi','rubi'],dir:['rubi'],bandeja:['rubi','safira'],caixa_na_bandeja:false},
+  {tipo:'equilibrar',missao:'Quanto pesa a caixa misteriosa?',peso_caixa:4,esq:['caixa_misteriosa'],dir:[],bandeja:['rubi','safira','esmeralda','topazio'],caixa_na_bandeja:false},
   {tipo:'equilibrar',missao:'Equilibre a balança!',peso_caixa:2,esq:['caixa_misteriosa','safira','rubi'],dir:['caixa_misteriosa','topazio'],bandeja:['rubi','safira','esmeralda','topazio'],caixa_na_bandeja:false}
 ]};
 const ALGEBRA_LAYOUT_LOCAL = {
@@ -226,10 +239,12 @@ window.loadAlgebra = () => algebraLoading ||= (async()=>{
 })().catch(error=>{algebraLoading=null;throw error;});
 
 
+// Tempo de memorização em segundos; os cruzamentos ficam nos dados e no espelho abaixo.
+const LABIRINTO = Object.freeze({ MEM_S: 8 });
 // Constantes exclusivas do labirinto; FOOT_W/H e CORNER_NUDGE globais continuam sendo da ilha.
-const LABIRINTO_CONFIG = Object.freeze({FOOT_W:8,FOOT_H:4,CORNER_NUDGE:4,PEDESTAL_H:84,PEDESTAL_H_CAMARA:112,ERRO_NOVA_SEQUENCIA:false,SIMBOLO_ESCALA_NA_PRACA:0.62,PERSONAGEM_ESCALA:1.0});
+const LABIRINTO_CONFIG = Object.freeze({FOOT_W:8,FOOT_H:4,CORNER_NUDGE:4,PEDESTAL_H:84,PEDESTAL_H_CAMARA:112,SIMBOLO_ESCALA_NA_PRACA:0.62,PERSONAGEM_ESCALA:1.0});
 // Espelho de data/labirinto.json para file://, como nas outras três cenas.
-const LABIRINTO_LOCAL = {"metrics":{"width":1024,"height":434,"speed":220,"footW":8,"footH":4,"heroH":75.6,"memorizeSeconds":4},"runas":[{"id":"estrela","nome":"Estrela","cor":"#facc15"},{"id":"lua","nome":"Lua","cor":"#38bdf8"},{"id":"flor","nome":"Flor","cor":"#f472b6"},{"id":"folha","nome":"Folha","cor":"#4ade80"},{"id":"borboleta","nome":"Borboleta","cor":"#a855f7"},{"id":"pata","nome":"Pata","cor":"#fb923c"}],"fases":[{"spawn":[512,400],"saidas":[{"id":"esq","zona":[339,142,60,60],"pe":[369,172],"arco":[205,170]},{"id":"dir","zona":[631,141,60,60],"pe":[661,171],"arco":[830,170]}]},{"spawn":[512,400],"saidas":[{"id":"topo","zona":[486,52,60,60],"pe":[516,82],"arco":[516,45]},{"id":"esq","zona":[339,141,60,60],"pe":[369,171],"arco":[205,170]},{"id":"dir","zona":[632,141,60,60],"pe":[662,171],"arco":[830,170]}]},{"spawn":[512,400],"saidas":[{"id":"topo_esq","zona":[399,52,60,60],"pe":[429,82],"arco":[420,45]},{"id":"topo_dir","zona":[572,52,60,60],"pe":[602,82],"arco":[604,45]},{"id":"esq","zona":[338,141,60,60],"pe":[368,171],"arco":[205,170]},{"id":"dir","zona":[634,141,60,60],"pe":[664,171],"arco":[830,170]}]}],"camara":{"spawn":[512,412],"pedestal":{"pe":[512,240],"altura":0,"raio":0},"chave":{"altura":61,"centro":[512,218.2],"flutuacao":5.2},"disco":[512,239.6],"interacao":39,"soleira":[434,148,156,24],"alvo":[512,160],"portal":{"centro":[512,98],"raio":78}}};
+const LABIRINTO_LOCAL = {"metrics":{"width":1024,"height":434,"speed":220,"footW":8,"footH":4,"heroH":75.6},"runas":[{"id":"estrela","nome":"Estrela","cor":"#facc15"},{"id":"lua","nome":"Lua","cor":"#38bdf8"},{"id":"flor","nome":"Flor","cor":"#f472b6"},{"id":"folha","nome":"Folha","cor":"#4ade80"},{"id":"borboleta","nome":"Borboleta","cor":"#a855f7"},{"id":"pata","nome":"Pata","cor":"#fb923c"}],"fases":[{"spawn":[512,400],"saidas":[{"id":"esq","zona":[339,142,60,60],"pe":[369,172],"arco":[205,170]},{"id":"dir","zona":[631,141,60,60],"pe":[661,171],"arco":[830,170]}]},{"spawn":[512,400],"saidas":[{"id":"topo","zona":[486,52,60,60],"pe":[516,82],"arco":[516,45]},{"id":"esq","zona":[339,141,60,60],"pe":[369,171],"arco":[205,170]},{"id":"dir","zona":[632,141,60,60],"pe":[662,171],"arco":[830,170]}]},{"spawn":[512,400],"saidas":[{"id":"topo_esq","zona":[399,52,60,60],"pe":[429,82],"arco":[420,45]},{"id":"topo_dir","zona":[572,52,60,60],"pe":[602,82],"arco":[604,45]},{"id":"esq","zona":[338,141,60,60],"pe":[368,171],"arco":[205,170]},{"id":"dir","zona":[634,141,60,60],"pe":[664,171],"arco":[830,170]}]}],"camara":{"spawn":[512,412],"pedestal":{"pe":[512,240],"altura":0,"raio":0},"chave":{"altura":61,"centro":[512,218.2],"flutuacao":5.2},"disco":[512,239.6],"interacao":39,"soleira":[434,148,156,24],"alvo":[512,160],"portal":{"centro":[512,98],"raio":78}},"LABIRINTO":{"ERRO_NOVA_SEQUENCIA":false,"CRUZAMENTOS":[{"cenario":1,"pedestais":2},{"cenario":1,"pedestais":2},{"cenario":2,"pedestais":3},{"cenario":2,"pedestais":3},{"cenario":3,"pedestais":4}]}};
 // Espelhos binários do alfa >40 dos quatro PNGs: evitam canvas contaminado em file://.
 // Atualizar estes espelhos quando as máscaras mudarem; os PNGs originais ficam intactos.
 const LABIRINTO_MASKS_LOCAL = [
