@@ -107,3 +107,62 @@ Pontos antigos (mundo): guia (2424,2088), portal (2136,2088), floresta (1032,112
   - Falhas de arquivo são capturadas com aviso discreto no console, mantendo o puzzle plenamente jogável sem som.
   - Coexistência com música tema: pontos de extensão (`pauseThemeMusic` / `resumeThemeMusic`) integrados para pausar a música tema ao entrar em Geometria e retomá-la ao sair, sem nunca sobrepor ambas.
 - **Testes automatizados**: suíte em `scratch/test-geometria-audio.cjs` cobrindo 11 casos de teste (ciclo, volume, fade, mute, visibility, autoplay, calma, bloqueio de teste e isolamento entre fases).
+
+## Cartão de Tutorial dos Puzzles
+
+Sistema genérico e orientado a dados para apresentar vinhetas de demonstração animada em canvas antes da 1ª rodada de cada puzzle. O sistema é desacoplado e pode ser reutilizado por Lógica, Álgebra, Geometria e Operações sem alterar o componente central.
+
+- **Módulos do sistema**:
+  - `css/tutorial-card.css`: diálogo modal (#tutorial-card-dialog), moldura proporcional (1373×1116) com container queries, palco de vídeo recortado (1008×751, viewport útil 815×526 px), tipografia fluida com `clamp()` e botões de ação ("OK", "Voltar", "Próximo", bolinhas de passo e fechar).
+  - `js/tutorial-data.js`: registro de dados estruturados com títulos, textos explicativos e identificadores de demonstração por puzzle, suportando passos únicos ou múltiplos.
+  - `js/tutorial-demos.js`: motor de animações a 60 fps com relógio determinístico RAF, renderização da mão com âncoras compensadas, anéis de toque expansivos, selos de resultado ("Certo", "Erro", "Reiniciar"), partículas de brilho e simulações específicas de puzzle.
+  - `js/tutorial-card.js`: gerenciador modal (`window.TutorialCard`), ciclo de vida, acessibilidade com foco retido, atalhos de teclado (Tab, Escape, Enter, Espaço, Setas) e controle de frequência.
+- **Assets reais em `assets/tutorial/`**:
+  - `tutorial-cartao.webp` (1373×1116): fundo do cartão de pergaminho/madeira.
+  - `tutorial-moldura-video.webp` (1008×751): moldura com furo central transparente de 815×526 px (x: 9.5%–90.3%, y: 14.2%–84.2%, proporção 1.55:1).
+  - `mao-apontando.webp` (386×429, âncora x: 0.19, y: 0.02) e `mao-pressionando.webp` (364×386, âncora x: 0.38, y: 0.10): ambas exibidas com a mesma escala (`MAO_ESCALA = 0.18`), alinhando o ponto de toque sem saltos na transição de pose.
+  - Anéis de toque: `toque-1.webp` (193 px), `toque-2.webp` (300 px), `toque-3.webp` (407 px).
+  - Selos circulares: `selo-certo.webp`, `selo-erro.webp`, `selo-reiniciar.webp` (exibidos com ~8% da largura do palco = ~65 px).
+  - Brilhos: `brilho-1.webp`, `brilho-2.webp`, `brilho-3.webp`.
+  - Bolinhas de navegação: `ponto-ativo.webp`, `ponto-inativo.webp`.
+  - Botão de ajuda no HUD: `botao-ajuda-normal.webp`, `botao-ajuda-pressionado.webp`.
+- **Enquadramento do Palco (815×526)**:
+  - Cenas de aspecto mais largo (como Álgebra 1024×572, 1.79:1) são renderizadas centralizadas em cover com fator de escala `526 / 572 ≈ 0.91958` e corte simétrico de ~6,7% nas laterais, sem esticar sprites nem deixar vazios.
+- **Acessibilidade e Redução de Movimento**:
+  - Em modo `prefers-reduced-motion` ou quando o modo calmo do jogo estiver ativado, a demonstração exibe um quadro estático explicativo com a trajetória desenhada em linha tracejada e um botão "Ver demonstração" para reprodução única sob demanda.
+  - Foco é retido no diálogo durante a exibição e restaurado para o primeiro controle do puzzle ao fechar.
+- **Frequência de Exibição**:
+  - Controlada pela constante `TUTORIAL_FREQUENCIA = "primeira-vez-na-sessao"` (padrão) ou `"sempre"`. O progresso de visualização é mantido apenas na memória da sessão (`Set`), sem escrita em `localStorage`.
+- **Integração com Álgebra**:
+  - Abre automaticamente na primeira entrada do jogador na Balança, pausando entradas e física da cena.
+  - Botão de ajuda ("?") no HUD ao lado dos botões ↻ e X em `[812, 12, 44, 40]`, permitindo reabrir o tutorial a qualquer momento. O botão fica desabilitado durante animações de resolução.
+  - Linha do tempo da demonstração:
+    - `0.0s`: balança inclinada à esquerda (+10°).
+    - `0.8s`: mão apontando surge deslizando do canto inferior direito.
+    - `1.4s`: mão toca a safira na bandeja, anel de toque se expande, mão muda para a pose pressionando e levanta a joia.
+    - `2.4s`: arrasto em arco até o prato direito (prato se ilumina ao alcance).
+    - `3.6s`: mão solta a joia no prato e recua; joia cai e a balança começa a nivelar.
+    - `6.0s`: balança atinge 0° em repouso perfeito; selo "Certo" surge com partículas de brilho dourado.
+    - `7.0s - 8.5s`: pausa para contemplação do resultado; loop reinicia suavemente.
+- **Integração com Geometria**:
+  - Abre automaticamente na primeira entrada da cena da Ponte de Peças, congelando entradas do jogador e atualizações da física até ser fechado.
+  - Botão de ajuda ("?") no HUD ao lado dos botões ↻ e × em `[1136, 16, 56, 50]`, com foco e estados normal e pressionado via sprites locais (`botao-ajuda-normal.webp` e `botao-ajuda-pressionado.webp`). O botão reabre o tutorial a qualquer momento no passo 1 e é desabilitado quando o jogo não estiver no estado ativo.
+  - Sequência de 3 passos pedagógicos:
+    1. **Passo 1: "Arraste a peça"** (`Puxe a peça até o lugar de encaixe.`): demonstração animada em que a mão surge, pressiona a peça na bandeja com escala de elevação (1.08) e sombra, arrasta em arco até o encaixe vazio no tabuleiro (que pulsa em verde na aproximação), solta com quique suave, selo circular "Certo" e partículas de brilho dourado.
+    2. **Passo 2: "Gire a peça"** (`Toque na peça da barra para ela girar.`): demonstração com a peça em rotação inicial errada na barra e a silhueta pontilhada do encaixe-alvo ao lado. A mão toca a peça (anel de toque) girando 90° no sentido horário em ~250 ms acompanhada pela setinha do selo reiniciar; novo toque gira mais 90° até igualar a silhueta do encaixe, finalizando com selo "Certo" e brilhos.
+    3. **Passo 3: "Tire a peça"** (`Toque numa peça já encaixada e ela volta para a barra.`): demonstração com a peça já encaixada no tabuleiro e a vaga vazia na barra. A mão toca sobre a peça encaixada; ela desencaixa e voa em arco parabólico (~500 ms) de volta para sua posição na barra, deixando o encaixe do tabuleiro vazio e destacado novamente.
+- **Integração com Raciocínio Lógico (Labirinto da Floresta)**:
+  - Abre automaticamente na primeira entrada do labirinto **antes** de a sequência de runas acender (`AGUARDANDO_TUTORIAL`), mantendo o puzzle parado (sem tela de memorização e sem relógio) até que o cartão seja fechado.
+  - Botão de ajuda ("?") no HUD (`top: 14px; right: 126px;`) ao lado de ↻ e X, usando `botao-ajuda-normal.webp` e `botao-ajuda-pressionado.webp`. Reabre o cartão no passo 1 quando a personagem está andando e fica **desativado** enquanto a sequência de runas acende (`MEMORIZAR`) ou durante transições/animações de erro.
+  - Cenário das demonstrações: utiliza `assets/puzzles/floresta/cenario-2-runas.webp` (1376×768, proporção 1.79:1) enquadrado em cover no palco de 815×526 px (1.55:1, cortando ~6,76% de cada lateral), com duas lajes (`laje-estrela.webp` à esquerda em 16,8%, 39,4% e `laje-lua.webp` à direita em 83,5%, 39,4%) e a personagem real (`personagem_spritesheet_8_direcoes_v2.png`) partindo de (50%, 89,6%) de costas (olhando para cima). Todos os trechos de caminhada foram verificados pixel a pixel contra `assets/puzzles/floresta/mascara-2-runas.webp` (0 amostras bloqueadas).
+  - Sequência de 2 passos pedagógicos ("Próximo" → "OK"):
+    1. **Passo 1: "Siga a ordem das runas"** (`Veja quais runas acendem. Depois vá até elas na mesma ordem!`, demo `logica-ordem`): faixa superior `"Memorize a ordem!"`, acendimento de ESTRELA com `"1"` (1,0–2,2 s) e LUA com `"2"` (2,6–3,8 s), troca para `"Agora vá na ordem!"`, caminhada animada até ESTRELA (selo "Certo" e 1ª bolinha de progresso acesa) e depois até LUA (selo "Certo", 2ª bolinha acesa, brilhos e faixa `"Muito bem!"`).
+    2. **Passo 2: "Errou? Volta ao início"** (`Se for na runa errada, você volta ao começo. Sem problema: tente de novo!`, demo `logica-erro`): acendimento rápido 1→2, caminhada até a runa errada primeiro (LUA), tremor horizontal (±6 px, 400 ms) com flash vermelho leve, selo "Erro" e faixa `"Ops! Não era essa."`. Em seguida, reproduz fielmente o comportamento do jogo real em `js/labirinto-puzzle.js`: selo "Reiniciar" sobre a personagem, fade curto no escuro (`ESCURECER_ERRO`, 0,4 s) e reaparecimento direto no spawn inicial (50%, 89,6%) com as duas bolinhas apagadas e a faixa `"Tente de novo!"`.
+- **Testes automatizados e wrappers**:
+  - `node verificar-puzzles.cjs`: executa a verificação completa de sintaxe e suítes de teste de todos os puzzles e cartões de tutorial.
+  - `node verificar-menu.cjs`: executa a verificação de sintaxe e integridade do menu, configurações e áudio.
+  - `node scratch/test-tutorial-card.cjs`: 8 testes cobrindo dados, métricas do palco, alinhamento de âncoras da mão, ciclo do modal, retenção de foco, frequência de exibição, paginação de múltiplos passos, timeline e modo estático calmo.
+  - `node scratch/test-algebra-tutorial-integration.cjs`: testes de integração verificando abertura automática, botão "?" no HUD, pausa e retomada de física e foco em Álgebra.
+  - `node scratch/test-geometria-tutorial-integration.cjs`: 6 testes de integração verificando os 3 passos de Geometria ("Próximo", "Próximo", "OK"), avanço e retorno, abertura automática na entrada, botão "?" no HUD, congelamento da cena e registro das 3 demos no `TutorialDemos`.
+  - `node scratch/test-logica-tutorial-integration.cjs`: 7 testes de integração verificando os 2 passos de Raciocínio Lógico ("Próximo" → "OK"), retenção antes da sequência acender (`AGUARDANDO_TUTORIAL`), desativação do botão "?" durante `MEMORIZAR`, reabertura durante `ANDAR`, frequência por sessão e execução determinística das demos `logica-ordem` e `logica-erro`.
+

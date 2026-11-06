@@ -161,6 +161,14 @@ window.LabirintoPuzzle = (() => {
       b.onfocus = () => { b.style.outline = '3px solid #ffe591'; }; b.onblur = () => { b.style.outline = ''; };
       frame.appendChild(b); controls.push(b);
     }
+    // Botão "?" (ajuda): reabre o cartão de tutorial; desativado enquanto a sequência acende.
+    const help = document.createElement('button'); help.type = 'button'; help.setAttribute('aria-label', 'Ajuda: como jogar');
+    help.style.cssText = 'position:absolute;width:44px;height:44px;border:0;padding:0;border-radius:50%;cursor:pointer;z-index:10;background:center/contain no-repeat url("assets/tutorial/botao-ajuda-normal.webp");image-rendering:pixelated;';
+    help.onfocus = () => { help.style.outline = '3px solid #ffe591'; }; help.onblur = () => { help.style.outline = ''; };
+    help.onpointerdown = () => { help.style.backgroundImage = 'url("assets/tutorial/botao-ajuda-pressionado.webp")'; };
+    help.onpointerup = help.onpointerleave = () => { help.style.backgroundImage = 'url("assets/tutorial/botao-ajuda-normal.webp")'; };
+    frame.appendChild(help); controls.push(help);
+    const tutorialAberto = () => Boolean(window.TutorialCard?.isAberto?.());
     const font = getComputedStyle(document.body).fontFamily || 'sans-serif', calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches || Boolean(window.GameSettings?.calm);
     const SIMBOLO_ESCALA_NA_PRACA = options.simboloEscala ?? cfg.SIMBOLO_ESCALA_NA_PRACA ?? 0.62;
     const PERSONAGEM_ESCALA = options.personagemEscala ?? cfg.PERSONAGEM_ESCALA ?? 1.0;
@@ -184,6 +192,7 @@ window.LabirintoPuzzle = (() => {
     function change(next) {
       state = next; elapsed = 0; held.fill(0); route = empty; hero.walk = 0;
       controls[2].hidden = next !== 'MEMORIZAR'; controls[2].disabled = true; controls[3].hidden = true;
+      help.disabled = next !== 'ANDAR' && next !== 'CAMARA_ANDAR'; help.style.opacity = help.disabled ? '.45' : '1';
       if (next === 'MEMORIZAR') say(`Memorize a ordem dos símbolos! 1º: ${runes[seq[0]].nome}; 2º: ${runes[seq[1]].nome}; 3º: ${runes[seq[2]].nome}.`);
       else if (next === 'ANDAR') say(`Escolha o ${phase + 1}º símbolo da sequência!`);
       else if (next === 'ERRO') say('Ainda não é essa! Vamos recomeçar!');
@@ -230,6 +239,7 @@ window.LabirintoPuzzle = (() => {
       // Botões superiores (X e ↻) ancorados no topo direito seguro
       controls[0].style.top = '14px'; controls[0].style.right = '14px';
       controls[1].style.top = '14px'; controls[1].style.right = '70px';
+      help.style.top = '14px'; help.style.right = '126px';
 
       // Botão "Já memorizei" centralizado
       controls[2].style.left = '50%';
@@ -298,6 +308,7 @@ window.LabirintoPuzzle = (() => {
 
     function down(event) {
       event.preventDefault();
+      if (tutorialAberto()) return;
       if (state !== 'ANDAR' && state !== 'CAMARA_ANDAR') return;
       const { x, y } = screenToGame(event.clientX, event.clientY);
       if (state === 'CAMARA_ANDAR') {
@@ -313,12 +324,13 @@ window.LabirintoPuzzle = (() => {
 
     function key(event) {
       if (event.ctrlKey || event.altKey || event.metaKey) return;
+      if (tutorialAberto()) return; // o cartão trata as próprias teclas
       const k = event.key.toLowerCase(); event.stopImmediatePropagation();
       if (k === 'tab') {
         event.preventDefault(); let i = controls.indexOf(document.activeElement);
-        const step = event.shiftKey ? -1 : 1;
-        for (let n = 0; n < 4; n++) {
-          i = (i + step + 4) % 4;
+        const step = event.shiftKey ? -1 : 1, n = controls.length;
+        for (let c = 0; c < n; c++) {
+          i = (i + step + n) % n;
           if (!controls[i].hidden && !controls[i].disabled) { controls[i].focus(); break; }
         }
         return;
@@ -343,6 +355,7 @@ window.LabirintoPuzzle = (() => {
     }
 
     function up(event) {
+      if (tutorialAberto()) return;
       const k = event.key.toLowerCase();
       if (k in dirs) { event.preventDefault(); event.stopImmediatePropagation(); held[dirs[k]] = 0; }
     }
@@ -352,6 +365,7 @@ window.LabirintoPuzzle = (() => {
     function close(won = false) {
       if (closed) return;
       closed = true; held.fill(0); route = empty;
+      if (tutorialAberto()) window.TutorialCard.fechar();
       window.Music?.sairDaCena?.('labirinto');
       cancelAnimationFrame(raf);
       canvas.removeEventListener('pointerdown', down);
@@ -400,6 +414,7 @@ window.LabirintoPuzzle = (() => {
     }
 
     function update(dt) {
+      if (tutorialAberto()) return; // puzzle parado atrás do cartão (sem relógio nem caminhada)
       time += dt; elapsed += dt;
       if (state === 'MEMORIZAR') {
         controls[2].disabled = elapsed < 1.5;
@@ -734,6 +749,11 @@ window.LabirintoPuzzle = (() => {
     controls[1].onclick = restart;
     controls[2].onclick = () => { if (state === 'MEMORIZAR' && elapsed >= 1.5) { change('ANDAR'); canvas.focus(); } };
     controls[3].onclick = () => collect();
+    help.onclick = () => {
+      if (help.disabled || tutorialAberto()) return;
+      held.fill(0); route = empty;
+      window.TutorialCard?.abrir?.('logica', { onFechar: () => canvas.focus() });
+    };
 
     canvas.addEventListener('pointerdown', down);
     document.addEventListener('keydown', key, true);
@@ -745,6 +765,16 @@ window.LabirintoPuzzle = (() => {
 
     current = close;
     restart();
+    // Cartão de tutorial antes da sequência acender: segura em AGUARDANDO_TUTORIAL
+    // (sem tela de memorização nem relógio) e só então começa a rodada.
+    if (state === 'MEMORIZAR' || state === 'ANDAR') {
+      const inicial = state;
+      change('AGUARDANDO_TUTORIAL');
+      const aberto = window.TutorialCard?.verificarEabrir?.('logica', {
+        onFechar: () => { if (!closed && state === 'AGUARDANDO_TUTORIAL') { change(inicial); canvas.focus(); } }
+      });
+      if (!aberto && state === 'AGUARDANDO_TUTORIAL') change(inicial);
+    }
     resize();
     raf = requestAnimationFrame(loop);
   }
