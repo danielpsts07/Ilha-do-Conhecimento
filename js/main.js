@@ -189,9 +189,6 @@
         setTimeout(() => {
           GameIsland.start();
           setTimeout(() => {
-            if (params.has('f3')) {
-              document.dispatchEvent(new KeyboardEvent('keydown', { key: 'F3', bubbles: true }));
-            }
             const tp = params.get('teleport');
             if (tp && window.ISLAND_REGIONS) {
               const r = window.ISLAND_REGIONS.find(reg => reg.id === tp);
