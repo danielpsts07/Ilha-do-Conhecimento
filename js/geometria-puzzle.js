@@ -2,6 +2,40 @@
 window.GeometriaPuzzle = (() => {
   'use strict';
   let data,catalog,ready,current;const images=new Map(),dash=[6,5],solid=[];
+  // Lógica pura, também disponível no console: GeometriaPuzzle.selfTest().
+  function selfTest(input=data) {
+    const results=[],expected=[{}, {'01':'2,0 2,1 1,1 1,2'}, {'05':'0,0 0,1 1,1 1,2 2,2','04':'4,2 3,3 4,3'}];
+    let prepared;
+    try{prepared=Polyomino.prepare(input);}catch(error){console.error(`[Geometria] FALHOU: ${error.message}`);return false;}
+    for(let index=0;index<prepared.cycles.length;index++) {
+      const cycle=prepared.cycles[index],{cols,rows}=cycle,board=new Int8Array(cols*rows).fill(-1),ids=new Set();
+      let ok=Array.isArray(cycle.travadas);
+      for(const pose of cycle.travadas||[]) {
+        const shape=prepared.pieces[pose.id]?.rotations[pose.rotation],cells=[];
+        if(!shape||!Number.isInteger(pose.col)||!Number.isInteger(pose.row)||ids.has(pose.id)||!cycle.pieces.includes(pose.id)||!Polyomino.valid(board,cols,rows,shape,pose.col,pose.row)){ok=false;continue;}
+        ids.add(pose.id);
+        for(let j=0;j<shape.cells.length;j+=2){const x=pose.col+shape.cells[j],y=pose.row+shape.cells[j+1];board[y*cols+x]=1;cells.push(`${x},${y}`);if(cycle.solution[y][x]!==pose.id)ok=false;}
+        if(cells.sort().join(' ')!==(expected[index]?.[pose.id]||'').split(' ').sort().join(' '))ok=false;
+      }
+      if(ids.size!==Object.keys(expected[index]||{}).length)ok=false;
+      const free=cycle.pieces.filter(id=>!ids.has(id));
+      const shapes=free.map(id=>{const seen=new Set();return prepared.pieces[id].rotations.filter(r=>{const key=r.rows.join('/');if(seen.has(key))return false;seen.add(key);return true;});});
+      function search(depth) {
+        if(depth===free.length)return board.includes(-1)?0:1;
+        let count=0;
+        for(const shape of shapes[depth])for(let row=0;row<=rows-shape.h;row++)for(let col=0;col<=cols-shape.w;col++) {
+          if(!Polyomino.valid(board,cols,rows,shape,col,row))continue;
+          for(let j=0;j<shape.cells.length;j+=2)board[(row+shape.cells[j+1])*cols+col+shape.cells[j]]=1;
+          count+=search(depth+1);
+          for(let j=0;j<shape.cells.length;j+=2)board[(row+shape.cells[j+1])*cols+col+shape.cells[j]]=-1;
+        }
+        return count;
+      }
+      const count=search(0);ok=ok&&count>=1;results.push(ok);
+      console.info(`[Geometria] Ponte ${index+1}: ${ok?'PASSOU':'FALHOU'}; travadas: ${ids.size}; soluções: ${count} (só rotações)`);
+    }
+    return results.every(Boolean);
+  }
   function image(src) {
     if(!src)return Promise.resolve(null);
     if(images.has(src))return images.get(src);
@@ -12,7 +46,7 @@ window.GeometriaPuzzle = (() => {
     return ready ||= (async()=>{
       data=input;
       try{catalog=Polyomino.prepare(data);}catch(error){console.error(`[Geometria] ${error.message}`);ready=null;throw error;}
-      for(let i=0;i<catalog.cycles.length;i++)console.info(`[Geometria] Ponte ${i+1}: OK`);
+      if(!selfTest(data))throw Error('Geometria: autoteste das pontes falhou');
       const entries=Object.values(catalog.pieces);
       await Promise.all(entries.map(async p=>{p.image=await image(p.sprite);}));
       const bg=await image(data.background);data.bg=bg||await image(data.backgroundFallback);
@@ -46,19 +80,20 @@ window.GeometriaPuzzle = (() => {
       p.fx=p.x;p.fy=p.y;p.fs=p.size;p.fa=p.angle;p.tx=x;p.ty=y;p.ts=size;p.ta=angle;p.anim=0;p.duration=calm?0:duration;
     }
     function layout() {
-      let width=0;for(const p of pieces)width+=p.def.rotations[p.r].w*m.TRAY_CELL;
-      const gap=Math.min(56,(m.TRAY_RIGHT-m.TRAY_LEFT-width)/(pieces.length+1));let x=(m.TRAY_LEFT+m.TRAY_RIGHT-width-gap*(pieces.length-1))/2;
-      for(const p of pieces){const r=p.def.rotations[p.r];p.homeX=x+r.w*m.TRAY_CELL/2;p.homeY=m.TRAY_BOTTOM-r.h*m.TRAY_CELL/2;x+=r.w*m.TRAY_CELL+gap;}
+      let width=0,count=0;for(const p of pieces)if(!p.locked){width+=p.def.rotations[p.r].w*m.TRAY_CELL;count++;}
+      const gap=Math.min(56,(m.TRAY_RIGHT-m.TRAY_LEFT-width)/(count+1));let x=(m.TRAY_LEFT+m.TRAY_RIGHT-width-gap*(count-1))/2;
+      for(const p of pieces)if(!p.locked){const r=p.def.rotations[p.r];p.homeX=x+r.w*m.TRAY_CELL/2;p.homeY=m.TRAY_BOTTOM-r.h*m.TRAY_CELL/2;x+=r.w*m.TRAY_CELL+gap;}
     }
     function setup() {
       cycle=catalog.cycles[cycleIndex];cell=Math.min((m.GAP_RIGHT-m.GAP_LEFT)/cycle.cols,(m.BOTTOM-m.SLOT_Y0)/cycle.rows);left=m.CENTER_X-cycle.cols*cell/2;
       board=new Int8Array(cycle.cols*cycle.rows).fill(-1);
-      pieces=cycle.pieces.map(id=>({id,def:catalog.pieces[id],r:Math.floor(Math.random()*4),placed:false,x:0,y:0,size:m.TRAY_CELL,angle:0,duration:0,anim:0,pop:0}));
+      pieces=cycle.pieces.map(id=>({id,def:catalog.pieces[id],locked:cycle.travadas.some(p=>p.id===id),r:Math.floor(Math.random()*4),placed:false,x:0,y:0,size:m.TRAY_CELL,angle:0,duration:0,anim:0,pop:0}));
       for(let i=pieces.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)),p=pieces[i];pieces[i]=pieces[j];pieces[j]=p;}
-      layout();for(const p of pieces){p.x=p.homeX;p.y=p.homeY;p.angle=p.r*turn;}
+      layout();for(const p of pieces)if(!p.locked){p.x=p.homeX;p.y=p.homeY;p.angle=p.r*turn;}
+      for(const pose of cycle.travadas){const i=pieces.findIndex(p=>p.id===pose.id),p=pieces[i];p.r=pose.rotation;fill(i,pose.col,pose.row);p.x=p.tx;p.y=p.ty;p.size=p.ts;p.angle=p.ta;p.duration=0;p.pop=0;}
       grab.index=-1;grab.id=-1;particles.fill(0);walkX=1100;walkTime=0;hero.walk=0;change('JOGANDO');
     }
-    function remove(index){for(let i=0;i<board.length;i++)if(board[i]===index)board[i]=-1;}
+    function remove(index){if(pieces[index].locked)return;for(let i=0;i<board.length;i++)if(board[i]===index)board[i]=-1;}
     function fill(index,col,row) {
       const p=pieces[index],r=p.def.rotations[p.r];p.placed=true;p.col=col;p.row=row;
       // A matriz rotacionada escreve o índice da peça; os espaços vazios não ocupam a grade.
@@ -87,7 +122,7 @@ window.GeometriaPuzzle = (() => {
     }
     function down(event) {
       if(state!=='JOGANDO'||grab.id!==-1||event.button>0)return;event.preventDefault();project(event);canvas.focus();
-      for(let i=pieces.length-1;i>=0;i--)if(hit(pieces[i])) {
+      for(let i=pieces.length-1;i>=0;i--)if(!pieces[i].locked&&hit(pieces[i])) {
         const p=pieces[i],r=p.def.rotations[p.r];grab.id=event.pointerId;grab.index=i;grab.x=(pointer.x-p.x)/p.size+r.w/2;grab.y=(pointer.y-p.y)/p.size+r.h/2;
         grab.startX=event.clientX;grab.startY=event.clientY;grab.time=performance.now();grab.moved=0;grab.rotation=p.r;grab.drag=false;canvas.setPointerCapture(event.pointerId);break;
       }
@@ -118,8 +153,8 @@ window.GeometriaPuzzle = (() => {
     }
     function reset(){if(state!=='JOGANDO')return;if(grab.id!==-1)cancel({pointerId:grab.id});setup();canvas.focus();}
     function solve() {
-      if(grab.id!==-1)cancel({pointerId:grab.id});board.fill(-1);
-      for(const placement of cycle.placements){const i=pieces.findIndex(p=>p.id===placement.id);pieces[i].r=placement.rotation;fill(i,placement.col,placement.row);}complete();
+      if(grab.id!==-1)cancel({pointerId:grab.id});for(let i=0;i<pieces.length;i++)remove(i);
+      for(const placement of cycle.placements){const i=pieces.findIndex(p=>p.id===placement.id);if(pieces[i].locked)continue;pieces[i].r=placement.rotation;fill(i,placement.col,placement.row);}complete();
     }
     function key(event) {
       if(event.ctrlKey||event.altKey||event.metaKey)return;
@@ -163,6 +198,7 @@ window.GeometriaPuzzle = (() => {
       ctx.beginPath();for(let i=0;i<base.cells.length;i+=2)ctx.rect((base.cells[i]-base.w/2)*size,(base.cells[i+1]-base.h/2)*size,size,size);ctx.clip();
       if(p.def.image)ctx.drawImage(p.def.image,-base.w*size/2,-base.h*size/2,base.w*size,base.h*size);
       else {ctx.fillStyle='#a66beb';ctx.strokeStyle='#eed7ff';for(let i=0;i<base.cells.length;i+=2){const x=(base.cells[i]-base.w/2)*size,y=(base.cells[i+1]-base.h/2)*size;ctx.fillRect(x,y,size,size);ctx.strokeRect(x+1,y+1,size-2,size-2);}}
+      if(p.locked){ctx.fillStyle='rgba(0,0,0,0.18)';ctx.fillRect(-base.w*size/2,-base.h*size/2,base.w*size,base.h*size);}
       ctx.restore();
     }
     function draw() {
@@ -173,6 +209,11 @@ window.GeometriaPuzzle = (() => {
       for(let y=0;y<cycle.rows;y++)for(let x=0;x<cycle.cols;x++){ctx.fillStyle='#10152699';ctx.fillRect(left+x*cell,m.SLOT_Y0+y*cell,cell,cell);ctx.strokeStyle='#eee4d49a';ctx.strokeRect(left+x*cell+2,m.SLOT_Y0+y*cell+2,cell-4,cell-4);}ctx.setLineDash(solid);
       if(grab.drag){const p=pieces[grab.index],r=p.def.rotations[p.r];ctx.fillStyle=grab.valid?'#4dff8590':'#ff435b90';for(let i=0;i<r.cells.length;i+=2)ctx.fillRect(left+(grab.col+r.cells[i])*cell,m.SLOT_Y0+(grab.row+r.cells[i+1])*cell,cell,cell);}
       for(let i=0;i<pieces.length;i++)if(i!==grab.index)piece(pieces[i]);if(grab.index>=0){ctx.globalAlpha=grab.drag ? .8 : 1;piece(pieces[grab.index]);ctx.globalAlpha=1;}
+      if(options.debug()) {
+        ctx.strokeStyle='#66e5ff';ctx.lineWidth=4;
+        for(let y=0;y<cycle.rows;y++)for(let x=0;x<cycle.cols;x++)if(board[y*cycle.cols+x]>=0&&pieces[board[y*cycle.cols+x]].locked)ctx.strokeRect(left+x*cell+5,m.SLOT_Y0+y*cell+5,cell-10,cell-10);
+        ctx.fillStyle='#10131de6';ctx.fillRect(92,16,390,42);ctx.fillStyle='#fff';ctx.font='20px monospace';ctx.textAlign='left';ctx.fillText(`Ponte ${cycleIndex+1} | travadas: ${cycle.travadas.length}`,104,44);
+      }
       if(state==='BRILHO'){
         ctx.save();ctx.beginPath();ctx.rect(left,m.SLOT_Y0,cell*cycle.cols,cell*cycle.rows);ctx.clip();ctx.fillStyle='#fff8d77a';ctx.fillRect(left-70+elapsed*2*(cell*cycle.cols+70),m.SLOT_Y0,70,cell*cycle.rows);ctx.restore();
         ctx.fillStyle='#fff3b9';for(let i=0;i<24;i++){const j=i*5;ctx.globalAlpha=Math.max(0,particles[j+4]*2);ctx.fillRect(particles[j],particles[j+1],4,4);}ctx.globalAlpha=1;
@@ -197,11 +238,11 @@ window.GeometriaPuzzle = (() => {
         if(state==='TITULO'){ctx.fillStyle='#fff';ctx.font='bold 36px system-ui';ctx.fillText(`Ponte ${cycleIndex+2} de ${catalog.cycles.length}`,640,357);}
       }
     }
-    function loop(time){if(closed)return;const dt=last?Math.min(.1,(time-last)/1000):0;last=time;update(dt);if(closed)return;draw();raf=requestAnimationFrame(loop);}
+    function loop(time){if(closed)return;const dt=last?Math.min(.05,(time-last)/1000):0;last=time;update(dt);if(closed)return;draw();raf=requestAnimationFrame(loop);}
     exit.onclick=()=>close(false);restart.onclick=reset;
     canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',cancel);canvas.addEventListener('lostpointercapture',cancel);
     document.addEventListener('keydown',key,true);window.addEventListener('resize',resize);
     current=close;resize();setup();canvas.focus();raf=requestAnimationFrame(loop);
   }
-  return {prepare,open};
+  return {prepare,open,selfTest};
 })();
