@@ -192,11 +192,19 @@ window.LabirintoPuzzle = (() => {
     status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite'); status.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);';
     frame.appendChild(canvas); frame.appendChild(status); host.appendChild(frame); document.body.appendChild(host);
 
-    const controls = [], labels = ['X', '↻', 'Já memorizei', 'E — Pegar a chave'];
-    for (let i = 0; i < 4; i++) {
+    const controls = [], labels = ['X', '↻', 'Já memorizei', 'E — Pegar a chave', ''];
+    for (let i = 0; i < 5; i++) {
       const b = document.createElement('button'); b.type = 'button'; b.textContent = labels[i];
-      b.setAttribute('aria-label', i === 0 ? 'Sair do labirinto' : i === 1 ? 'Reiniciar com nova sequência' : labels[i]);
-      b.style.cssText = 'position:absolute;min-height:44px;min-width:44px;border:2px solid #b9dc9a;border-radius:10px;background:#183a30ed;color:#fff5d7;font:inherit;font-size:16px;cursor:pointer;padding:6px 14px;z-index:10;user-select:none;';
+      b.setAttribute('aria-label', i === 0 ? 'Sair do labirinto' : i === 1 ? 'Reiniciar com nova sequência' : i === 4 ? 'Ajuda: como jogar' : labels[i]);
+      if (i === 4) {
+        b.className = 'puzzle-hud-help-btn';
+        b.style.cssText = 'position:absolute;width:44px;height:44px;border:none;background:url("assets/tutorial/botao-ajuda-normal.webp") center/contain no-repeat transparent;cursor:pointer;padding:0;z-index:10;user-select:none;image-rendering:pixelated;';
+        b.addEventListener('pointerdown', () => { if (!b.disabled) b.style.backgroundImage = 'url("assets/tutorial/botao-ajuda-pressionado.webp")'; });
+        const restoreHelpBtn = () => { b.style.backgroundImage = 'url("assets/tutorial/botao-ajuda-normal.webp")'; };
+        b.addEventListener('pointerup', restoreHelpBtn); b.addEventListener('pointerleave', restoreHelpBtn); b.addEventListener('pointercancel', restoreHelpBtn);
+      } else {
+        b.style.cssText = 'position:absolute;min-height:44px;min-width:44px;border:2px solid #b9dc9a;border-radius:10px;background:#183a30ed;color:#fff5d7;font:inherit;font-size:16px;cursor:pointer;padding:6px 14px;z-index:10;user-select:none;';
+      }
       b.onfocus = () => { b.style.outline = '3px solid #ffe591'; }; b.onblur = () => { b.style.outline = ''; };
       frame.appendChild(b); controls.push(b);
     }
@@ -226,7 +234,11 @@ window.LabirintoPuzzle = (() => {
 
     function change(next) {
       state = next; elapsed = 0; held.fill(0); route = empty; hero.walk = 0;
-      controls[2].hidden = next !== 'MEMORIZAR'; controls[2].disabled = true; controls[3].hidden = true;
+      const cardOpen = Boolean(window.TutorialCard?.isAberto?.());
+      controls[2].hidden = next !== 'MEMORIZAR' || cardOpen; controls[2].disabled = true; controls[3].hidden = true;
+      controls[4].disabled = (next !== 'ANDAR' && next !== 'CAMARA_ANDAR');
+      controls[4].style.opacity = controls[4].disabled ? '0.45' : '1';
+      controls[4].style.cursor = controls[4].disabled ? 'not-allowed' : 'pointer';
       if (next === 'MEMORIZAR') say('Memorize a ordem dos símbolos! ' + sequenceNames);
       else if (next === 'ANDAR') say(`Escolha o ${phase + 1}º símbolo da sequência!`);
       else if (next === 'ERRO') say('Ainda não é essa! Vamos recomeçar!');
@@ -272,9 +284,10 @@ window.LabirintoPuzzle = (() => {
       offsetX = (canvas.width - W * s) / 2;
       offsetY = (canvas.height - H * s) / 2;
 
-      // Botões superiores (X e ↻) ancorados no topo direito seguro
+      // Botões superiores (?, ↻ e X) ancorados no topo direito seguro
       controls[0].style.top = '14px'; controls[0].style.right = '14px';
       controls[1].style.top = '14px'; controls[1].style.right = '70px';
+      controls[4].style.top = '14px'; controls[4].style.right = '126px';
 
       // Botão "Já memorizei" centralizado
       controls[2].style.left = '50%';
@@ -342,6 +355,7 @@ window.LabirintoPuzzle = (() => {
     }
 
     function down(event) {
+      if (window.TutorialCard?.isAberto?.()) return;
       event.preventDefault();
       if (state !== 'ANDAR' && state !== 'CAMARA_ANDAR') return;
       const { x, y } = screenToGame(event.clientX, event.clientY);
@@ -357,13 +371,14 @@ window.LabirintoPuzzle = (() => {
     }
 
     function key(event) {
+      if (window.TutorialCard?.isAberto?.()) return;
       if (event.ctrlKey || event.altKey || event.metaKey) return;
       const k = event.key.toLowerCase(); event.stopImmediatePropagation();
       if (k === 'tab') {
         event.preventDefault(); let i = controls.indexOf(document.activeElement);
         const step = event.shiftKey ? -1 : 1;
-        for (let n = 0; n < 4; n++) {
-          i = (i + step + 4) % 4;
+        for (let n = 0; n < controls.length; n++) {
+          i = (i + step + controls.length) % controls.length;
           if (!controls[i].hidden && !controls[i].disabled) { controls[i].focus(); break; }
         }
         return;
@@ -400,6 +415,7 @@ window.LabirintoPuzzle = (() => {
     function close(won = false) {
       if (closed) return;
       closed = true; held.fill(0); route = empty;
+      if (window.TutorialCard?.isAberto?.()) window.TutorialCard.fechar();
       window.Music?.sairDaCena?.('labirinto');
       cancelAnimationFrame(raf);
       canvas.removeEventListener('pointerdown', down);
@@ -448,6 +464,11 @@ window.LabirintoPuzzle = (() => {
     }
 
     function update(dt) {
+      if (window.TutorialCard?.isAberto?.()) {
+        if (state === 'MEMORIZAR') controls[2].hidden = true;
+        return;
+      }
+      if (state === 'MEMORIZAR' && controls[2].hidden) controls[2].hidden = false;
       time += dt; elapsed += dt;
       if (state === 'MEMORIZAR') {
         controls[2].disabled = elapsed < 1.5;
@@ -711,8 +732,9 @@ window.LabirintoPuzzle = (() => {
         text(`${debugLine} · (${hero.x.toFixed(1)}, ${hero.y.toFixed(1)}) · N avança`, W / 2, H - 23, 15);
       }
 
-      // Tela de memorização
-      if (state === 'MEMORIZAR') {
+      // Tela de memorização (só acende depois que o cartão de tutorial fecha)
+      const tutorialAberto = Boolean(window.TutorialCard?.isAberto?.());
+      if (state === 'MEMORIZAR' && !tutorialAberto) {
         ctx.fillStyle = '#000000a8'; ctx.fillRect(0, 0, W, H);
         const spacing = Math.min(140, (W * 0.76 - 74) / Math.max(1, N - 1));
         const startX = W / 2 - (N - 1) * spacing / 2;
@@ -782,6 +804,13 @@ window.LabirintoPuzzle = (() => {
     controls[1].onclick = restart;
     controls[2].onclick = () => { if (state === 'MEMORIZAR' && elapsed >= 1.5) { change('ANDAR'); canvas.focus(); } };
     controls[3].onclick = () => collect();
+    controls[4].onclick = () => {
+      if (controls[4].disabled) return;
+      held.fill(0); route = empty;
+      window.TutorialCard?.abrir?.('logica', {
+        onFechar: () => { canvas.focus(); }
+      });
+    };
 
     canvas.addEventListener('pointerdown', down);
     document.addEventListener('keydown', key, true);
@@ -795,6 +824,14 @@ window.LabirintoPuzzle = (() => {
     restart();
     if (isDebug()) randomTest(ids, crossings);
     resize();
+    const tutorialAbriu = window.TutorialCard?.verificarEabrir?.('logica', {
+      onFechar: () => {
+        if (state === 'MEMORIZAR') controls[2].hidden = false;
+        canvas.focus();
+      }
+    });
+    if (tutorialAbriu && state === 'MEMORIZAR') controls[2].hidden = true;
+    if (!tutorialAbriu) canvas.focus();
     raf = requestAnimationFrame(loop);
   }
 

@@ -51,18 +51,20 @@ window.GeometriaPuzzle = (() => {
       await Promise.all(entries.map(async p=>{p.image=await image(p.sprite);}));
       const bg=await image(data.background);data.bg=bg||await image(data.backgroundFallback);
       data.keyImage=await image(data.key);data.hero=await image(`assets/${HERO_SHEET.src}`);data.side=await image('assets/personagem/personagem-lado.png');
+      data.btnHelpNormal=await image('assets/tutorial/botao-ajuda-normal.webp');data.btnHelpPressed=await image('assets/tutorial/botao-ajuda-pressionado.webp');
     })();
   }
   function open(options) {
     if(current)current();
     const m=data.metrics,host=document.createElement('div'),canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
-    const exit=document.createElement('button'),restart=document.createElement('button'),frameHost=document.createElement('div');
+    const exit=document.createElement('button'),help=document.createElement('button'),restart=document.createElement('button'),frameHost=document.createElement('div');
+    let helpPressed=false;
     host.style.cssText='position:fixed;inset:0;z-index:1000;background:#10131d;display:flex;justify-content:center;';
     frameHost.style.cssText='position:relative;height:100%;';canvas.style.cssText='display:block;width:100%;height:100%;touch-action:none;';canvas.tabIndex=0;
     canvas.setAttribute('aria-label','Geometria: monte a ponte. Clique para girar; arraste para encaixar; R gira ao arrastar; Escape sai.');
     host.setAttribute('role','dialog');host.setAttribute('aria-modal','true');host.setAttribute('aria-label','Ponte de peças');
-    exit.setAttribute('aria-label','Sair da ponte');restart.setAttribute('aria-label','Reiniciar ponte');
-    for(const b of [exit,restart]){b.style.cssText='position:absolute;background:transparent;color:transparent;border:0;border-radius:10px;cursor:pointer;';frameHost.appendChild(b);}
+    exit.setAttribute('aria-label','Sair da ponte');help.setAttribute('aria-label','Ajuda: como jogar');restart.setAttribute('aria-label','Reiniciar ponte');
+    for(const b of [exit,help,restart]){b.style.cssText='position:absolute;background:transparent;color:transparent;border:0;border-radius:10px;cursor:pointer;';frameHost.appendChild(b);}
     frameHost.prepend(canvas);host.appendChild(frameHost);document.body.appendChild(host);
     const particles=new Float32Array(24*5),hero={moving:false,walk:0,idle:0};
     const pointer={x:0,y:0},grab={id:-1,index:-1,x:0,y:0,startX:0,startY:0,time:0,moved:0,rotation:0,drag:false,col:0,row:0,valid:false};
@@ -74,7 +76,8 @@ window.GeometriaPuzzle = (() => {
       const w=Math.min(window.innerWidth,window.innerHeight*m.WIDTH/m.HEIGHT),dpr=Math.min(2,window.devicePixelRatio||1);
       frameHost.style.width=`${w}px`;canvas.width=Math.round(w*dpr);canvas.height=Math.round(window.innerHeight*dpr);
       s=canvas.width/m.WIDTH;offset=(canvas.height-m.HEIGHT*s)/2;
-      for(let i=0;i<2;i++){const b=i?restart:exit;b.style.left=`${(i?1204:20)*w/m.WIDTH}px`;b.style.top=`${(offset/s+16)*w/m.WIDTH}px`;b.style.width=`${56*w/m.WIDTH}px`;b.style.height=`${50*w/m.WIDTH}px`;}
+      const hudBtns=[exit,help,restart],hudX=[20,1136,1204];
+      for(let i=0;i<3;i++){const b=hudBtns[i];b.style.left=`${hudX[i]*w/m.WIDTH}px`;b.style.top=`${(offset/s+16)*w/m.WIDTH}px`;b.style.width=`${56*w/m.WIDTH}px`;b.style.height=`${50*w/m.WIDTH}px`;}
     }
     function animate(p,x,y,size,angle,duration=.12) {
       p.fx=p.x;p.fy=p.y;p.fs=p.size;p.fa=p.angle;p.tx=x;p.ty=y;p.ts=size;p.ta=angle;p.anim=0;p.duration=calm?0:duration;
@@ -121,6 +124,7 @@ window.GeometriaPuzzle = (() => {
       return y>=0&&y<r.h&&x>=0&&x<r.w&&r.rows[y][x]==='#';
     }
     function down(event) {
+      if(window.TutorialCard?.isAberto?.())return;
       if(state!=='JOGANDO'||grab.id!==-1||event.button>0)return;event.preventDefault();project(event);canvas.focus();
       for(let i=pieces.length-1;i>=0;i--)if(!pieces[i].locked&&hit(pieces[i])) {
         const p=pieces[i],r=p.def.rotations[p.r];grab.id=event.pointerId;grab.index=i;grab.x=(pointer.x-p.x)/p.size+r.w/2;grab.y=(pointer.y-p.y)/p.size+r.h/2;
@@ -157,10 +161,11 @@ window.GeometriaPuzzle = (() => {
       for(const placement of cycle.placements){const i=pieces.findIndex(p=>p.id===placement.id);if(pieces[i].locked)continue;pieces[i].r=placement.rotation;fill(i,placement.col,placement.row);}complete();
     }
     function key(event) {
+      if(window.TutorialCard?.isAberto?.())return;
       if(event.ctrlKey||event.altKey||event.metaKey)return;
       const k=event.key.toLowerCase();
-      if(k==='tab'){event.preventDefault();event.stopImmediatePropagation();const next=document.activeElement===exit&&!restart.disabled?restart:exit;next.focus();return;}
-      if((event.target===exit||event.target===restart)&&(k==='enter'||k===' ')){event.preventDefault();event.stopImmediatePropagation();if(!event.repeat){if(event.target===exit)close(false);else reset();}return;}
+      if(k==='tab'){event.preventDefault();event.stopImmediatePropagation();const list=[exit,help,restart].filter(b=>!b.disabled);const idx=list.indexOf(document.activeElement);const next=list[(idx+1)%list.length]||exit;next.focus();return;}
+      if((event.target===exit||event.target===help||event.target===restart)&&(k==='enter'||k===' ')){event.preventDefault();event.stopImmediatePropagation();if(!event.repeat){if(event.target===exit)close(false);else if(event.target===help)window.TutorialCard?.abrir?.('geometria',{onFechar:()=>canvas.focus()});else reset();}return;}
       event.preventDefault();event.stopImmediatePropagation();if(event.repeat)return;
       if(k==='escape'){close(false);return;}
       if(k==='f3'){options.toggleDebug();return;}
@@ -170,11 +175,13 @@ window.GeometriaPuzzle = (() => {
     }
     function close(complete=false) {
       if(closed)return;closed=true;cancelAnimationFrame(raf);
+      if(window.TutorialCard?.isAberto?.())window.TutorialCard.fechar();
       window.GameAudio?.stopGeometryMusic?.();
       canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',release);canvas.removeEventListener('pointercancel',cancel);canvas.removeEventListener('lostpointercapture',cancel);
       document.removeEventListener('keydown',key,true);window.removeEventListener('resize',resize);host.remove();current=null;options.onExit(complete);
     }
     function update(dt) {
+      if(window.TutorialCard?.isAberto?.())return;
       elapsed+=dt;
       for(let i=0;i<pieces.length;i++) {
         const p=pieces[i];p.anim=Math.min(p.duration,p.anim+dt);const t=p.duration?ease(p.anim/p.duration):1;
@@ -233,6 +240,10 @@ window.GeometriaPuzzle = (() => {
       ctx.fillStyle='#fff';ctx.font='bold 30px system-ui';ctx.textAlign='center';ctx.fillText('×',48,52);
       ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(1232,41,13,.3,Math.PI*1.9);ctx.stroke();
       ctx.beginPath();ctx.moveTo(1246,28);ctx.lineTo(1248,41);ctx.lineTo(1235,37);ctx.closePath();ctx.fill();
+      const helpImg=helpPressed?data.btnHelpPressed:data.btnHelpNormal;
+      if(helpImg)ctx.drawImage(helpImg,1139,16,50,50);
+      else{ctx.fillStyle='#171829c9';ctx.beginPath();ctx.roundRect(1136,16,56,50,10);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 26px system-ui';ctx.textAlign='center';ctx.fillText('?',1164,50);}
+      if(document.activeElement===help){ctx.strokeStyle='#ffe59a';ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(1136,16,56,50,10);ctx.stroke();}
       if(state==='ESCURECER'||state==='TITULO'||state==='COLETAR'){
         ctx.fillStyle='#10131d';ctx.globalAlpha=state==='TITULO'?1:Math.min(1,elapsed/.4);ctx.fillRect(0,0,m.WIDTH,m.HEIGHT);ctx.globalAlpha=1;
         if(state==='TITULO'){ctx.fillStyle='#fff';ctx.font='bold 36px system-ui';ctx.fillText(`Ponte ${cycleIndex+2} de ${catalog.cycles.length}`,640,357);}
@@ -240,9 +251,14 @@ window.GeometriaPuzzle = (() => {
     }
     function loop(time){if(closed)return;const dt=last?Math.min(.05,(time-last)/1000):0;last=time;update(dt);if(closed)return;draw();raf=requestAnimationFrame(loop);}
     exit.onclick=()=>close(false);restart.onclick=reset;
+    help.onpointerdown=()=>{helpPressed=true;};help.onpointerup=()=>{helpPressed=false;};help.onpointerleave=()=>{helpPressed=false;};
+    help.onclick=()=>{if(grab.id!==-1)cancel({pointerId:grab.id});window.TutorialCard?.abrir?.('geometria',{onFechar:()=>canvas.focus()});};
     canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',cancel);canvas.addEventListener('lostpointercapture',cancel);
     document.addEventListener('keydown',key,true);window.addEventListener('resize',resize);
-    current=close;resize();setup();canvas.focus();raf=requestAnimationFrame(loop);
+    current=close;resize();setup();
+    const tutorialAbriu=window.TutorialCard?.verificarEabrir?.('geometria',{onFechar:()=>canvas.focus()});
+    if(!tutorialAbriu)canvas.focus();
+    raf=requestAnimationFrame(loop);
   }
   return {prepare,open,selfTest};
 })();
