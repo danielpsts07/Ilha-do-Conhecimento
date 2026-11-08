@@ -87,7 +87,17 @@
     GameAudio.click();
     const kind=button.dataset.open;
     if(kind==='settings'||kind==='tutorial')openBook(kind,button.dataset.settingsStart);
-    else if(kind==='start')GameIsland.start();
+    else if(kind==='start'){
+      if(window.IntroStory)window.IntroStory.play(()=>GameIsland.start());
+      else GameIsland.start();
+    }
+    else if(kind==='replay-intro'){
+      if(book.open)book.close();
+      if(window.IntroStory)window.IntroStory.play(()=>{
+        if(!GameIsland.active)GameIsland.start();
+        else document.getElementById('island-canvas')?.focus();
+      });
+    }
     else if(kind==='exit')askQuitTab();
     else openMessage();
   }));

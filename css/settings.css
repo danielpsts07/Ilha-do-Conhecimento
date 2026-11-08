@@ -387,9 +387,9 @@ body.large-text {
   pointer-events: none;
 }
 
-/* Continuar (etiqueta-verde, left 23.2%, width 22.4%) */
+/* Continuar (etiqueta-verde, left 10.1%, width 22.4%) */
 .mural-action-btn.action-verde {
-  left: 23.2%;
+  left: 10.1%;
   width: 22.4%;
 }
 
@@ -405,10 +405,27 @@ body.large-text {
   pointer-events: none;
 }
 
-/* Restaurar padrões (tira-listrada, left 52.7%, width 24.0%) */
+/* Rever a história (tira-listrada, left 36.5%, width 25.0%) */
+.mural-action-btn.action-historia {
+  left: 36.5%;
+  width: 25.0%;
+}
+
+.mural-action-btn.action-historia span {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  color: #4a2a14;
+  font: bold 1.6cqw Georgia, serif;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Restaurar padrões (tira-listrada, left 65.5%, width 24.5%) */
 .mural-action-btn.action-listrada {
-  left: 52.7%;
-  width: 24.0%;
+  left: 65.5%;
+  width: 24.5%;
 }
 
 .mural-action-btn.action-listrada .action-icon {
@@ -1472,10 +1489,18 @@ body.large-text {
   object-fit: contain;
 }
 
+.howto-buttons-row {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1.5cqw, 14px);
+  margin-top: clamp(8px, 1.8cqh, 14px);
+  max-width: 58cqw;
+}
+
 .mural-btn-tutorial {
   position: relative;
-  margin-top: clamp(8px, 1.8cqh, 14px);
-  width: clamp(140px, 20cqw, 185px);
+  margin-top: 0;
+  width: clamp(135px, 19.5cqw, 180px);
   height: clamp(38px, 8.2cqh, 48px);
   background: transparent;
   border: 0;
@@ -1509,6 +1534,12 @@ body.large-text {
   white-space: nowrap;
   text-shadow: 1px 1px 0 rgba(70, 38, 18, 0.7);
   pointer-events: none;
+}
+
+.mural-btn-tutorial.howto-replay-intro span {
+  left: 50%;
+  color: #4a2a14;
+  text-shadow: none;
 }
 
 /* ==========================================================================

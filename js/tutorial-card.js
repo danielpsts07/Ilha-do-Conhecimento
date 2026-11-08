@@ -29,6 +29,127 @@ window.TutorialCard = (() => {
   let isAberto = false;
   let lastActiveElement = null;
 
+  // Dimensões reais dos botões em pixel art (1 px da arte = 8 px do arquivo)
+  const BTN_METRICS = {
+    primario: {
+      imgW: 488,
+      imgH: 184,
+      faceH: 160,
+      depth3D: 24,
+      capW: 80,
+      pressShift: 16,
+      centerNormal: 80,
+      centerPressed: 96
+    },
+    secundario: {
+      imgW: 368,
+      imgH: 152,
+      faceH: 128,
+      depth3D: 24,
+      capW: 64,
+      pressShift: 16,
+      centerNormal: 64,
+      centerPressed: 80
+    },
+    icones: {
+      setaDireita: { w: 80, h: 104, src: 'assets/tutorial/icone-seta-direita.webp' },
+      setaEsquerda: { w: 80, h: 104, src: 'assets/tutorial/icone-seta-esquerda.webp' },
+      check: { w: 120, h: 104, src: 'assets/tutorial/icone-check.webp' },
+      faceRatio: 0.40
+    }
+  };
+
+  let buttonsPreloaded = false;
+
+  function preloadButtonArt() {
+    if (buttonsPreloaded || typeof Image === 'undefined') return;
+    buttonsPreloaded = true;
+    const sources = [
+      { src: 'assets/tutorial/botao-primario-verde-normal.webp', target: () => btnPrincipal },
+      { src: 'assets/tutorial/botao-primario-verde-pressionado.webp', target: () => btnPrincipal },
+      { src: 'assets/tutorial/botao-primario-dourado-normal.webp', target: null },
+      { src: 'assets/tutorial/botao-primario-dourado-pressionado.webp', target: null },
+      { src: 'assets/tutorial/botao-voltar-normal.webp', target: () => btnVoltar },
+      { src: 'assets/tutorial/botao-voltar-pressionado.webp', target: () => btnVoltar },
+      { src: BTN_METRICS.icones.setaDireita.src, target: null },
+      { src: BTN_METRICS.icones.setaEsquerda.src, target: null },
+      { src: BTN_METRICS.icones.check.src, target: null }
+    ];
+    for (const item of sources) {
+      const img = new Image();
+      img.onerror = () => {
+        const el = item.target ? item.target() : null;
+        if (el && el.classList) el.classList.add('is-fallback-css');
+      };
+      img.src = item.src;
+    }
+  }
+
+  function wirePressState(btn) {
+    if (!btn || typeof btn.addEventListener !== 'function') return;
+    const add = () => btn.classList && btn.classList.add('is-pressed');
+    const remove = () => btn.classList && btn.classList.remove('is-pressed');
+    btn.addEventListener('pointerdown', add);
+    btn.addEventListener('pointerup', remove);
+    btn.addEventListener('pointerleave', remove);
+    btn.addEventListener('pointercancel', remove);
+    btn.addEventListener('blur', remove);
+  }
+
+  function setButtonContent(btn, text, iconSpec, iconSide) {
+    if (!btn) return;
+    btn.innerHTML = '';
+    if (Array.isArray(btn.children)) btn.children.length = 0;
+
+    const inner = document.createElement('span');
+    inner.className = 'tutorial-btn-inner';
+
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'tutorial-btn-label';
+    labelSpan.textContent = text;
+
+    const iconImg = document.createElement('img');
+    const mod = iconSide === 'right' ? 'arrow-right' : (text === 'OK' ? 'check' : 'arrow-left');
+    iconImg.className = `tutorial-btn-icon tutorial-btn-icon--${mod}`;
+    iconImg.src = iconSpec.src;
+    iconImg.width = iconSpec.w;
+    iconImg.height = iconSpec.h;
+    iconImg.alt = '';
+    iconImg.setAttribute('aria-hidden', 'true');
+    iconImg.onerror = () => { iconImg.hidden = true; };
+
+    if (iconSide === 'left') {
+      inner.appendChild(iconImg);
+      inner.appendChild(labelSpan);
+    } else {
+      inner.appendChild(labelSpan);
+      inner.appendChild(iconImg);
+    }
+
+    btn.appendChild(inner);
+    btn.setAttribute('aria-label', text);
+    if (btn.dataset) {
+      btn.dataset.action = text === 'OK' ? 'ok' : (text === 'Voltar' ? 'voltar' : 'proximo');
+    }
+    // Em ambientes de teste com DOM simulado onde textContent não é getter nativo:
+    if (btn.textContent !== text) {
+      btn.textContent = text;
+    }
+  }
+
+  function syncPrimaryButtonWidth() {
+    if (!btnPrincipal || typeof btnPrincipal.getBoundingClientRect !== 'function') return;
+    btnPrincipal.style.minWidth = '0px';
+    setButtonContent(btnPrincipal, 'Próximo', BTN_METRICS.icones.setaDireita, 'right');
+    const wProximo = Math.ceil(btnPrincipal.getBoundingClientRect().width || btnPrincipal.offsetWidth || 0);
+    setButtonContent(btnPrincipal, 'OK', BTN_METRICS.icones.check, 'left');
+    const wOk = Math.ceil(btnPrincipal.getBoundingClientRect().width || btnPrincipal.offsetWidth || 0);
+    const maxW = Math.max(wProximo, wOk);
+    if (maxW > 0) {
+      btnPrincipal.style.minWidth = `${maxW}px`;
+    }
+  }
+
   function isCalm() {
     return Boolean(window.GameSettings?.calm) ||
       (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -141,7 +262,8 @@ window.TutorialCard = (() => {
     btnVoltar = document.createElement('button');
     btnVoltar.type = 'button';
     btnVoltar.className = 'tutorial-btn-voltar';
-    btnVoltar.textContent = 'Voltar';
+    setButtonContent(btnVoltar, 'Voltar', BTN_METRICS.icones.setaEsquerda, 'left');
+    wirePressState(btnVoltar);
     btnVoltar.onclick = () => {
       if (currentStep > 0) renderStep(currentStep - 1);
     };
@@ -155,7 +277,8 @@ window.TutorialCard = (() => {
     btnPrincipal = document.createElement('button');
     btnPrincipal.type = 'button';
     btnPrincipal.className = 'tutorial-btn-principal';
-    btnPrincipal.textContent = 'OK';
+    setButtonContent(btnPrincipal, 'OK', BTN_METRICS.icones.check, 'left');
+    wirePressState(btnPrincipal);
     btnPrincipal.onclick = () => {
       const passos = currentData?.passos || [];
       if (currentStep < passos.length - 1) {
@@ -165,6 +288,21 @@ window.TutorialCard = (() => {
       }
     };
     actions.appendChild(btnPrincipal);
+
+    preloadButtonArt();
+    if (typeof window.addEventListener === 'function') {
+      window.addEventListener('resize', () => {
+        if (!isAberto) return;
+        const passos = currentData?.passos || [];
+        const isLast = (currentStep === passos.length - 1);
+        syncPrimaryButtonWidth();
+        if (isLast) {
+          setButtonContent(btnPrincipal, 'OK', BTN_METRICS.icones.check, 'left');
+        } else {
+          setButtonContent(btnPrincipal, 'Próximo', BTN_METRICS.icones.setaDireita, 'right');
+        }
+      });
+    }
 
     content.appendChild(actions);
     wrapperEl.appendChild(content);
@@ -241,10 +379,15 @@ window.TutorialCard = (() => {
 
     // Botão Voltar: visível apenas a partir do 2º passo
     btnVoltar.hidden = (currentStep === 0);
+    setButtonContent(btnVoltar, 'Voltar', BTN_METRICS.icones.setaEsquerda, 'left');
 
-    // Botão Principal: "OK" no último passo; "Próximo" nos intermediários
+    // Botão Principal: "OK" (check + texto) no último passo; "Próximo" (texto + seta direita) nos intermediários
     const isLast = (currentStep === passos.length - 1);
-    btnPrincipal.textContent = isLast ? 'OK' : 'Próximo';
+    if (isLast) {
+      setButtonContent(btnPrincipal, 'OK', BTN_METRICS.icones.check, 'left');
+    } else {
+      setButtonContent(btnPrincipal, 'Próximo', BTN_METRICS.icones.setaDireita, 'right');
+    }
 
     // Bolinhas de etapa
     dotsContainer.innerHTML = '';
@@ -306,6 +449,7 @@ window.TutorialCard = (() => {
     isAberto = true;
 
     dialogEl.hidden = false;
+    syncPrimaryButtonWidth();
     renderStep(0);
 
     options.onAbrir?.();
@@ -352,6 +496,7 @@ window.TutorialCard = (() => {
 
   return {
     TUTORIAL_FREQUENCIA,
+    BTN_METRICS,
     abrir,
     verificarEabrir,
     fechar,

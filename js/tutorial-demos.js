@@ -1465,6 +1465,665 @@ window.TutorialDemos = (() => {
   };
 
   /* -------------------------------------------------------------
+     DEMONSTRAÇÕES DE OPERAÇÕES (Moinho Encantado — 2 passos)
+     Janela horizontal x = 0%..86% da cena cheia (1024×572),
+     preservando toda a altura (572 px) na moldura 815×526.
+  ------------------------------------------------------------- */
+  const OP_CROP_X_RATIO = 0.86;
+  const OP_FULL_W = 1024;
+  const OP_FULL_H = 572;
+  const OP_SX = STAGE_W / (OP_FULL_W * OP_CROP_X_RATIO);
+  const OP_SY = STAGE_H / OP_FULL_H;
+  const ox = pct => (pct / 86) * STAGE_W;
+  const oy = pct => (pct / 100) * STAGE_H;
+
+  const OP_SLOTS_PCT = [
+    [40.7, 45.6],
+    [45.8, 45.6],
+    [50.9, 45.6],
+    [56.0, 45.6],
+    [61.1, 45.6]
+  ];
+  const OP_MESA_SACOS_PCT = [
+    [23.4, 64.6],
+    [27.9, 64.6],
+    [32.4, 64.6]
+  ];
+
+  async function loadOperacoesAssets() {
+    const [
+      fundo,
+      velas,
+      slot,
+      carrinho,
+      saco,
+      placa,
+      lanterna,
+      maoApontando,
+      maoPressionando,
+      toque1,
+      toque2,
+      toque3,
+      seloCerto,
+      brilho1,
+      brilho2,
+      brilho3
+    ] = await Promise.all([
+      loadImage('assets/puzzles/operacoes/fundo_fazenda.png'),
+      loadImage('assets/puzzles/operacoes/velas_frames.png'),
+      loadImage('assets/puzzles/operacoes/slot.png'),
+      loadImage('assets/puzzles/operacoes/carrinho.png'),
+      loadImage('assets/puzzles/operacoes/saco_trigo.png'),
+      loadImage('assets/puzzles/operacoes/placa_pedido.png'),
+      loadImage('assets/puzzles/operacoes/lanterna_apagada.png'),
+      loadImage('assets/tutorial/mao-apontando.webp'),
+      loadImage('assets/tutorial/mao-pressionando.webp'),
+      loadImage('assets/tutorial/toque-1.webp'),
+      loadImage('assets/tutorial/toque-2.webp'),
+      loadImage('assets/tutorial/toque-3.webp'),
+      loadImage('assets/tutorial/selo-certo.webp'),
+      loadImage('assets/tutorial/brilho-1.webp'),
+      loadImage('assets/tutorial/brilho-2.webp'),
+      loadImage('assets/tutorial/brilho-3.webp')
+    ]);
+    return {
+      fundo,
+      velas,
+      slot,
+      carrinho,
+      saco,
+      placa,
+      lanterna,
+      maoApontando,
+      maoPressionando,
+      toque1,
+      toque2,
+      toque3,
+      seloCerto,
+      brilho1,
+      brilho2,
+      brilho3
+    };
+  }
+
+  function createOperacoesBase(canvas, assets) {
+    const ctx = canvas.getContext('2d');
+    const font = (typeof getComputedStyle === 'function' && document.body)
+      ? (getComputedStyle(document.body).fontFamily || 'sans-serif')
+      : 'sans-serif';
+
+    function drawFundo(time = 0, girarVelas = false) {
+      ctx.save();
+      if (assets.fundo) {
+        const cropW = Math.round(assets.fundo.naturalWidth * OP_CROP_X_RATIO);
+        ctx.drawImage(
+          assets.fundo,
+          0, 0, cropW, assets.fundo.naturalHeight,
+          0, 0, STAGE_W, STAGE_H
+        );
+      } else {
+        ctx.fillStyle = '#6b8e4e';
+        ctx.fillRect(0, 0, STAGE_W, STAGE_H);
+      }
+
+      // Velas do moinho em (518, 55), escala 1.3 no espaço 1024×572
+      const vx = 518 * OP_SX;
+      const vy = 55 * OP_SY;
+      const vsizeW = 224 * 1.3 * OP_SX;
+      const vsizeH = 224 * 1.3 * OP_SY;
+      if (assets.velas) {
+        const strip = assets.velas.naturalWidth === 3584;
+        const frameIdx = girarVelas ? (Math.floor(time * 8) % 16) : 0;
+        const sx = strip ? frameIdx * 224 : (frameIdx % 4) * 224;
+        const sy = strip ? 0 : Math.floor(frameIdx / 4) * 224;
+        ctx.drawImage(assets.velas, sx, sy, 224, 224, vx - vsizeW / 2, vy - vsizeH / 2, vsizeW, vsizeH);
+      }
+
+      // 5 espaços (slots) na plataforma do moinho
+      for (let i = 0; i < OP_SLOTS_PCT.length; i++) {
+        const [px, py] = OP_SLOTS_PCT[i];
+        const sx = ox(px);
+        const sy = oy(py);
+        const sw = (46 * 176 / 180) * OP_SX;
+        const sh = 46 * OP_SY;
+        if (assets.slot) {
+          ctx.drawImage(assets.slot, sx - sw / 2, sy - 40 * OP_SY, sw, sh);
+        } else {
+          ctx.fillStyle = '#3d2b1f88';
+          ctx.fillRect(sx - sw / 2, sy - sh, sw, sh);
+        }
+      }
+
+      // Carrinho em (501, 275.34) com escala 0.415 no espaço 1024×572
+      if (assets.carrinho) {
+        const cw = (assets.carrinho.naturalWidth || 875) * 0.415 * OP_SX;
+        const ch = (assets.carrinho.naturalHeight || 509) * 0.415 * OP_SY;
+        ctx.drawImage(assets.carrinho, 501 * OP_SX, 275.34 * OP_SY, cw, ch);
+      }
+      ctx.restore();
+    }
+
+    function drawSlotHighlight(slotIndex, alpha) {
+      if (alpha <= 0) return;
+      const [px, py] = OP_SLOTS_PCT[slotIndex];
+      const sx = ox(px);
+      const sy = oy(py);
+      const sw = 46 * OP_SX;
+      const sh = 46 * OP_SY;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#ffe57f';
+      ctx.lineWidth = 3;
+      ctx.fillStyle = 'rgba(255, 229, 127, 0.28)';
+      ctx.beginPath();
+      ctx.roundRect(sx - sw / 2 - 3, sy - 40 * OP_SY - 3, sw + 6, sh + 6, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawLanternas(primeiraAcesa = 0) {
+      for (let i = 0; i < 3; i++) {
+        const lx = (210 + i * 40) * OP_SX;
+        const ly = 24 * OP_SY;
+        const lw = 27.6 * OP_SX;
+        const lh = 39.6 * OP_SY;
+        if (assets.lanterna) {
+          ctx.drawImage(assets.lanterna, lx, ly, lw, lh);
+        } else {
+          ctx.fillStyle = '#8b6739';
+          ctx.fillRect(lx, ly, lw, lh);
+        }
+        if (i === 0 && primeiraAcesa > 0) {
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, primeiraAcesa);
+          const cx = lx + lw / 2;
+          const cy = ly + lh * 0.55;
+          const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 32 * OP_SX);
+          grad.addColorStop(0, '#fff7c2');
+          grad.addColorStop(0.45, '#ffc84ae0');
+          grad.addColorStop(1, 'rgba(255, 200, 74, 0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(cx, cy, 32 * OP_SX, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+    }
+
+    function drawPlaca(lineHighlight = [0, 0, 0], borderPulse = 0) {
+      const px = 18 * OP_SX;
+      const py = 12 * OP_SY;
+      const pw = 170 * OP_SX;
+      const ph = 134 * OP_SY;
+
+      ctx.save();
+      if (borderPulse > 0) {
+        ctx.save();
+        ctx.strokeStyle = `rgba(255, 224, 102, ${0.55 + 0.4 * borderPulse})`;
+        ctx.lineWidth = 4;
+        ctx.shadowColor = '#ffd54f';
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.roundRect(px + 4, py + 12, pw - 8, ph - 16, 10);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (assets.placa) {
+        ctx.drawImage(assets.placa, px, py, pw, ph);
+      } else {
+        ctx.fillStyle = '#d9b382';
+        ctx.fillRect(px, py, pw, ph);
+      }
+
+      const cx = ox(10.1);
+      const lines = [
+        { text: 'Coloque', y: 59 * OP_SY, size: 16 },
+        { text: 'no moinho', y: 83 * OP_SY, size: 16 },
+        { text: '2 SACOS', y: 111 * OP_SY, size: 20 }
+      ];
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+
+      for (let i = 0; i < lines.length; i++) {
+        const l = lines[i];
+        const glow = lineHighlight[i] || 0;
+        ctx.save();
+        if (glow > 0) {
+          const scale = 1 + 0.08 * glow;
+          ctx.translate(cx, l.y - 6);
+          ctx.scale(scale, scale);
+          ctx.translate(-cx, -(l.y - 6));
+          if (i === 2) {
+            ctx.shadowColor = '#ffe066';
+            ctx.shadowBlur = 12 * glow;
+            ctx.fillStyle = '#fff5bd';
+            ctx.fillRect(cx - 52 * OP_SX, l.y - 19 * OP_SY, 104 * OP_SX, 24 * OP_SY);
+          } else {
+            ctx.fillStyle = `rgba(255, 243, 180, ${0.55 * glow})`;
+            ctx.fillRect(cx - 48 * OP_SX, l.y - 16 * OP_SY, 96 * OP_SX, 20 * OP_SY);
+          }
+        }
+        ctx.fillStyle = '#513525';
+        ctx.font = `bold ${Math.round(l.size * OP_SY)}px ${font}`;
+        ctx.fillText(l.text, cx, l.y);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    function drawTag(label, pctX, pctY, popScale = 1) {
+      const x = ox(pctX);
+      const y = oy(pctY);
+      const w = 152 * OP_SX;
+      const h = 35 * OP_SY;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(popScale, popScale);
+      ctx.fillStyle = '#34271de8';
+      ctx.fillRect(-w / 2, -20 * OP_SY, w, h);
+      ctx.fillStyle = '#fff4d3';
+      ctx.font = `bold ${Math.round(17 * OP_SY)}px ${font}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(label, 0, 4 * OP_SY);
+      ctx.restore();
+    }
+
+    function drawSaco(x, y, baseH = 38, scale = 1, shadow = false) {
+      const h = baseH * OP_SY * scale;
+      const ratio = (assets.saco?.naturalWidth || 130) / (assets.saco?.naturalHeight || 151);
+      const w = h * ratio;
+      ctx.save();
+      if (shadow) {
+        ctx.fillStyle = '#22160455';
+        ctx.beginPath();
+        ctx.ellipse(x, y + 4 * OP_SY, w * 0.55, 6 * OP_SY, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (assets.saco) {
+        ctx.drawImage(assets.saco, x - w / 2, y - h, w, h);
+      } else {
+        ctx.fillStyle = '#c99b62';
+        ctx.fillRect(x - w / 2, y - h, w, h);
+      }
+      ctx.restore();
+    }
+
+    return {
+      ctx,
+      drawFundo,
+      drawSlotHighlight,
+      drawLanternas,
+      drawPlaca,
+      drawTag,
+      drawSaco
+    };
+  }
+
+  /* PASSO 1: Leia a placa (~6,5 s + 1,5 s pausa = 8,0 s) */
+  registry['operacoes-placa'] = {
+    loadAssets: loadOperacoesAssets,
+    create(canvas, assets) {
+      const b = createOperacoesBase(canvas, assets);
+      const { ctx } = b;
+
+      const PLACA_CENTER_X = ox(10.1);
+      const PLACA_CENTER_Y = oy(15.0);
+      const MOINHO_PANEL_X = ox(50.9);
+      const MOINHO_PANEL_Y = oy(45.6);
+
+      function render(t, estatico) {
+        ctx.clearRect(0, 0, STAGE_W, STAGE_H);
+        b.drawFundo(t, false);
+        b.drawLanternas(0);
+
+        // 3 sacos na mesa
+        for (let i = 0; i < 3; i++) {
+          b.drawSaco(ox(OP_MESA_SACOS_PCT[i][0]), oy(OP_MESA_SACOS_PCT[i][1]), 38, 1, false);
+        }
+
+        // Rótulos escuros
+        b.drawTag('No moinho: 0', 50.8, 35.6, 1);
+        b.drawTag('Mesa: 3', 30.2, 59.0, 1);
+        b.drawTag('Carrinho: 0', 69.3, 53.9, 1);
+
+        if (estatico) {
+          ctx.fillStyle = 'rgba(15, 12, 8, 0.35)';
+          ctx.fillRect(0, 0, STAGE_W, STAGE_H);
+          b.drawPlaca([0.6, 0.6, 1], 1);
+
+          // Linha tracejada da placa ao painel do moinho
+          ctx.save();
+          ctx.strokeStyle = '#ffe066';
+          ctx.lineWidth = 4;
+          ctx.setLineDash([8, 6]);
+          ctx.beginPath();
+          ctx.moveTo(ox(18.0), oy(16.0));
+          ctx.quadraticCurveTo(ox(34.0), oy(24.0), MOINHO_PANEL_X, MOINHO_PANEL_Y - 12);
+          ctx.stroke();
+          ctx.restore();
+
+          drawHand(ctx, assets, 'apontando', PLACA_CENTER_X + 26, PLACA_CENTER_Y + 18, 1);
+          return;
+        }
+
+        // Escurecimento suave (~45%) entre 0.6s e 5.5s
+        let darkAlpha = 0;
+        if (t >= 0.6 && t < 1.1) {
+          darkAlpha = 0.45 * ease.easeOutQuad((t - 0.6) / 0.5);
+        } else if (t >= 1.1 && t < 5.5) {
+          darkAlpha = 0.45;
+        } else if (t >= 5.5 && t < 6.1) {
+          darkAlpha = 0.45 * (1 - ease.easeOutQuad((t - 5.5) / 0.6));
+        }
+
+        if (darkAlpha > 0) {
+          ctx.fillStyle = `rgba(15, 12, 8, ${darkAlpha})`;
+          ctx.fillRect(0, 0, STAGE_W, STAGE_H);
+        }
+
+        // Pulso no painel do moinho a partir de 4.0s
+        if (t >= 4.0 && t < 5.5) {
+          const p = Math.sin(((t - 4.0) / 1.5) * Math.PI);
+          const rx = ox(38.1);
+          const ry = oy(38.8);
+          const rw = ox(63.7) - rx;
+          const rh = oy(53.5) - ry;
+          ctx.save();
+          ctx.strokeStyle = `rgba(255, 224, 102, ${0.85 * p})`;
+          ctx.fillStyle = `rgba(255, 224, 102, ${0.22 * p})`;
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.roundRect(rx, ry, rw, rh, 12);
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Destaque das linhas da placa uma por vez (2.0s -> 4.0s)
+        const lineGlow = [0, 0, 0];
+        if (t >= 2.0 && t < 5.5) {
+          if (t >= 2.0 && t < 2.7) lineGlow[0] = Math.sin(((t - 2.0) / 0.7) * Math.PI);
+          if (t >= 2.6 && t < 3.3) lineGlow[1] = Math.sin(((t - 2.6) / 0.7) * Math.PI);
+          if (t >= 3.2 && t < 5.5) lineGlow[2] = Math.min(1, (t - 3.2) / 0.35);
+        }
+
+        const borderPulse = (t >= 0.6 && t < 5.8) ? (0.5 + 0.5 * Math.sin((t - 0.6) * 5)) : 0;
+        b.drawPlaca(lineGlow, borderPulse);
+
+        // Linha tracejada animada da placa até o painel do moinho (4.0s -> 5.5s)
+        if (t >= 4.0 && t < 5.5) {
+          const prog = Math.min(1, (t - 4.0) / 0.6);
+          const startX = ox(18.2);
+          const startY = oy(16.0);
+          const endX = startX + (MOINHO_PANEL_X - startX) * prog;
+          const endY = startY + (MOINHO_PANEL_Y - 10 - startY) * prog;
+          ctx.save();
+          ctx.strokeStyle = '#ffe066';
+          ctx.lineWidth = 4;
+          ctx.setLineDash([8, 6]);
+          ctx.lineDashOffset = -(t - 4.0) * 30;
+          ctx.beginPath();
+          ctx.moveTo(startX, startY);
+          ctx.lineTo(endX, endY);
+          ctx.stroke();
+          ctx.fillStyle = '#ffe066';
+          ctx.beginPath();
+          ctx.arc(endX, endY, 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Anel de toque na placa (1.5s -> 2.1s)
+        if (t >= 1.5 && t < 2.1) {
+          drawTouchRing(ctx, assets, PLACA_CENTER_X + 18, PLACA_CENTER_Y + 14, (t - 1.5) / 0.6);
+        }
+
+        // Mão apontando entra pela direita em 1.2s e some em 5.5s
+        let handOpacity = 0;
+        let handX = PLACA_CENTER_X + 22;
+        let handY = PLACA_CENTER_Y + 18;
+        if (t >= 1.2 && t < 1.7) {
+          const p = ease.easeOutCubic((t - 1.2) / 0.5);
+          handOpacity = Math.min(1, (t - 1.2) / 0.25);
+          handX = (PLACA_CENTER_X + 130) + (PLACA_CENTER_X + 22 - (PLACA_CENTER_X + 130)) * p;
+          handY = (PLACA_CENTER_Y + 50) + (PLACA_CENTER_Y + 18 - (PLACA_CENTER_Y + 50)) * p;
+        } else if (t >= 1.7 && t < 5.5) {
+          handOpacity = 1;
+          if (t >= 2.0 && t < 3.8) {
+            const lineIdx = t < 2.6 ? 0 : t < 3.2 ? 1 : 2;
+            const targetY = (lineIdx === 0 ? 59 : lineIdx === 1 ? 83 : 111) * OP_SY;
+            handY = targetY + 4;
+          }
+        } else if (t >= 5.5 && t < 6.0) {
+          handOpacity = Math.max(0, 1 - (t - 5.5) / 0.5);
+        }
+
+        drawHand(ctx, assets, 'apontando', handX, handY, handOpacity);
+      }
+
+      return { duration: 8.0, render };
+    }
+  };
+
+  /* PASSO 2: Coloque os sacos no moinho (~8,0 s + 1,5 s pausa = 9,5 s) */
+  registry['operacoes-arrastar'] = {
+    loadAssets: loadOperacoesAssets,
+    create(canvas, assets) {
+      const b = createOperacoesBase(canvas, assets);
+      const { ctx } = b;
+
+      const S1_START_X = ox(OP_MESA_SACOS_PCT[0][0]);
+      const S1_START_Y = oy(OP_MESA_SACOS_PCT[0][1]);
+      const S2_START_X = ox(OP_MESA_SACOS_PCT[1][0]);
+      const S2_START_Y = oy(OP_MESA_SACOS_PCT[1][1]);
+      const S3_START_X = ox(OP_MESA_SACOS_PCT[2][0]);
+      const S3_START_Y = oy(OP_MESA_SACOS_PCT[2][1]);
+
+      const SLOT1_X = ox(OP_SLOTS_PCT[0][0]);
+      const SLOT1_Y = oy(OP_SLOTS_PCT[0][1]);
+      const SLOT2_X = ox(OP_SLOTS_PCT[1][0]);
+      const SLOT2_Y = oy(OP_SLOTS_PCT[1][1]);
+
+      function render(t, estatico) {
+        ctx.clearRect(0, 0, STAGE_W, STAGE_H);
+
+        if (estatico) {
+          b.drawFundo(0, true);
+          b.drawPlaca([0, 0, 1], 0);
+          b.drawLanternas(1);
+
+          // Saco 1 já no 1º espaço, Saco 2 no 2º espaço, Saco 3 na mesa
+          b.drawSaco(SLOT1_X, SLOT1_Y, 44, 1, false);
+          b.drawSaco(SLOT2_X, SLOT2_Y, 44, 1, false);
+          b.drawSaco(S3_START_X, S3_START_Y, 38, 1, false);
+
+          // Seta tracejada da mesa ao moinho
+          ctx.save();
+          ctx.strokeStyle = '#ffe066';
+          ctx.lineWidth = 4;
+          ctx.setLineDash([8, 6]);
+          ctx.beginPath();
+          ctx.moveTo(S2_START_X, S2_START_Y - 18);
+          ctx.quadraticCurveTo((S2_START_X + SLOT2_X) / 2, SLOT2_Y - 55, SLOT2_X, SLOT2_Y - 18);
+          ctx.stroke();
+          ctx.restore();
+
+          b.drawTag('No moinho: 2', 50.8, 35.6, 1);
+          b.drawTag('Mesa: 1', 30.2, 59.0, 1);
+          b.drawTag('Carrinho: 0', 69.3, 53.9, 1);
+
+          drawSeal(ctx, assets, 'certo', ox(50.9), oy(45.6) - 24, 1);
+          return;
+        }
+
+        const concluido = t >= 7.2;
+        b.drawFundo(t, concluido);
+        b.drawPlaca([0, 0, 0], 0);
+
+        const lanternaAcesa = t >= 7.2 ? Math.min(1, (t - 7.2) / 0.35) : 0;
+        b.drawLanternas(lanternaAcesa);
+
+        // Destaque nos slots ao receber cada saco
+        if (t >= 2.2 && t < 3.4) {
+          const a = t < 3.2 ? Math.min(1, (t - 2.2) / 0.4) : Math.max(0, 1 - (t - 3.2) / 0.2);
+          b.drawSlotHighlight(0, a);
+        }
+        if (t >= 5.4 && t < 6.6) {
+          const a = t < 6.4 ? Math.min(1, (t - 5.4) / 0.4) : Math.max(0, 1 - (t - 6.4) / 0.2);
+          b.drawSlotHighlight(1, a);
+        }
+
+        // Estado do 1º saco
+        let s1X = S1_START_X;
+        let s1Y = S1_START_Y;
+        let s1BaseH = 38;
+        let s1Scale = 1;
+        let s1Shadow = false;
+
+        if (t >= 1.4 && t < 2.0) {
+          const p = ease.easeOutQuad((t - 1.4) / 0.6);
+          s1Scale = 1 + 0.08 * p;
+          s1Y = S1_START_Y - 5 * p;
+          s1Shadow = true;
+        } else if (t >= 2.0 && t < 3.2) {
+          const p = ease.easeInOutCubic((t - 2.0) / 1.2);
+          s1X = S1_START_X + (SLOT1_X - S1_START_X) * p;
+          s1Y = (S1_START_Y - 5) + (SLOT1_Y - (S1_START_Y - 5)) * p - Math.sin(p * Math.PI) * 48;
+          s1BaseH = 38 + (44 - 38) * p;
+          s1Scale = 1.08;
+          s1Shadow = true;
+        } else if (t >= 3.2) {
+          s1X = SLOT1_X;
+          s1Y = SLOT1_Y;
+          s1BaseH = 44;
+          if (t < 3.6) {
+            s1Scale = 1 + 0.1 * Math.sin(((t - 3.2) / 0.4) * Math.PI);
+          }
+        }
+
+        // Estado do 2º saco
+        let s2X = S2_START_X;
+        let s2Y = S2_START_Y;
+        let s2BaseH = 38;
+        let s2Scale = 1;
+        let s2Shadow = false;
+
+        if (t >= 4.6 && t < 5.2) {
+          const p = ease.easeOutQuad((t - 4.6) / 0.6);
+          s2Scale = 1 + 0.08 * p;
+          s2Y = S2_START_Y - 5 * p;
+          s2Shadow = true;
+        } else if (t >= 5.2 && t < 6.4) {
+          const p = ease.easeInOutCubic((t - 5.2) / 1.2);
+          s2X = S2_START_X + (SLOT2_X - S2_START_X) * p;
+          s2Y = (S2_START_Y - 5) + (SLOT2_Y - (S2_START_Y - 5)) * p - Math.sin(p * Math.PI) * 48;
+          s2BaseH = 38 + (44 - 38) * p;
+          s2Scale = 1.08;
+          s2Shadow = true;
+        } else if (t >= 6.4) {
+          s2X = SLOT2_X;
+          s2Y = SLOT2_Y;
+          s2BaseH = 44;
+          if (t < 6.8) {
+            s2Scale = 1 + 0.1 * Math.sin(((t - 6.4) / 0.4) * Math.PI);
+          }
+        }
+
+        // Desenha os sacos (saco sendo arrastado por cima dos demais)
+        b.drawSaco(S3_START_X, S3_START_Y, 38, 1, false);
+        if (s1Shadow) {
+          b.drawSaco(s2X, s2Y, s2BaseH, s2Scale, s2Shadow);
+          b.drawSaco(s1X, s1Y, s1BaseH, s1Scale, s1Shadow);
+        } else {
+          b.drawSaco(s1X, s1Y, s1BaseH, s1Scale, s1Shadow);
+          b.drawSaco(s2X, s2Y, s2BaseH, s2Scale, s2Shadow);
+        }
+
+        // Contadores e pulinho ao atualizar em 3.2s e 6.4s
+        const noMoinho = t < 3.2 ? 0 : t < 6.4 ? 1 : 2;
+        const naMesa = 3 - noMoinho;
+        let popLabels = 1;
+        if (t >= 3.2 && t < 3.55) {
+          popLabels = 1 + 0.14 * Math.sin(((t - 3.2) / 0.35) * Math.PI);
+        } else if (t >= 6.4 && t < 6.75) {
+          popLabels = 1 + 0.14 * Math.sin(((t - 6.4) / 0.35) * Math.PI);
+        }
+
+        b.drawTag(`No moinho: ${noMoinho}`, 50.8, 35.6, popLabels);
+        b.drawTag(`Mesa: ${naMesa}`, 30.2, 59.0, popLabels);
+        b.drawTag('Carrinho: 0', 69.3, 53.9, 1);
+
+        // Posição e pose da mão
+        let handPose = 'apontando';
+        let handX = S1_START_X + 35;
+        let handY = S1_START_Y + 25;
+        let handOpacity = 0;
+
+        if (t >= 0.8 && t < 1.4) {
+          const p = ease.easeOutCubic((t - 0.8) / 0.6);
+          handOpacity = Math.min(1, (t - 0.8) / 0.25);
+          handX = (S1_START_X + 45) + (S1_START_X - (S1_START_X + 45)) * p;
+          handY = (S1_START_Y + 30) + ((S1_START_Y - 16) - (S1_START_Y + 30)) * p;
+        } else if (t >= 1.4 && t < 3.2) {
+          handOpacity = 1;
+          handPose = 'pressionando';
+          handX = s1X;
+          handY = s1Y - 16;
+        } else if (t >= 3.2 && t < 4.0) {
+          handOpacity = 1;
+          handPose = 'apontando';
+          const p = ease.easeInOutQuad((t - 3.2) / 0.8);
+          handX = SLOT1_X + (S2_START_X - SLOT1_X) * p;
+          handY = (SLOT1_Y - 16) + ((S2_START_Y - 16) - (SLOT1_Y - 16)) * p;
+        } else if (t >= 4.0 && t < 4.6) {
+          handOpacity = 1;
+          handPose = 'apontando';
+          handX = S2_START_X;
+          handY = S2_START_Y - 16;
+        } else if (t >= 4.6 && t < 6.4) {
+          handOpacity = 1;
+          handPose = 'pressionando';
+          handX = s2X;
+          handY = s2Y - 16;
+        } else if (t >= 6.4 && t < 8.0) {
+          handPose = 'apontando';
+          handX = SLOT2_X + Math.min(1, (t - 6.4) / 0.6) * 28;
+          handY = (SLOT2_Y - 16) + Math.min(1, (t - 6.4) / 0.6) * 18;
+          handOpacity = t < 7.5 ? 1 : Math.max(0, 1 - (t - 7.5) / 0.5);
+        }
+
+        if (t >= 1.4 && t < 1.9) {
+          drawTouchRing(ctx, assets, S1_START_X, S1_START_Y - 16, (t - 1.4) / 0.5);
+        }
+        if (t >= 4.6 && t < 5.1) {
+          drawTouchRing(ctx, assets, S2_START_X, S2_START_Y - 16, (t - 4.6) / 0.5);
+        }
+
+        drawHand(ctx, assets, handPose, handX, handY, handOpacity);
+
+        // Em 7.2s: selo-certo sobre o moinho e brilhos (brilho-1..3)
+        if (t >= 7.2) {
+          const sealScale = ease.easeOutBack(Math.min(1, (t - 7.2) / 0.35));
+          const cx = ox(45.8);
+          const cy = oy(45.6) - 26;
+          drawSeal(ctx, assets, 'certo', cx, cy, sealScale);
+          const sp = Math.min(3, Math.floor((t - 7.25) / 0.25) + 1);
+          if (sp >= 1) drawSparkle(ctx, assets, 1, cx - 55, cy - 30, 26);
+          if (sp >= 2) drawSparkle(ctx, assets, 2, cx + 55, cy - 25, 32);
+          if (sp >= 3) drawSparkle(ctx, assets, 3, cx, cy + 42, 36);
+        }
+      }
+
+      return { duration: 9.5, render };
+    }
+  };
+
+  /* -------------------------------------------------------------
      MOTOR DE EXECUÇÃO (Loop via requestAnimationFrame com delta)
   ------------------------------------------------------------- */
   let activeRunner = null;
