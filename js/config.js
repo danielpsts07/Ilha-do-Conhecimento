@@ -1,3 +1,10 @@
+// Intro: tempos em milissegundos; cada caractere acrescenta tempo dentro dos limites.
+const INTRO_MIN_MS = 4000, INTRO_MAX_MS = 9000, INTRO_MS_PER_CHAR = 90;
+const INTRO_FADE_MS = 500; // Duração da mistura entre imagens e do escurecimento final.
+const INTRO_FIT = 'contain-blur'; // cover preenche e corta; contain-blur preserva a imagem sobre fundo desfocado.
+const INTRO_TEXT_SAFE_MARGIN = 0.06; // Margem do texto como fração da tela.
+const INTRO_SKIP_LABEL = 'Pular ▶'; // Único botão da história.
+
 // Escala do JPEG no mundo; câmera amplia o mundo inteiro sem mudar a física.
 const WORLD_SCALE = 0.6;
 const CAMERA_ZOOM = 1.90;
