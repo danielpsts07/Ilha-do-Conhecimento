@@ -5,6 +5,7 @@ const INTRO_FIT = 'contain-blur'; // cover preenche e corta; contain-blur preser
 const INTRO_TEXT_SAFE_MARGIN = 0.06; // Margem do texto como fração da tela.
 const INTRO_MUSIC_SRC = 'assets/audio/intro.mp3'; // Trilha opcional; na ausência usa síntese suave.
 const INTRO_MUSIC_FILE_PRESENT = false; // MP3 ainda não fornecido; ative ao adicioná-lo para evitar erro de arquivo ausente.
+const INTRO_SLIDE_SFX = false; // Ative para tocar o plim das trocas e o acorde do último slide.
 const INTRO_SKIP_LABEL = 'Pular ▶'; // Único botão da história.
 
 // Escala do JPEG no mundo; câmera amplia o mundo inteiro sem mudar a física.
@@ -55,7 +56,7 @@ const OCCLUSION_RUN_GAP_PX = 4; // Buracos tolerados no trecho vertical roxo, em
 const OCCLUSION_MARGIN_PX = 2; // Distância dos pés à base do objeto para decidir a profundidade.
 const OCCLUSION_PATCH_W = 96, OCCLUSION_PATCH_H = 112; // Recorte em pixels nativos do mapa.
 const OCCLUSION_GHOST_ALPHA = 0.3; // Visibilidade atrás dos objetos; zero desliga o fantasma.
-const SPAWN_POINT = {x:1290,y:955}; // Pixels nativos da imagem, como x/y do F3; Y cresce para baixo.
+const SPAWN_POINT = {x:1378,y:1006}; // Pixels nativos da imagem, como x/y do F3; Y cresce para baixo.
 const SPAWN = SPAWN_POINT; // Compatibilidade com as consultas existentes da ilha.
 const CHECKPOINTS = [
   {name:'Entrada do labirinto',x:630,y:650}, {name:'Fonte da vila',x:690,y:1035},

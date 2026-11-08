@@ -58,7 +58,7 @@ window.IntroStory = (() => {
         {
           id: 'panel-b',
           sceneId: 'intro-01b',
-          src: 'intro/intro-01b.webp',
+          src: 'intro/slide2_livro.png',
           alt: 'O livro antigo flutua e cresce com brilho mágico diante da estante.',
           tilt: 0.7,
           miniPanel: {
@@ -457,7 +457,7 @@ window.IntroStory = (() => {
   const SCENES = Object.freeze([
     { id: "intro-01", src: "intro/intro-01.webp",
       text: "A menina estuda com seu gato e um livro acorda.", textoOriginal: "Numa noite tranquila, uma menina estudava ao lado do seu gatinho… Mas, na estante, um livro muito antigo estava acordando…" },
-    { id: "intro-01b", src: "intro/intro-01b.webp",
+    { id: "intro-01b", src: "intro/slide2_livro.png",
       text: "O livro acorda e fica bem grande.", textoOriginal: "FUUUSH! O livro acordou… e começou a crescer!" },
     { id: "intro-02", src: "intro/intro-02.webp",
       text: "O Livro Malvado abre um portal perto do gato.", textoOriginal: "Hehehe! Há muito tempo eu espero por isso! O que está acontecendo?!" },
@@ -539,7 +539,7 @@ window.IntroStory = (() => {
   function enter() {
     elapsed = 0; fade = 0; prepare(index); prepare(index + 1);
     live.textContent = slides[index].text;
-    if (index > 0) window.IntroAudio?.sfx(index === slides.length - 1 ? 'final' : 'slide');
+    if (INTRO_SLIDE_SFX && index > 0) window.IntroAudio?.sfx(index === slides.length - 1 ? 'final' : 'slide');
   }
   function drawSlide(slide, alpha) {
     ctx.globalAlpha = alpha; ctx.fillStyle = '#101018'; ctx.fillRect(0, 0, width, height);
