@@ -57,9 +57,14 @@ window.TutorialData = (() => {
       tituloGeral: 'Campos do Moinho',
       passos: [
         {
-          titulo: 'Resolva a conta',
-          texto: 'Conte os sacos e escolha a resposta correta para moer os grãos.',
-          demo: 'operacoes-conta'
+          titulo: 'Leia a placa',
+          texto: 'Tudo o que você precisa fazer está escrito na placa, lá em cima.',
+          demo: 'operacoes-placa'
+        },
+        {
+          titulo: 'Coloque os sacos no moinho',
+          texto: 'Leve os sacos da mesa até o moinho. Aqui são dois sacos!',
+          demo: 'operacoes-arrastar'
         }
       ]
     }

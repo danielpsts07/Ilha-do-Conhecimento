@@ -432,4 +432,66 @@ let passed = 0;
   console.log('✓ Teste 8: Modo calm / prefers-reduced-motion com quadro estático e botão replay');
 }
 
+// Test 9: Botões em pixel art (medidas reais, fatias border-image, ícones e ordem texto+ícone)
+{
+  const env = createMockEnv();
+  const Card = env.TutorialCard;
+  const M = Card.BTN_METRICS;
+  assert(M, 'BTN_METRICS deve estar exposto em TutorialCard');
+  assert.strictEqual(M.primario.imgW, 488);
+  assert.strictEqual(M.primario.imgH, 184);
+  assert.strictEqual(M.primario.faceH, 160);
+  assert.strictEqual(M.primario.depth3D, 24);
+  assert.strictEqual(M.primario.capW, 80);
+  assert.strictEqual(M.primario.centerNormal, 80);
+  assert.strictEqual(M.primario.centerPressed, 96);
+
+  assert.strictEqual(M.secundario.imgW, 368);
+  assert.strictEqual(M.secundario.imgH, 152);
+  assert.strictEqual(M.secundario.faceH, 128);
+  assert.strictEqual(M.secundario.depth3D, 24);
+  assert.strictEqual(M.secundario.capW, 64);
+  assert.strictEqual(M.secundario.centerNormal, 64);
+  assert.strictEqual(M.secundario.centerPressed, 80);
+
+  assert.strictEqual(M.icones.setaDireita.w, 80);
+  assert.strictEqual(M.icones.setaDireita.h, 104);
+  assert.strictEqual(M.icones.setaEsquerda.w, 80);
+  assert.strictEqual(M.icones.setaEsquerda.h, 104);
+  assert.strictEqual(M.icones.check.w, 120);
+  assert.strictEqual(M.icones.check.h, 104);
+  assert.strictEqual(M.icones.faceRatio, 0.40);
+
+  // Verifica ordem de filhos em "Próximo" (texto + seta direita) e "Voltar" (seta esquerda + texto)
+  Card.abrir('logica');
+  const dialog = env.document.getElementById('tutorial-card-dialog');
+  const btnPrincipal = dialog.querySelector('.tutorial-btn-principal');
+  const btnVoltar = dialog.querySelector('.tutorial-btn-voltar');
+
+  const innerProximo = btnPrincipal.children[0];
+  assert.strictEqual(innerProximo.children[0].className, 'tutorial-btn-label');
+  assert.strictEqual(innerProximo.children[0].textContent, 'Próximo');
+  assert(innerProximo.children[1].src.includes('icone-seta-direita.webp'), '"Próximo" deve ter seta direita à direita do texto');
+
+  const innerVoltar = btnVoltar.children[0];
+  assert(innerVoltar.children[0].src.includes('icone-seta-esquerda.webp'), '"Voltar" deve ter seta esquerda à esquerda do texto');
+  assert.strictEqual(innerVoltar.children[1].textContent, 'Voltar');
+
+  // Avança para último passo ("OK": check + texto)
+  btnPrincipal.onclick();
+  const innerOk = btnPrincipal.children[0];
+  assert(innerOk.children[0].src.includes('icone-check.webp'), '"OK" deve ter check à esquerda do texto');
+  assert.strictEqual(innerOk.children[1].textContent, 'OK');
+
+  // Verifica fatias border-image no CSS
+  const css = fs.readFileSync(path.join(__dirname, '../css/tutorial-card.css'), 'utf8');
+  assert(css.includes('border-image-slice: 0 80 fill'), 'Primário deve usar border-image-slice: 0 80 fill');
+  assert(css.includes('border-image-slice: 0 64 fill'), 'Secundário deve usar border-image-slice: 0 64 fill');
+  assert(css.includes('.is-fallback-css'), 'Reserva CSS deve estar presente');
+
+  Card.fechar();
+  passed++;
+  console.log('✓ Teste 9: Botões em pixel art com medidas reais, border-image 0 80 / 0 64 e ícones validados');
+}
+
 console.log(`\nTODOS OS ${passed} TESTES DE TUTORIAL CARD PASSARAM COM SUCESSO!`);

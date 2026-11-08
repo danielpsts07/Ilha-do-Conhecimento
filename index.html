@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="css/rescue.css">
   <link rel="stylesheet" href="css/settings.css">
   <link rel="stylesheet" href="css/tutorial-card.css">
+  <link rel="stylesheet" href="css/intro.css">
 </head>
 <body>
   <main id="home-screen" class="game-shell">
@@ -201,6 +202,10 @@
               <button id="settings-continue" class="mural-action-btn action-verde" data-close aria-label="Continuar">
                 <img src="assets/configuracoes/mural/ui/etiqueta-verde.webp" alt="" class="action-bg">
                 <span>Continuar</span>
+              </button>
+              <button id="settings-replay-intro" class="mural-action-btn action-historia" type="button" data-open="replay-intro" aria-label="Rever a história">
+                <img src="assets/configuracoes/mural/ui/tira-listrada.webp" alt="" class="action-bg">
+                <span>Rever a história</span>
               </button>
               <button id="settings-reset" class="mural-action-btn action-listrada" aria-label="Restaurar padrões">
                 <img src="assets/configuracoes/mural/ui/tira-listrada.webp" alt="" class="action-bg">
@@ -448,10 +453,16 @@
                     <img src="assets/hud/chave-amarela.png" alt="">
                   </div>
 
-                  <button class="mural-btn-tutorial asset-button green howto-tutorial" data-open="tutorial">
-                    <img src="assets/configuracoes/mural/ui/etiqueta-verde.webp" alt="" class="tutorial-btn-bg">
-                    <span>Abrir o tutorial</span>
-                  </button>
+                  <div class="howto-buttons-row">
+                    <button class="mural-btn-tutorial asset-button green howto-tutorial" data-open="tutorial">
+                      <img src="assets/configuracoes/mural/ui/etiqueta-verde.webp" alt="" class="tutorial-btn-bg">
+                      <span>Abrir o tutorial</span>
+                    </button>
+                    <button id="howto-replay-intro" class="mural-btn-tutorial asset-button parchment howto-replay-intro" type="button" data-open="replay-intro">
+                      <img src="assets/configuracoes/mural/ui/tira-listrada.webp" alt="" class="tutorial-btn-bg">
+                      <span>Rever a história</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -600,6 +611,7 @@
   <script src="js/maze-triggers.js"></script>
   <script src="js/memory-maze-game.js"></script>
   <script src="js/island-game.js"></script>
+  <script src="js/intro-story.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

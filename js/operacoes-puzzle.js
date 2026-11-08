@@ -22,6 +22,7 @@ window.OperacoesPuzzle = (() => {
       for(const i of [0,3,5,6]){const p=zones.carrinho.cells[i];zones.carrinho.cells.push({x:p.x,y:p.y-25});}
       await Promise.all(names.map(name=>new Promise(resolve=>{const img=new Image();img.onload=()=>{art[name]=img;resolve();};img.onerror=()=>{console.warn(`[Operações] Ausente: ${name}.png; usando placeholder.`);resolve();};img.src=`assets/puzzles/operacoes/${name}.png`;})));
       await new Promise(resolve=>{const img=new Image();img.onload=()=>{art.chave=img;resolve();};img.onerror=()=>{console.warn('[Operações] Chave ausente; usando placeholder.');resolve();};img.src='assets/hud/chave_operacoes.png';});
+      await Promise.all([['ajudaNormal','assets/tutorial/botao-ajuda-normal.webp'],['ajudaPressionado','assets/tutorial/botao-ajuda-pressionado.webp']].map(([k,src])=>new Promise(resolve=>{const img=new Image();img.onload=()=>{art[k]=img;resolve();};img.onerror=()=>resolve();img.src=src;})));
       const sails=art.velas_frames;
       if(sails){strip=sails.naturalWidth===3584&&sails.naturalHeight===224;const grid=sails.naturalWidth===896&&sails.naturalHeight===896;
         console.info(`[Operações] Velas: ${sails.naturalWidth}×${sails.naturalHeight}, ${strip?'tira horizontal':grid?'grade 4×4':'formato inválido; placeholder'}.`);if(!strip&&!grid)art.velas_frames=null;}
@@ -42,10 +43,11 @@ window.OperacoesPuzzle = (() => {
     const host=document.createElement('div'),frame=document.createElement('div'),canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
     host.style.cssText='position:fixed;inset:0;z-index:1000;background:#171c20;display:flex;justify-content:center;';frame.style.cssText='position:relative;height:100%;';
     canvas.style.cssText='display:block;width:100%;height:100%;touch-action:none;';canvas.tabIndex=0;host.setAttribute('role','dialog');host.setAttribute('aria-modal','true');host.setAttribute('aria-label','O Moinho Encantado');
-    const exit=document.createElement('button'),restart=document.createElement('button'),takeKey=document.createElement('button'),controls=[exit,restart,takeKey];
-    const rects=[{x:950,y:16,w:54,h:48},{x:884,y:16,w:54,h:48},{x:482,y:209,w:76,h:92}];
-    const labels=['Sair do moinho','Reiniciar fase','Pegar a Chave de Operações'];
-    for(let i=0;i<3;i++){const b=controls[i];b.type='button';b.textContent=labels[i];b.setAttribute('aria-label',labels[i]);b.title=labels[i];b.style.cssText='position:absolute;background:transparent;color:transparent;font-size:0;padding:0;overflow:hidden;border:0;border-radius:10px;cursor:pointer;';frame.appendChild(b);}
+    const exit=document.createElement('button'),restart=document.createElement('button'),takeKey=document.createElement('button'),help=document.createElement('button'),controls=[exit,restart,takeKey,help];
+    let helpPressed=false;
+    const rects=[{x:950,y:16,w:54,h:48},{x:884,y:16,w:54,h:48},{x:482,y:209,w:76,h:92},{x:818,y:16,w:54,h:48}];
+    const labels=['Sair do moinho','Reiniciar fase','Pegar a Chave de Operações','Ajuda: como jogar'];
+    for(let i=0;i<controls.length;i++){const b=controls[i];b.type='button';b.textContent=labels[i];b.setAttribute('aria-label',labels[i]);b.title=labels[i];b.style.cssText='position:absolute;background:transparent;color:transparent;font-size:0;padding:0;overflow:hidden;border:0;border-radius:10px;cursor:pointer;';frame.appendChild(b);}
     const status=document.createElement('p');status.setAttribute('aria-live','polite');status.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);';frame.appendChild(status);
     frame.prepend(canvas);host.appendChild(frame);document.body.appendChild(host);
     const font=getComputedStyle(document.body).fontFamily||'sans-serif',calm=window.matchMedia('(prefers-reduced-motion: reduce)').matches||Boolean(window.GameSettings?.calm);
@@ -57,11 +59,11 @@ window.OperacoesPuzzle = (() => {
     let item='saco_trigo',dragZone='',dragCell=0,downX=0,downY=0,clock=0,condition=false,result='ok',goal=0,settled=0;
     const ease=t=>1-(1-t)**3;
     function say(text){status.textContent=text;}
-    function change(next){state=next;elapsed=0;restart.disabled=next!=='JOGANDO';takeKey.hidden=next!=='CHAVE';exit.disabled=claimed;}
+    function change(next){state=next;elapsed=0;restart.disabled=next!=='JOGANDO';help.disabled=next!=='JOGANDO';takeKey.hidden=next!=='CHAVE';exit.disabled=claimed;}
     function resize() {
       const w=Math.min(window.innerWidth,window.innerHeight*1024/572),dpr=Math.min(2,window.devicePixelRatio||1);frame.style.width=`${w}px`;
       canvas.width=Math.round(w*dpr);canvas.height=Math.round(window.innerHeight*dpr);s=canvas.width/1024;offset=(canvas.height-572*s)/2;
-      for(let i=0;i<3;i++){const b=controls[i],r=rects[i];b.style.left=`${r.x*w/1024}px`;b.style.top=`${(offset/s+r.y)*w/1024}px`;b.style.width=`${r.w*w/1024}px`;b.style.height=`${r.h*w/1024}px`;}
+      for(let i=0;i<controls.length;i++){const b=controls[i],r=rects[i];b.style.left=`${r.x*w/1024}px`;b.style.top=`${(offset/s+r.y)*w/1024}px`;b.style.width=`${r.w*w/1024}px`;b.style.height=`${r.h*w/1024}px`;}
     }
     function animate(b,x,y,h,duration=.18){b.fx=b.x;b.fy=b.y;b.fh=b.h;b.tx=x;b.ty=y;b.th=h;b.t=0;b.duration=calm?0:duration;}
     function counts(id){let n=0;for(let i=0;i<occupied[id].length;i++)if(occupied[id][i]>=0)n++;return n;}
@@ -113,6 +115,7 @@ window.OperacoesPuzzle = (() => {
     }
     function releaseCapture(){const id=pointerId;pointerId=-1;if(id>=0&&canvas.hasPointerCapture(id))canvas.releasePointerCapture(id);}
     function down(event) {
+      if(window.TutorialCard?.isAberto?.())return;
       if(state==='CHAVE'){project(event);if(OperacoesLayout.inside(rects[2],pointer.x,pointer.y,0))collect();return;}
       if(state!=='JOGANDO'||drag>=0||event.button>0)return;project(event);canvas.focus();event.preventDefault();
       for(let j=bagCount-1;j>=0;j--){const i=order[j],b=bags[i],w=b.h*(art[item]?.naturalWidth||130)/(art[item]?.naturalHeight||151);
@@ -147,6 +150,7 @@ window.OperacoesPuzzle = (() => {
     }
     function collect(){if(state!=='CHAVE')return;claimed=true;change('COLETAR');say('Chave de Operações obtida!');}
     function key(event) {
+      if(window.TutorialCard?.isAberto?.())return;
       if(event.ctrlKey||event.altKey||event.metaKey)return;const k=event.key.toLowerCase();event.stopImmediatePropagation();
       if(k==='tab'){
         event.preventDefault();let i=controls.indexOf(document.activeElement),step=event.shiftKey?-1:1;
@@ -157,11 +161,12 @@ window.OperacoesPuzzle = (() => {
       event.preventDefault();if(event.repeat)return;if(k==='escape'){if(!claimed)close(false);}else if(k==='f3'){options.toggleDebug();if(options.debug())selfTest();}else if((k==='enter'||k==='e')&&state==='CHAVE')collect();else if(k==='n'&&options.debug()&&state==='JOGANDO')solve();
     }
     function close(won=false) {
-      if(closed)return;closed=true;cancelAnimationFrame(raf);drag=-1;releaseCapture();
+      if(closed)return;closed=true;window.TutorialCard?.fechar?.();cancelAnimationFrame(raf);drag=-1;releaseCapture();
       canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',cancel);canvas.removeEventListener('lostpointercapture',cancel);
       document.removeEventListener('keydown',key,true);window.removeEventListener('resize',resize);host.remove();current=null;options.onExit(won);
     }
     function update(dt) {
+      if(window.TutorialCard?.isAberto?.())return;
       elapsed+=dt;clock+=dt;messageTime=Math.max(0,messageTime-dt);shake=Math.max(0,shake-dt);
       if(state==='JOGANDO'&&f.tipo!=='divisao'){settled=condition&&drag<0?settled+dt:0;if(settled+1e-9>=ASSENTA_S)success();}
       const target=completed===0?0:completed===1?6:completed===2?10:16;speed+=(target-speed)*(1-Math.exp(-dt*5));angle+=speed*dt;
@@ -245,13 +250,23 @@ window.OperacoesPuzzle = (() => {
         text(`${rule}; sem arrastar | ${settled.toFixed(2)}/${ASSENTA_S}s | estado: ${result}`,587,119,14,'#fff');
       }
       if(state==='ESCURECER'||state==='TITULO'||state==='SAIR'){ctx.globalAlpha=state==='TITULO'?1:Math.min(1,elapsed/.4);ctx.fillStyle='#171c20';ctx.fillRect(0,0,1024,572);ctx.globalAlpha=1;if(state==='TITULO')text(`Fase ${phase+2} de 3`,512,286,36,'#fff4d3');}
-      button(0,'×');button(1,'↻');ctx.restore();
+      button(0,'×');button(1,'↻');
+      const hr=rects[3],helpImg=helpPressed?art.ajudaPressionado:art.ajudaNormal;
+      ctx.save();if(help.disabled)ctx.globalAlpha=0.45;
+      if(helpImg)ctx.drawImage(helpImg,hr.x+3,hr.y,48,48);else button(3,'?');
+      if(document.activeElement===help){ctx.strokeStyle='#fff0a0';ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(hr.x,hr.y,hr.w,hr.h,10);ctx.stroke();}
+      ctx.restore();ctx.restore();
     }
     function tag(label,x,y){ctx.fillStyle='#34271de8';ctx.fillRect(x-76,y-20,152,35);text(label,x,y+4,17,'#fff4d3');}
     function loop(time){if(closed)return;const dt=last?Math.min(.05,(time-last)/1000):0;last=time;update(dt);if(closed)return;draw();raf=requestAnimationFrame(loop);}
     exit.onclick=()=>close(false);restart.onclick=reset;takeKey.onclick=collect;
+    help.onpointerdown=()=>{if(!help.disabled)helpPressed=true;};help.onpointerup=()=>{helpPressed=false;};help.onpointerleave=()=>{helpPressed=false;};
+    help.onclick=()=>{if(help.disabled||state!=='JOGANDO')return;if(drag>=0){seat(drag,dragZone,dragCell);drag=-1;releaseCapture();}window.TutorialCard?.abrir?.('operacoes',{onFechar:()=>canvas.focus()});};
     canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',cancel);canvas.addEventListener('lostpointercapture',cancel);
-    document.addEventListener('keydown',key,true);window.addEventListener('resize',resize);current=close;setup();resize();canvas.focus();if(options.debug())selfTest();raf=requestAnimationFrame(loop);
+    document.addEventListener('keydown',key,true);window.addEventListener('resize',resize);current=close;setup();resize();
+    const tutorialAbriu=window.TutorialCard?.verificarEabrir?.('operacoes',{onFechar:()=>canvas.focus()});
+    if(!tutorialAbriu)canvas.focus();
+    if(options.debug())selfTest();raf=requestAnimationFrame(loop);
   }
   return {prepare,open,registerType:(name,strategy)=>{types[name]=strategy;}};
 })();
