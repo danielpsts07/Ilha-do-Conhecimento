@@ -2,6 +2,8 @@
 window.FinalLogic = (() => {
   'use strict';
   function layout(d) {
+    // Frações locais preservam novaPos = baseNova + k * (posAntiga - baseAntiga),
+    // com k = larguraNova / larguraAntiga; gato, argolas e jaula compartilham a base.
     const j=d.jaula,k=j.largura/j.sprite[0],h=j.sprite[1]*k;
     const cage={x:j.base[0]-j.largura/2,y:j.base[1]-h,w:j.largura,h};
     return {

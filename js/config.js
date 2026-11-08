@@ -8,6 +8,15 @@ const INTRO_MUSIC_FILE_PRESENT = false; // MP3 ainda não fornecido; ative ao ad
 const INTRO_SLIDE_SFX = false; // Ative para tocar o plim das trocas e o acorde do último slide.
 const INTRO_SKIP_LABEL = 'Pular ▶'; // Único botão da história.
 
+// Encerramento: leitura automática, transições e zoom em milissegundos.
+const FINAL_MIN_MS = 3200, FINAL_MAX_MS = 5000, FINAL_MS_PER_CHAR = 60;
+const FINAL_FADE_MS = 400, FINAL_AFTER_LOCKS_MS = 900; // Espera após abrir o quarto cadeado.
+const FINAL_ZOOM = 0.04; // Fração de ampliação por slide; zero desliga.
+const FINAL_BUTTON_DELAY_MS = 1500; // Espera antes de permitir jogar novamente.
+const FINAL_SLIDE_SFX = false; // Sem efeitos sonoros nas trocas.
+// Centros do título, subtítulo e botão na parte superior da tela final.
+const FINAL_TITLE_Y = 0.10, FINAL_SUBTITLE_Y = 0.19, FINAL_BUTTON_Y = 0.28;
+
 // Escala do JPEG no mundo; câmera amplia o mundo inteiro sem mudar a física.
 const WORLD_SCALE = 0.6;
 const CAMERA_ZOOM = 1.90;
@@ -265,7 +274,7 @@ const LABIRINTO_MASKS_LOCAL = [
 ];
 
 // Finale: espelho de data/final.json para duplo clique (file://).
-const FINAL_LOCAL = {"tela":[1024,572],"jaula":{"base":[512,322],"largura":190,"sprite":[439,559],"aberta":[475,559],"deslocamentoAberta":-36},"gato":{"escala":0.2,"dentro":[0.5,0.86],"livre":[600,400]},"cadeados":[{"id":"logica","regiao":"Raciocínio Lógico","cor":"verde","tinta":"#4ade80","fracao":[0.37,0.645]},{"id":"algebra","regiao":"Álgebra Inicial","cor":"azul","tinta":"#60a5fa","fracao":[0.63,0.665]},{"id":"geometria","regiao":"Geometria","cor":"roxo","tinta":"#a855f7","fracao":[0.36,0.8]},{"id":"operacoes","regiao":"Operações","cor":"laranja","tinta":"#fb923c","fracao":[0.63,0.8]}],"cadeadoAltura":30,"menina":{"altura":78,"entrada":[512,548],"parada":[370,395]},"barra":{"x":20,"y":508,"altura":36,"espaco":8},"portal":{"centro":[835,285],"largura":190,"redemoinho":0.54,"grausSegundo":50,"crescer":0.8,"velocidade":160,"distanciaGato":40,"encolher":0.6,"branco":0.5},"caminhoFinal":[600,380],"final":{"alturaGato":200,"estrelas":40,"confetes":40}};
+const FINAL_LOCAL = {"tela":[1024,572],"jaula":{"base":[512,445],"largura":140,"sprite":[439,559],"aberta":[475,559],"deslocamentoAberta":-36},"gato":{"escala":0.14736842105263157,"dentro":[0.5,0.86],"livre":[600,400]},"cadeados":[{"id":"logica","regiao":"Raciocínio Lógico","cor":"verde","tinta":"#4ade80","fracao":[0.37,0.645]},{"id":"algebra","regiao":"Álgebra Inicial","cor":"azul","tinta":"#60a5fa","fracao":[0.63,0.665]},{"id":"geometria","regiao":"Geometria","cor":"roxo","tinta":"#a855f7","fracao":[0.36,0.8]},{"id":"operacoes","regiao":"Operações","cor":"laranja","tinta":"#fb923c","fracao":[0.63,0.8]}],"cadeadoAltura":22.105263157894736,"menina":{"altura":78,"entrada":[512,548],"parada":[370,395]},"barra":{"x":20,"y":508,"altura":36,"espaco":8},"portal":{"centro":[835,285],"largura":190,"redemoinho":0.54,"grausSegundo":50,"crescer":0.8,"velocidade":160,"distanciaGato":40,"encolher":0.6,"branco":0.5},"caminhoFinal":[600,380],"final":{"alturaGato":200,"estrelas":40,"confetes":40},"slides":[{"img":"assets/final/historia_1_chaves.webp","text":"As quatro chaves abriram todos os cadeados!"},{"img":"assets/final/historia_2_abraco.webp","text":"Você salvou o gato!"},{"img":"assets/final/historia_3_portal.png","text":"Um portal mágico apareceu para levar vocês para casa."},{"img":"assets/final/historia_4_entrada.png","text":"Hora de voltar para casa!"}],"encerramento":{"img":"assets/final/fim_quarto.png","title":"Parabéns!","subtitle":"Você salvou o gato e aprendeu muito!","button":"Jogar de novo"}};
 let finalLoading;
 window.loadFinal = () => finalLoading ||= (async()=>{
   let data=FINAL_LOCAL;
