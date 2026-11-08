@@ -359,114 +359,72 @@ window.GameAudio = (() => {
    Mantém GameAudio intacto e preserva o construtor nativo window.Audio. */
 window.IntroAudio = (() => {
   'use strict';
-  const melody = [60, 64, 67, 69, 67, 64, 62, 60, 64, 67, 74, 69, 67, 62, 64, 60];
-  let ctx, music, effects, envelope, synth, media, source, pad, notes = new Set();
-  let playing = false, stopping = false, next = 0, position = 0, lastSound = -1, lastMusic = -1;
-  function resume() {
-    if (ctx?.state === 'suspended' && !document.hidden) ctx.resume().catch(() => {});
-    if (media?.paused && playing && !stopping && !document.hidden) media.play().catch(() => {});
+  // audio.js carrega antes de config.js: só lemos as constantes ao iniciar o áudio.
+  let SONGS;
+  function configure(){SONGS ||= {intro:{src:INTRO_MUSIC_SRC,volume:MUSIC_INTRO_VOL,step:MUSIC_INTRO_STEP_S,pattern:[69,0,72,0,70,0,0,75,69,0,76,0,72,70,0,0]},
+    final:{src:FINAL_MUSIC_SRC,volume:MUSIC_FINAL_VOL,step:30/MUSIC_FINAL_BPM,chords:[[60,64,67,72],[57,60,64,69],[53,57,60,65],[53,56,60,65],[60,64,67,72],[55,59,62,67],[53,57,60,65],[60,64,67,72]],melody:[76,72,72,68,72,74,72,67]}};}
+  const ARPEGGIO=[0,1,2,3,2,1,2,1],tracks=new Set();
+  let ctx,music,effects,fx,current,lastSound=-1,lastMusic=-1;
+  // MIDI para hertz: cada semitom multiplica a frequência por 2^(1/12).
+  const hz=n=>440*2**((n-69)/12);
+  function resume(){if(ctx?.state==='suspended'&&!document.hidden)ctx.resume().catch(()=>{});
+    for(const t of tracks)if(t.media?.paused&&!t.stopping&&!document.hidden)t.media.play().then(()=>{if(!t.dead&&!t.stopping)t.synth.gain.value=0;}).catch(()=>{});}
+  function visibility(){if(document.hidden){ctx?.suspend().catch(()=>{});for(const t of tracks)t.media?.pause();}else resume();}
+  function syncVolumes(){if(!ctx)return;const get=window.GameSettings?.get,muted=Boolean(get?.('mute'));
+    const sound=muted?0:Math.max(0,Math.min(100,get?.('sound')??70))/100,volume=muted?0:Math.max(0,Math.min(100,get?.('music')??35))/100;
+    if(sound!==lastSound){effects.gain.setValueAtTime(sound,ctx.currentTime);lastSound=sound;}if(volume!==lastMusic){music.gain.setValueAtTime(volume,ctx.currentTime);lastMusic=volume;}}
+  function init(){configure();if(ctx){resume();return;}const Context=window.AudioContext||window.webkitAudioContext;if(!Context)return;
+    try{ctx=new Context();music=ctx.createGain();effects=ctx.createGain();music.connect(ctx.destination);effects.connect(ctx.destination);fx={synth:effects,notes:new Set()};
+      document.addEventListener('visibilitychange',visibility);for(const key of ['pointerdown','keydown','touchstart'])document.addEventListener(key,resume,true);syncVolumes();resume();}catch{dispose();}}
+  function tone(t,n,time,duration,gain,type='triangle',bus=t.synth,attack=.01,hold=false){const osc=ctx.createOscillator(),level=ctx.createGain(),entry={osc,level};
+    osc.type=type;osc.frequency.value=hz(n);level.gain.setValueAtTime(0,time);level.gain.linearRampToValueAtTime(gain,time+attack);
+    if(hold){level.gain.setValueAtTime(gain,time+duration-.03);level.gain.linearRampToValueAtTime(0,time+duration);}else level.gain.exponentialRampToValueAtTime(.0001,time+duration);
+    osc.connect(level);level.connect(bus);t.notes.add(entry);osc.onended=()=>{osc.disconnect();level.disconnect();t.notes.delete(entry);};osc.start(time);osc.stop(time+duration);return entry;
   }
-  function visibility() {
-    if (document.hidden) { ctx?.suspend().catch(() => {}); media?.pause(); }
-    else { if (ctx) next = Math.max(next, ctx.currentTime); resume(); }
+  function clearNotes(t){for(const e of [...t.notes]){e.osc.onended=null;try{e.osc.stop();}catch{}e.osc.disconnect();e.level.disconnect();}t.notes.clear();}
+  function release(t){if(t.dead)return;t.dead=true;if(t.stopper){t.stopper.onended=null;try{t.stopper.stop();}catch{}t.stopper.disconnect();}
+    if(t.media){t.media.oncanplay=t.media.onerror=null;t.media.pause();t.media.removeAttribute('src');t.media.load();}clearNotes(t);for(const node of t.nodes)node.disconnect();tracks.delete(t);if(current===t)current=null;}
+  function fadeStop(t,ms){if(!t||t.dead||t.stopping)return;t.stopping=true;const now=ctx.currentTime,g=t.envelope.gain;
+    if(g.cancelAndHoldAtTime)g.cancelAndHoldAtTime(now);else{g.cancelScheduledValues(now);g.setValueAtTime(g.value,now);}g.linearRampToValueAtTime(0,now+ms/1000);
+    // Um oscilador silencioso e desconectado fornece o evento de limpeza sem timers.
+    const stopper=t.stopper=ctx.createOscillator();stopper.onended=()=>release(t);stopper.start(now);stopper.stop(now+ms/1000);if(ms===0)release(t);
   }
-  function syncVolumes() {
-    if (!ctx) return;
-    const get = window.GameSettings?.get, muted = Boolean(get?.('mute'));
-    const sound = muted ? 0 : Math.max(0, Math.min(100, get?.('sound') ?? 70)) / 100;
-    const volume = muted ? 0 : Math.max(0, Math.min(100, get?.('music') ?? get?.('sound') ?? 70)) / 100;
-    if (sound !== lastSound) { effects.gain.setValueAtTime(sound, ctx.currentTime); lastSound = sound; }
-    if (volume !== lastMusic) { music.gain.setValueAtTime(volume, ctx.currentTime); lastMusic = volume; }
+  function tryFile(t){try{const player=t.media=new window.Audio();player.loop=true;player.preload='auto';const source=ctx.createMediaElementSource(player);source.connect(t.envelope);t.nodes.push(source);
+      player.oncanplay=()=>{if(t.dead||t.stopping)return;player.play().then(()=>{if(!t.dead&&!t.stopping)t.synth.gain.value=0;}).catch(()=>{});};
+      player.onerror=()=>{if(!t.dead){player.pause();t.synth.gain.value=1;}};player.src=SONGS[t.id].src;player.load();}catch{t.synth.gain.value=1;}}
+  function playMusic(id){init();if(!ctx)return;
+    // Compatibilidade: a intro atual passa null ou o caminho do MP3; ambos significam 'intro'.
+    id=id==='final'||id===FINAL_MUSIC_SRC?'final':'intro';if(current?.id===id&&!current.stopping)return;
+    for(const t of [...tracks])if(t!==current)release(t);fadeStop(current,600);
+    const now=ctx.currentTime,t={id,envelope:ctx.createGain(),synth:ctx.createGain(),notes:new Set(),nodes:[],next:now,step:0,pulse:now,pad:now,stopping:false,dead:false};
+    t.nodes.push(t.envelope,t.synth);t.synth.connect(t.envelope);t.envelope.connect(music);t.envelope.gain.setValueAtTime(0,now);t.envelope.gain.linearRampToValueAtTime(SONGS[id].volume,now+.8);
+    if(id==='final'){const delay=ctx.createDelay(),feedback=ctx.createGain(),wet=ctx.createGain();delay.delayTime.value=.375;feedback.gain.value=.3;wet.gain.value=.25;
+      t.synth.connect(delay);delay.connect(feedback);feedback.connect(delay);delay.connect(wet);wet.connect(t.envelope);t.nodes.push(delay,feedback,wet);}
+    current=t;tracks.add(t);tryFile(t);
   }
-  function init() {
-    if (ctx) { resume(); return; }
-    const Context = window.AudioContext || window.webkitAudioContext;
-    if (!Context) return;
-    try {
-      ctx = new Context(); music = ctx.createGain(); effects = ctx.createGain();
-      envelope = ctx.createGain(); synth = ctx.createGain(); envelope.gain.value = 0;
-      synth.connect(envelope); envelope.connect(music); music.connect(ctx.destination); effects.connect(ctx.destination);
-      document.addEventListener('visibilitychange', visibility);
-      document.addEventListener('pointerdown', resume, true); document.addEventListener('keydown', resume, true);
-      document.addEventListener('touchstart', resume, true); syncVolumes(); resume();
-    } catch { dispose(); }
+  function stopMusic(ms=600){for(const t of tracks)fadeStop(t,Math.max(0,ms));}
+  function piano(t,n,time,duration,gain){tone(t,n,time,duration,gain);tone(t,n+12,time,duration,gain*.35,'sine');}
+  function scheduleIntro(t,end){const song=SONGS.intro;
+    while(t.pad<end){for(const n of [45,51]){const p=tone(t,n,t.pad,song.step*16,.03,'sine',t.synth,.02,true);
+        const lfo=tone(t,69,t.pad,song.step*16,.03*.4,'sine',p.level.gain,.02,true);lfo.osc.frequency.value=.15;}t.pad+=song.step*16;}
+    while(t.pulse<end){const pulse=tone(t,69,t.pulse,.15,.08,'sine');pulse.osc.frequency.setValueAtTime(60,t.pulse);pulse.osc.frequency.exponentialRampToValueAtTime(40,t.pulse+.15);t.pulse+=1.1;}
+    while(t.next<end){const n=song.pattern[t.step++%16];if(n){tone(t,n,t.next,1.2,.14,'sine',t.synth,.015).osc.detune.value=-8;tone(t,n,t.next,1.2,.14,'triangle',t.synth,.015).osc.detune.value=8;}t.next+=song.step;}
   }
-  function note(midi, time, duration, gain, bus, type = 'triangle') {
-    const oscillator = ctx.createOscillator(), level = ctx.createGain();
-    oscillator.type = type;
-    // MIDI para hertz: Lá4 (nota 69) vale 440 Hz; cada semitom multiplica por 2^(1/12).
-    oscillator.frequency.value = 440 * 2 ** ((midi - 69) / 12);
-    level.gain.setValueAtTime(0, time); level.gain.linearRampToValueAtTime(gain, time + .02);
-    level.gain.exponentialRampToValueAtTime(.0001, time + duration);
-    oscillator.connect(level); level.connect(bus); notes.add(oscillator);
-    oscillator.onended = () => { oscillator.disconnect(); level.disconnect(); notes.delete(oscillator); };
-    oscillator.start(time); oscillator.stop(time + duration);
-    return oscillator;
+  function scheduleFinal(t,end){const song=SONGS.final;
+    while(t.next<end){const beat=t.step%8,bar=Math.floor(t.step/8)%8,chord=song.chords[bar];piano(t,chord[ARPEGGIO[beat]],t.next,.9,beat===0?.20:.14);
+      if(beat===0){piano(t,song.melody[bar],t.next,song.step*8*.95,.12);tone(t,chord[0]-12,t.next,1.8,.10,'sine');}t.step++;t.next+=song.step;}
   }
-  function fallback() {
-    if (!ctx || stopping) return;
-    synth.gain.value = 1; next = ctx.currentTime; position = 0;
-    if (!pad) {
-      const oscillator = pad = ctx.createOscillator(), level = ctx.createGain(); pad.type = 'sine';
-      pad.frequency.value = 440 * 2 ** ((48 - 69) / 12); level.gain.value = .04;
-      pad.connect(level); level.connect(synth);
-      pad.onended = () => { oscillator.disconnect(); level.disconnect(); }; pad.start();
-    }
+  function update(dt){if(!ctx)return;syncVolumes();if(document.hidden||ctx.state!=='running')return;const now=ctx.currentTime;
+    // Lookahead de 200 ms; o relógio Web Audio é amostrado a cada frame, sem setTimeout/setInterval.
+    for(const t of tracks){if(t.stopping||t.dead||t.synth.gain.value===0)continue;t.next=Math.max(t.next,now);t.pad=Math.max(t.pad,now);t.pulse=Math.max(t.pulse,now);
+      if(t.id==='intro')scheduleIntro(t,now+.2);else scheduleFinal(t,now+.2);}
   }
-  function playMusic(id) {
-    if (!ctx || playing) return;
-    playing = true; stopping = false; fallback();
-    const now = ctx.currentTime;
-    envelope.gain.cancelScheduledValues(now); envelope.gain.setValueAtTime(0, now);
-    envelope.gain.linearRampToValueAtTime(.15, now + .8);
-    if (!id) return;
-    // O arquivo é opcional; até carregar, a melodia sintetizada já acompanha a história.
-    try {
-      const player = media = new window.Audio(); media.loop = true; media.preload = 'auto';
-      source = ctx.createMediaElementSource(media); source.connect(envelope);
-      media.oncanplay = () => {
-        if (!playing || stopping || media !== player) return;
-        player.play().then(() => { if (media === player && synth && !stopping) synth.gain.value = 0; }).catch(() => {});
-      };
-      media.onerror = () => { if (media === player && playing && !stopping) { player.pause(); if (synth.gain.value === 0) fallback(); } };
-      media.src = id; media.load();
-    } catch { fallback(); }
+  function sfx(id){if(!ctx||document.hidden||current?.stopping)return;syncVolumes();const now=ctx.currentTime;
+    if(id==='final'){for(const n of [60,64,67])tone(fx,n,now,.4,.08);}else{tone(fx,72,now,.15,.25);tone(fx,79,now+.1,.15,.25);}}
+  function dispose(){document.removeEventListener('visibilitychange',visibility);for(const key of ['pointerdown','keydown','touchstart'])document.removeEventListener(key,resume,true);
+    for(const t of [...tracks])release(t);if(fx)clearNotes(fx);music?.disconnect();effects?.disconnect();if(ctx&&ctx.state!=='closed')ctx.close().catch(()=>{});
+    ctx=music=effects=fx=current=null;lastSound=lastMusic=-1;
   }
-  function stopMusic(fadeMs = 600) {
-    if (!ctx || stopping) return;
-    stopping = true; const now = ctx.currentTime;
-    const gain = envelope.gain;
-    if (gain.cancelAndHoldAtTime) gain.cancelAndHoldAtTime(now);
-    else { gain.cancelScheduledValues(now); gain.setValueAtTime(gain.value, now); }
-    gain.linearRampToValueAtTime(0, now + fadeMs / 1000);
-  }
-  function sfx(id) {
-    if (!ctx || document.hidden || stopping) return;
-    syncVolumes(); const now = ctx.currentTime;
-    if (id === 'final') {
-      note(60, now, .4, .08, effects); note(64, now, .4, .08, effects); note(67, now, .4, .08, effects);
-    } else { note(72, now, .15, .25, effects); note(79, now + .10, .15, .25, effects); }
-  }
-  function update(dt) {
-    if (!ctx) return;
-    syncVolumes(); if (!playing || stopping || document.hidden || ctx.state !== 'running' || synth.gain.value === 0) return;
-    // Janela de 200 ms baseada no relógio de áudio; o game loop fornece as oportunidades de agendamento.
-    if (next < ctx.currentTime) next = ctx.currentTime;
-    while (next < ctx.currentTime + .2) {
-      note(melody[position], next, .4, .35, synth); position = (position + 1) % melody.length; next += .45;
-    }
-  }
-  function dispose() {
-    document.removeEventListener('visibilitychange', visibility);
-    document.removeEventListener('pointerdown', resume, true); document.removeEventListener('keydown', resume, true);
-    document.removeEventListener('touchstart', resume, true);
-    if (media) { media.oncanplay = media.onerror = null; media.pause(); media.removeAttribute('src'); media.load(); }
-    for (const oscillator of notes) { try { oscillator.stop(); } catch {} oscillator.onended?.(); oscillator.onended = null; }
-    notes.clear(); if (pad) { try { pad.stop(); } catch {} pad.onended?.(); pad.onended = null; pad = null; }
-    source?.disconnect(); synth?.disconnect(); envelope?.disconnect(); music?.disconnect(); effects?.disconnect();
-    if (ctx && ctx.state !== 'closed') ctx.close().catch(() => {});
-    ctx = music = effects = envelope = synth = media = source = null;
-    playing = stopping = false; lastSound = lastMusic = -1;
-  }
-  return {init, playMusic, stopMusic, sfx, update, dispose};
+  return {init,playMusic,stopMusic,sfx,update,dispose};
 })();
+window.IlhaAudio = window.IntroAudio; // API pública de depuração; preserva window.Audio nativo.

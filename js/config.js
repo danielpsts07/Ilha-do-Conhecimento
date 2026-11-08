@@ -4,7 +4,10 @@ const INTRO_FADE_MS = 400; // Duração da mistura entre imagens e do escurecime
 const INTRO_FIT = 'contain-blur'; // cover preenche e corta; contain-blur preserva a imagem sobre fundo desfocado.
 const INTRO_TEXT_SAFE_MARGIN = 0.06; // Margem do texto como fração da tela.
 const INTRO_MUSIC_SRC = 'assets/audio/intro.mp3'; // Trilha opcional; na ausência usa síntese suave.
-const INTRO_MUSIC_FILE_PRESENT = false; // MP3 ainda não fornecido; ative ao adicioná-lo para evitar erro de arquivo ausente.
+const FINAL_MUSIC_SRC = 'assets/audio/final.mp3'; // Arquivo opcional; falha mantém a síntese agridoce.
+const MUSIC_INTRO_STEP_S = 0.55, MUSIC_INTRO_VOL = 0.15; // Passo e ganho da música misteriosa.
+const MUSIC_FINAL_BPM = 76, MUSIC_FINAL_VOL = 0.16; // Andamento e ganho da música de encerramento.
+const INTRO_MUSIC_FILE_PRESENT = false; // Compatibilidade da intro; o áudio também aceita null e testa o MP3 opcional.
 const INTRO_SLIDE_SFX = false; // Ative para tocar o plim das trocas e o acorde do último slide.
 const INTRO_SKIP_LABEL = 'Pular ▶'; // Único botão da história.
 
@@ -16,6 +19,8 @@ const FINAL_BUTTON_DELAY_MS = 1500; // Espera antes de permitir jogar novamente.
 const FINAL_SLIDE_SFX = false; // Sem efeitos sonoros nas trocas.
 // Centros do título, subtítulo e botão na parte superior da tela final.
 const FINAL_TITLE_Y = 0.10, FINAL_SUBTITLE_Y = 0.19, FINAL_BUTTON_Y = 0.28;
+const TOPO_HERO_X = 385, TOPO_HERO_Y = 482, TOPO_HERO_SCALE = 1.0; // Pés e tamanho da personagem no topo.
+const TOPO_CAGE_SCALE = 1.25; // Amplia o conjunto da jaula mantendo a base assentada.
 
 // Escala do JPEG no mundo; câmera amplia o mundo inteiro sem mudar a física.
 const WORLD_SCALE = 0.6;

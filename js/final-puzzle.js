@@ -10,7 +10,7 @@ window.FinalPuzzle = (() => {
         const iw=im.naturalWidth,ih=im.naturalHeight;
         sizes.push({name,actual:[iw,ih],expected:expected||[iw,ih]});
         if(expected&&iw!==expected[0]&&Math.abs(iw-expected[0])<=1)console.warn(`[Finale] ${name}: largura ${iw}px; proporção original preservada.`);
-        if(!w&&!h){w=iw*data.gato.escala;h=ih*data.gato.escala;}else{if(!w)w=h*iw/ih;if(!h)h=w*ih/iw;}
+        if(!w&&!h){w=iw*data.gato.escala*TOPO_CAGE_SCALE;h=ih*data.gato.escala*TOPO_CAGE_SCALE;}else{if(!w)w=h*iw/ih;if(!h)h=w*ih/iw;}
         const c=document.createElement('canvas');c.width=Math.ceil(w*2);c.height=Math.ceil(h*2);
         const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.drawImage(im,0,0,c.width,c.height);
         art[name]={canvas:c,w,h};
@@ -33,7 +33,7 @@ window.FinalPuzzle = (() => {
     return cache.get(src);
   }
   function prepare(input) {return ready ||= (async()=>{
-    data=input;geometry=FinalLogic.layout(data);const j=data.jaula,g=geometry,k=j.largura/190;
+    data=input;geometry=FinalLogic.layout(data);const j=data.jaula,g=geometry,k=j.largura*TOPO_CAGE_SCALE/190;
     const tasks=[load('bg','assets/final/topo_bg.png',1024,572,[1024,572]),load('fechada','assets/final/jaula_fechada.png',g.cage.w,g.cage.h,j.sprite),load('aberta','assets/final/jaula_aberta.png',g.open.w,g.open.h,j.aberta)];
     for(const mood of ['triste','esperanca','feliz'])tasks.push(load(mood,`assets/final/gatos/gato_${mood}.png`,0,0).then(im=>{
       if(mood!=='feliz')return;const h=data.final.alturaGato,w=h*(im?im.naturalWidth/im.naturalHeight:305/412),c=document.createElement('canvas');c.width=Math.ceil(w*2);c.height=Math.ceil(h*2);
@@ -47,11 +47,11 @@ window.FinalPuzzle = (() => {
     }
     for(const p of data.cadeados) {
       tasks.push(load(p.id,`assets/hud/chave_${p.id}.png`,0,data.barra.altura));
-      for(const state of ['fechado','aberto'])tasks.push(load(`${p.id}_${state}`,`assets/final/cadeados/cadeado_${p.cor}_${state}.png`,0,data.cadeadoAltura,[110,state==='fechado'?177:194]));
+      for(const state of ['fechado','aberto'])tasks.push(load(`${p.id}_${state}`,`assets/final/cadeados/cadeado_${p.cor}_${state}.png`,0,data.cadeadoAltura*TOPO_CAGE_SCALE,[110,state==='fechado'?177:194]));
     }
     tasks.push(load('sheet',`assets/${HERO_SHEET.src}`,480,224,[192,448]).then(im=>{
       art.hero=[];if(!im)return;
-      const k=data.menina.altura/HERO_SHEET.frameH;
+      const k=data.menina.altura*TOPO_HERO_SCALE/HERO_SHEET.frameH;
       for(let row=0;row<4;row++)for(let col=0;col<10;col++) {
         const c=document.createElement('canvas');c.width=Math.ceil(48*k*2);c.height=Math.ceil(56*k*2);
         const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(im,col*48,row*56,48,56,0,0,c.width,c.height);art.hero.push(c);
@@ -64,7 +64,8 @@ window.FinalPuzzle = (() => {
   })().catch(error=>{ready=null;throw error;});}
   function open(options={}) {
     if(current)current();
-    const d=data,g=geometry,L=FinalLogic,state=options.state,sceneScale=d.jaula.largura/190;state.cadeados ||= {};
+    const d=data,g=geometry,L=FinalLogic,state=options.state,sceneScale=d.jaula.largura*TOPO_CAGE_SCALE/190;state.cadeados ||= {};
+    const heroStop=[TOPO_HERO_X,TOPO_HERO_Y];
     const returnFocus=document.activeElement,host=document.createElement('div'),frame=document.createElement('div'),canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
     const mission=document.createElement('p'),status=document.createElement('p'),style=document.createElement('style'),finalCopy=document.createElement('div'),homeCopy=document.createElement('p');
     host.className='finale';host.style.cssText='position:fixed;inset:0;z-index:1000;background:#101527;display:flex;justify-content:center;';frame.style.cssText='position:relative;height:100%;';
@@ -91,7 +92,7 @@ window.FinalPuzzle = (() => {
     const stars=new Float32Array(d.final.estrelas*4),confetti=new Float32Array(d.final.confetes*6),confettiColors=['#ffe194','#ff93bb','#93e1ff','#ba9dff','#a0f4b9'];
     for(let i=0;i<stars.length;i+=4){stars[i]=Math.random()*1024;stars[i+1]=Math.random();stars[i+2]=.6+Math.random()*1.4;stars[i+3]=Math.random()*Math.PI*2;}
     for(let i=0;i<confetti.length;i+=6){confetti[i]=Math.random()*1024;confetti[i+1]=Math.random();confetti[i+2]=22+Math.random()*45;confetti[i+3]=Math.random()*Math.PI*2;confetti[i+4]=i/6%5;confetti[i+5]=4+Math.random()*4;}
-    const heroRoute=[{x:d.menina.parada[0],y:d.menina.parada[1]},{x:d.caminhoFinal[0],y:d.caminhoFinal[1]},{x:d.portal.centro[0],y:d.portal.centro[1]}];
+    const heroRoute=[{x:heroStop[0],y:heroStop[1]},{x:d.caminhoFinal[0],y:d.caminhoFinal[1]},{x:d.portal.centro[0],y:d.portal.centro[1]}];
     const catRoute=[catTarget,heroRoute[1],heroRoute[2]],heroLength=L.routeLength(heroRoute),catLength=L.routeLength(catRoute);
     // Mesmo percurso após o desvio: a diferença entre as distâncias mantém o gato 40 px atrás.
     const catDelay=Math.hypot(heroRoute[1].x-heroRoute[0].x,heroRoute[1].y-heroRoute[0].y)+d.portal.distanciaGato-Math.hypot(catTarget.x-heroRoute[1].x,catTarget.y-heroRoute[1].y);
@@ -107,7 +108,7 @@ window.FinalPuzzle = (() => {
     }
     for(const slide of slides)preload(slide,slide.img);preload(room,ending.img,true);
     function fullScreen(){return phase==='STORY'||phase==='HOME'||phase==='RESTART';}
-    function beginMusic(){if(musicStarted)return;musicStarted=true;window.IntroAudio?.init();window.IntroAudio?.playMusic(INTRO_MUSIC_FILE_PRESENT?INTRO_MUSIC_SRC:null);}
+    function beginMusic(){if(musicStarted)return;musicStarted=true;window.IntroAudio?.init();window.IntroAudio?.playMusic('final');}
     function story(){phase='STORY';elapsed=0;slideIndex=0;mission.hidden=exit.hidden=next.hidden=replay.hidden=finalCopy.hidden=homeCopy.hidden=true;skip.hidden=false;
       beginMusic();resize();say(slides[0].text);skip.focus();syncButtons();}
     function home(){if(phase==='HOME'||phase==='RESTART')return;homeFrom=elapsed*1000;phase='HOME';elapsed=0;state.jogoConcluido=true;particles.fill(0);
@@ -143,7 +144,7 @@ window.FinalPuzzle = (() => {
     for(let i=0;i<4;i++){const a=art[d.cadeados[i].id];slots.push({x:slotX+a.w/2,y:d.barra.y+d.barra.altura/2+10});slotX+=a.w+d.barra.espaco;}
     const bar={x:d.barra.x,y:d.barra.y,w:slotX-d.barra.x+4,h:d.barra.altura+20};
     function point(x,y,label){debugPoints.push({x,y,label:`${label} (${x.toFixed(1)}, ${y.toFixed(1)})`});}
-    point(...d.jaula.base,'Jaula');point(g.cat.x,g.cat.y,'Gato dentro');point(...d.gato.livre,'Gato livre');point(...d.portal.centro,'Portal');point(...d.menina.entrada,'Entrada');point(...d.menina.parada,'Parada');point(bar.x,bar.y,'Barra');
+    point(...d.jaula.base,'Jaula');point(g.cat.x,g.cat.y,'Gato dentro');point(...d.gato.livre,'Gato livre');point(...d.portal.centro,'Portal');point(...d.menina.entrada,'Entrada');point(...heroStop,'Parada');point(bar.x,bar.y,'Barra');
     for(let i=0;i<4;i++)point(g.locks[i].x,g.locks[i].y,d.cadeados[i].cor);
     const allOpen=()=>d.cadeados.every(p=>state.cadeados[p.id]);
     const isDebug=()=>options.debug?options.debug():debug;
@@ -199,7 +200,7 @@ window.FinalPuzzle = (() => {
       if(k==='escape')close();else if(k==='f3'){if(options.toggleDebug)options.toggleDebug();else debug=!debug;}
       else if((k==='g'||k==='j')&&isDebug()){for(const p of d.cadeados){state.keys[p.id]=true;state.cadeados[p.id]=true;}flying=-1;if(k==='g')story();else home();}
       else if(k==='n'&&isDebug()){
-        if(phase==='ENTRAR'){hero.x=d.menina.parada[0];hero.y=d.menina.parada[1];hero.walk=0;hero.dir=2;change('CADEADOS');}
+        if(phase==='ENTRAR'){hero.x=heroStop[0];hero.y=heroStop[1];hero.walk=0;hero.dir=2;change('CADEADOS');}
         else if(phase==='CADEADOS'&&flying<0){const i=d.cadeados.findIndex(p=>!state.cadeados[p.id]);if(i<0){phase='WAIT_LOCKS';elapsed=0;}else unlock(i);}
         else if(phase==='LIBERTAR'){elapsed=2.5;}else if(phase==='PORTAL')change('BRANCO');else if(phase==='BRANCO')change('FINAL');
       }
@@ -217,7 +218,7 @@ window.FinalPuzzle = (() => {
       if(phase==='HOME'&&elapsed*1000>=FINAL_BUTTON_DELAY_MS&&replay.hidden){replay.hidden=false;replay.focus();}
       if(phase==='RESTART'&&elapsed>=.6){close();window.location.reload();return;}
       if(phase==='ENTRAR'){
-        const dx=d.menina.parada[0]-hero.x,dy=d.menina.parada[1]-hero.y,len=Math.hypot(dx,dy),step=Math.min(180*dt,len);
+        const dx=heroStop[0]-hero.x,dy=heroStop[1]-hero.y,len=Math.hypot(dx,dy),step=Math.min(180*dt,len);
         if(len>.01){hero.x+=dx/len*step;hero.y+=dy/len*step;hero.dir=Math.abs(dy)>Math.abs(dx)?3:1;hero.walk=Math.max(1,hero.walk+dt*60);}
         if(len<=step+.01){hero.walk=0;hero.dir=2;change('CADEADOS');}
       }else hero.idle+=dt*60;
@@ -275,7 +276,7 @@ window.FinalPuzzle = (() => {
         if(!state.cadeados[p.id]||fall)sprite(`${p.id}_${fall?'aberto':'fechado'}`,r.x+(calm?0:Math.sin(time*65)*shake[i]*6*sceneScale),r.y+30*sceneScale*drop,1-drop,fall&&!calm?1+Math.sin(drop*Math.PI)*.22:1,true);
       }
       const jump=phase==='LIBERTAR'&&!calm?Math.sin(Math.min(1,Math.max(0,(elapsed-1.05)/.5))*Math.PI)*14:0;
-      const c=HeroAnimation.column(hero,calm),im=art.hero[hero.dir*10+c],k=d.menina.altura/HERO_SHEET.frameH*heroScale;
+      const c=HeroAnimation.column(hero,calm),im=art.hero[hero.dir*10+c],k=d.menina.altura*TOPO_HERO_SCALE/HERO_SHEET.frameH*heroScale;
       if(heroScale>0){if(im)ctx.drawImage(im,hero.x-HERO_SHEET.pivotX*k,hero.y-HERO_SHEET.pivotY*k-jump,48*k,56*k);else{ctx.fillStyle='#ffdd92';ctx.fillRect(hero.x-14*heroScale,hero.y-78*heroScale-jump,28*heroScale,78*heroScale);}}
       panel(bar.x,bar.y,bar.w,bar.h);for(let i=0;i<4;i++)sprite(d.cadeados[i].id,slots[i].x,slots[i].y+d.barra.altura/2,state.cadeados[d.cadeados[i].id]?.35:1);
       if(flying>=0&&flyTime<.5){L.flight(flightPoint,slots[flying],g.locks[flying],flyTime/.5,calm?0:70);sprite(d.cadeados[flying].id,flightPoint.x,flightPoint.y+d.barra.altura/2);}
@@ -288,6 +289,7 @@ window.FinalPuzzle = (() => {
         ctx.strokeRect(g.cage.x,g.cage.y,g.cage.w,g.cage.h);ctx.strokeRect(g.open.x,g.open.y,g.open.w,g.open.h);ctx.strokeRect(bar.x,bar.y,bar.w,bar.h);
         for(const r of targets)ctx.strokeRect(r.x,r.y,r.w,r.h);ctx.fillRect(d.jaula.base[0]-2,d.jaula.base[1]-2,4,4);
         for(const p of debugPoints){ctx.beginPath();ctx.moveTo(p.x-5,p.y);ctx.lineTo(p.x+5,p.y);ctx.moveTo(p.x,p.y-5);ctx.lineTo(p.x,p.y+5);ctx.stroke();ctx.strokeStyle='#12202d';ctx.lineWidth=3;ctx.strokeText(p.label,p.x+7,p.y-5);ctx.fillText(p.label,p.x+7,p.y-5);ctx.strokeStyle='#64ffec';ctx.lineWidth=1;}
+        ctx.fillStyle='#4ade80';ctx.beginPath();ctx.arc(hero.x,hero.y,3,0,Math.PI*2);ctx.fill();
         ctx.fillText(`F3 · N: cadeado · G: história · J: final · ${phase}`,16,85);ctx.textAlign='center';
       }
       if(phase==='ENTRAR'&&elapsed<.4){ctx.fillStyle=`rgba(0,0,0,${1-elapsed/.4})`;ctx.fillRect(0,0,1024,572);}
@@ -295,7 +297,7 @@ window.FinalPuzzle = (() => {
       if(phase==='BRANCO'){const alpha=Math.min(1,elapsed/d.portal.branco);ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#fff';ctx.globalAlpha=alpha;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalAlpha=1;if(alpha===1)whiteDrawn=true;}
     }
     function loop(now){if(closed)return;const dt=!document.hidden&&last?Math.min(.05,(now-last)/1000):0;last=now;update(dt);if(closed)return;draw();raf=requestAnimationFrame(loop);}
-    if(allOpen()){hero.x=d.menina.parada[0];hero.y=d.menina.parada[1];hero.dir=2;phase='WAIT_LOCKS';}else change('ENTRAR');
+    if(allOpen()){hero.x=heroStop[0];hero.y=heroStop[1];hero.dir=2;phase='WAIT_LOCKS';}else change('ENTRAR');
     current=close;resize();canvas.addEventListener('pointerdown',down);document.addEventListener('keydown',key,true);document.addEventListener('keyup',keyup,true);document.addEventListener('visibilitychange',blur);window.addEventListener('resize',resize);window.addEventListener('blur',blur);canvas.focus();raf=requestAnimationFrame(loop);
   }
   return {prepare,open,get active(){return Boolean(current);}};

@@ -4,12 +4,13 @@ window.FinalLogic = (() => {
   function layout(d) {
     // Frações locais preservam novaPos = baseNova + k * (posAntiga - baseAntiga),
     // com k = larguraNova / larguraAntiga; gato, argolas e jaula compartilham a base.
-    const j=d.jaula,k=j.largura/j.sprite[0],h=j.sprite[1]*k;
-    const cage={x:j.base[0]-j.largura/2,y:j.base[1]-h,w:j.largura,h};
+    const j=d.jaula,k=j.largura*TOPO_CAGE_SCALE/j.sprite[0],h=j.sprite[1]*k;
+    // Escala em torno da base fixa: novaPos = base + escala * (posAntiga - base).
+    const cage={x:j.base[0]-j.largura*TOPO_CAGE_SCALE/2,y:j.base[1]-h,w:j.largura*TOPO_CAGE_SCALE,h};
     return {
       cage,open:{x:cage.x+j.deslocamentoAberta*k,y:cage.y,w:j.aberta[0]*k,h},
       cat:{x:cage.x+cage.w*d.gato.dentro[0],y:cage.y+cage.h*d.gato.dentro[1]},
-      locks:d.cadeados.map(p=>({x:cage.x+cage.w*p.fracao[0],y:cage.y+cage.h*p.fracao[1],w:d.cadeadoAltura*110/177,h:d.cadeadoAltura})),
+      locks:d.cadeados.map(p=>({x:cage.x+cage.w*p.fracao[0],y:cage.y+cage.h*p.fracao[1],w:d.cadeadoAltura*TOPO_CAGE_SCALE*110/177,h:d.cadeadoAltura*TOPO_CAGE_SCALE})),
       scale:k
     };
   }
