@@ -1,8 +1,10 @@
 // Intro: tempos em milissegundos; cada caractere acrescenta tempo dentro dos limites.
-const INTRO_MIN_MS = 4000, INTRO_MAX_MS = 9000, INTRO_MS_PER_CHAR = 90;
-const INTRO_FADE_MS = 500; // Duração da mistura entre imagens e do escurecimento final.
+const INTRO_MIN_MS = 2500, INTRO_MAX_MS = 5000, INTRO_MS_PER_CHAR = 60;
+const INTRO_FADE_MS = 400; // Duração da mistura entre imagens e do escurecimento final.
 const INTRO_FIT = 'contain-blur'; // cover preenche e corta; contain-blur preserva a imagem sobre fundo desfocado.
 const INTRO_TEXT_SAFE_MARGIN = 0.06; // Margem do texto como fração da tela.
+const INTRO_MUSIC_SRC = 'assets/audio/intro.mp3'; // Trilha opcional; na ausência usa síntese suave.
+const INTRO_MUSIC_FILE_PRESENT = false; // MP3 ainda não fornecido; ative ao adicioná-lo para evitar erro de arquivo ausente.
 const INTRO_SKIP_LABEL = 'Pular ▶'; // Único botão da história.
 
 // Escala do JPEG no mundo; câmera amplia o mundo inteiro sem mudar a física.

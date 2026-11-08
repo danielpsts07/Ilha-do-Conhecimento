@@ -355,3 +355,118 @@ window.GameAudio = (() => {
     registerThemeMusic
   };
 })();
+/* Áudio reutilizável com ciclo explícito: init no gesto, update no loop e dispose na saída.
+   Mantém GameAudio intacto e preserva o construtor nativo window.Audio. */
+window.IntroAudio = (() => {
+  'use strict';
+  const melody = [60, 64, 67, 69, 67, 64, 62, 60, 64, 67, 74, 69, 67, 62, 64, 60];
+  let ctx, music, effects, envelope, synth, media, source, pad, notes = new Set();
+  let playing = false, stopping = false, next = 0, position = 0, lastSound = -1, lastMusic = -1;
+  function resume() {
+    if (ctx?.state === 'suspended' && !document.hidden) ctx.resume().catch(() => {});
+    if (media?.paused && playing && !stopping && !document.hidden) media.play().catch(() => {});
+  }
+  function visibility() {
+    if (document.hidden) { ctx?.suspend().catch(() => {}); media?.pause(); }
+    else { if (ctx) next = Math.max(next, ctx.currentTime); resume(); }
+  }
+  function syncVolumes() {
+    if (!ctx) return;
+    const get = window.GameSettings?.get, muted = Boolean(get?.('mute'));
+    const sound = muted ? 0 : Math.max(0, Math.min(100, get?.('sound') ?? 70)) / 100;
+    const volume = muted ? 0 : Math.max(0, Math.min(100, get?.('music') ?? get?.('sound') ?? 70)) / 100;
+    if (sound !== lastSound) { effects.gain.setValueAtTime(sound, ctx.currentTime); lastSound = sound; }
+    if (volume !== lastMusic) { music.gain.setValueAtTime(volume, ctx.currentTime); lastMusic = volume; }
+  }
+  function init() {
+    if (ctx) { resume(); return; }
+    const Context = window.AudioContext || window.webkitAudioContext;
+    if (!Context) return;
+    try {
+      ctx = new Context(); music = ctx.createGain(); effects = ctx.createGain();
+      envelope = ctx.createGain(); synth = ctx.createGain(); envelope.gain.value = 0;
+      synth.connect(envelope); envelope.connect(music); music.connect(ctx.destination); effects.connect(ctx.destination);
+      document.addEventListener('visibilitychange', visibility);
+      document.addEventListener('pointerdown', resume, true); document.addEventListener('keydown', resume, true);
+      document.addEventListener('touchstart', resume, true); syncVolumes(); resume();
+    } catch { dispose(); }
+  }
+  function note(midi, time, duration, gain, bus, type = 'triangle') {
+    const oscillator = ctx.createOscillator(), level = ctx.createGain();
+    oscillator.type = type;
+    // MIDI para hertz: Lá4 (nota 69) vale 440 Hz; cada semitom multiplica por 2^(1/12).
+    oscillator.frequency.value = 440 * 2 ** ((midi - 69) / 12);
+    level.gain.setValueAtTime(0, time); level.gain.linearRampToValueAtTime(gain, time + .02);
+    level.gain.exponentialRampToValueAtTime(.0001, time + duration);
+    oscillator.connect(level); level.connect(bus); notes.add(oscillator);
+    oscillator.onended = () => { oscillator.disconnect(); level.disconnect(); notes.delete(oscillator); };
+    oscillator.start(time); oscillator.stop(time + duration);
+    return oscillator;
+  }
+  function fallback() {
+    if (!ctx || stopping) return;
+    synth.gain.value = 1; next = ctx.currentTime; position = 0;
+    if (!pad) {
+      const oscillator = pad = ctx.createOscillator(), level = ctx.createGain(); pad.type = 'sine';
+      pad.frequency.value = 440 * 2 ** ((48 - 69) / 12); level.gain.value = .04;
+      pad.connect(level); level.connect(synth);
+      pad.onended = () => { oscillator.disconnect(); level.disconnect(); }; pad.start();
+    }
+  }
+  function playMusic(id) {
+    if (!ctx || playing) return;
+    playing = true; stopping = false; fallback();
+    const now = ctx.currentTime;
+    envelope.gain.cancelScheduledValues(now); envelope.gain.setValueAtTime(0, now);
+    envelope.gain.linearRampToValueAtTime(.15, now + .8);
+    if (!id) return;
+    // O arquivo é opcional; até carregar, a melodia sintetizada já acompanha a história.
+    try {
+      const player = media = new window.Audio(); media.loop = true; media.preload = 'auto';
+      source = ctx.createMediaElementSource(media); source.connect(envelope);
+      media.oncanplay = () => {
+        if (!playing || stopping || media !== player) return;
+        player.play().then(() => { if (media === player && synth && !stopping) synth.gain.value = 0; }).catch(() => {});
+      };
+      media.onerror = () => { if (media === player && playing && !stopping) { player.pause(); if (synth.gain.value === 0) fallback(); } };
+      media.src = id; media.load();
+    } catch { fallback(); }
+  }
+  function stopMusic(fadeMs = 600) {
+    if (!ctx || stopping) return;
+    stopping = true; const now = ctx.currentTime;
+    const gain = envelope.gain;
+    if (gain.cancelAndHoldAtTime) gain.cancelAndHoldAtTime(now);
+    else { gain.cancelScheduledValues(now); gain.setValueAtTime(gain.value, now); }
+    gain.linearRampToValueAtTime(0, now + fadeMs / 1000);
+  }
+  function sfx(id) {
+    if (!ctx || document.hidden || stopping) return;
+    syncVolumes(); const now = ctx.currentTime;
+    if (id === 'final') {
+      note(60, now, .4, .08, effects); note(64, now, .4, .08, effects); note(67, now, .4, .08, effects);
+    } else { note(72, now, .15, .25, effects); note(79, now + .10, .15, .25, effects); }
+  }
+  function update(dt) {
+    if (!ctx) return;
+    syncVolumes(); if (!playing || stopping || document.hidden || ctx.state !== 'running' || synth.gain.value === 0) return;
+    // Janela de 200 ms baseada no relógio de áudio; o game loop fornece as oportunidades de agendamento.
+    if (next < ctx.currentTime) next = ctx.currentTime;
+    while (next < ctx.currentTime + .2) {
+      note(melody[position], next, .4, .35, synth); position = (position + 1) % melody.length; next += .45;
+    }
+  }
+  function dispose() {
+    document.removeEventListener('visibilitychange', visibility);
+    document.removeEventListener('pointerdown', resume, true); document.removeEventListener('keydown', resume, true);
+    document.removeEventListener('touchstart', resume, true);
+    if (media) { media.oncanplay = media.onerror = null; media.pause(); media.removeAttribute('src'); media.load(); }
+    for (const oscillator of notes) { try { oscillator.stop(); } catch {} oscillator.onended?.(); oscillator.onended = null; }
+    notes.clear(); if (pad) { try { pad.stop(); } catch {} pad.onended?.(); pad.onended = null; pad = null; }
+    source?.disconnect(); synth?.disconnect(); envelope?.disconnect(); music?.disconnect(); effects?.disconnect();
+    if (ctx && ctx.state !== 'closed') ctx.close().catch(() => {});
+    ctx = music = effects = envelope = synth = media = source = null;
+    playing = stopping = false; lastSound = lastMusic = -1;
+  }
+  return {init, playMusic, stopMusic, sfx, update, dispose};
+})();

@@ -453,17 +453,28 @@ window.IntroStory = (() => {
   ]);
 
   // Lista plana de referências às cenas para compatibilidade de inspeção
+  // Frases curtas; textoOriginal permite restaurar cada slide sem perder a história anterior.
   const SCENES = Object.freeze([
-    { id: 'intro-01', src: 'intro/intro-01.webp' },
-    { id: 'intro-01b', src: 'intro/intro-01b.webp' },
-    { id: 'intro-02', src: 'intro/intro-02.webp' },
-    { id: 'intro-02b', src: 'intro/intro-02b.webp' },
-    { id: 'intro-03', src: 'intro/intro-03.webp' },
-    { id: 'intro-04', src: 'intro/intro-04.webp' },
-    { id: 'intro-05', src: 'intro/intro-05.webp' },
-    { id: 'intro-06', src: 'intro/intro-06.webp' },
-    { id: 'intro-07', src: 'intro/intro-07.webp' },
-    { id: 'intro-final', src: 'intro/intro-07.webp', isFinalCard: true }
+    { id: "intro-01", src: "intro/intro-01.webp",
+      text: "A menina estuda com seu gato e um livro acorda.", textoOriginal: "Numa noite tranquila, uma menina estudava ao lado do seu gatinho… Mas, na estante, um livro muito antigo estava acordando…" },
+    { id: "intro-01b", src: "intro/intro-01b.webp",
+      text: "O livro acorda e fica bem grande.", textoOriginal: "FUUUSH! O livro acordou… e começou a crescer!" },
+    { id: "intro-02", src: "intro/intro-02.webp",
+      text: "O Livro Malvado abre um portal perto do gato.", textoOriginal: "Hehehe! Há muito tempo eu espero por isso! O que está acontecendo?!" },
+    { id: "intro-02b", src: "intro/intro-02b.webp",
+      text: "O Livro Malvado pega o gato.", textoOriginal: "ZUUUM! Esse gatinho agora é meu! Miaaau!" },
+    { id: "intro-03", src: "intro/intro-03.webp",
+      text: "A menina pula no portal para buscar seu gato.", textoOriginal: "HUP! Meu gato! Devolve ele!" },
+    { id: "intro-04", src: "intro/intro-04.webp",
+      text: "A menina segue o gato pelo portal até a ilha.", textoOriginal: "AAAAH! A menina pulou atrás do gato… e caiu em uma ilha mágica!" },
+    { id: "intro-05", src: "intro/intro-05.webp",
+      text: "A menina chega à Ilha do Conhecimento.", textoOriginal: "PUF! Ai! Onde eu estou?" },
+    { id: "intro-06", src: "intro/intro-06.webp",
+      text: "O gato está numa cela com 4 cadeados no alto da montanha.", textoOriginal: "Bem-vinda à Ilha do Conhecimento! Seu gato está preso lá no alto, no Pico do Miau. Para libertá-lo, você precisa vencer todos os desafios da ilha!" },
+    { id: "intro-07", src: "intro/intro-07.webp",
+      text: "Ache 4 chaves na floresta, vila, ruínas e fazenda.", textoOriginal: "Ele está trancado com 4 cadeados! Cada chave está escondida em um canto da ilha. Explore os 4 cantos da ilha, resolva os desafios, ache as 4 chaves e salve o gato!" },
+    { id: "intro-final", src: "intro/intro-07.webp",
+      text: "Solte o gato com as chaves e voltem para casa.", textoOriginal: "Seu objetivo. Floresta dos Padrões. Aldeia do Saber. Ruínas das Formas. Campos Contados. Ache as 4 chaves → abra os 4 cadeados → salve o gato!" , isFinalCard: true },
   ]);
 
   let active = false, root, canvas, ctx, skip, live, callback, returnFocus;
@@ -528,6 +539,7 @@ window.IntroStory = (() => {
   function enter() {
     elapsed = 0; fade = 0; prepare(index); prepare(index + 1);
     live.textContent = slides[index].text;
+    if (index > 0) window.IntroAudio?.sfx(index === slides.length - 1 ? 'final' : 'slide');
   }
   function drawSlide(slide, alpha) {
     ctx.globalAlpha = alpha; ctx.fillStyle = '#101018'; ctx.fillRect(0, 0, width, height);
@@ -542,7 +554,7 @@ window.IntroStory = (() => {
   }
   function finish(reason) {
     if (!active) return;
-    active = false; cancelAnimationFrame(raf);
+    active = false; cancelAnimationFrame(raf); window.IntroAudio?.dispose();
     document.removeEventListener('keydown', key, true); document.removeEventListener('keyup', keyup, true);
     document.removeEventListener('visibilitychange', visibility);
     window.removeEventListener('resize', resize); window.removeEventListener('orientationchange', resize);
@@ -555,7 +567,7 @@ window.IntroStory = (() => {
     const cb = callback, focus = returnFocus; callback = returnFocus = null;
     if (cb) cb(reason); else focus?.focus();
   }
-  function skipClick() { if (!ending) { ending = 'skip'; fade = 0; } }
+  function skipClick() { if (!ending) { ending = 'skip'; fade = 0; window.IntroAudio?.stopMusic(600); } }
   function key(event) {
     event.stopImmediatePropagation();
     if (event.key === 'Tab') { event.preventDefault(); skip.focus(); }
@@ -568,7 +580,9 @@ window.IntroStory = (() => {
   function loop(now) {
     if (!active) return;
     const dt = document.hidden || !last ? 0 : Math.max(0, Math.min(50, now - last)); last = now;
+    window.IntroAudio?.update(dt / 1000);
     const slide = slides[index];
+    if (!ending && index === slides.length - 1 && elapsed >= slide.duration && fade === 0) window.IntroAudio?.stopMusic(600);
     if (ending || elapsed >= slide.duration) fade += dt; else elapsed += dt;
     const fadeMs = ending === 'skip' ? Math.min(200, INTRO_FADE_MS) : INTRO_FADE_MS;
     const alpha = Math.min(1, Math.max(0, fade / Math.max(1, fadeMs)));
@@ -579,7 +593,7 @@ window.IntroStory = (() => {
       skip.style.opacity = 1 - alpha;
     } else if (fade > 0) drawSlide(slides[index + 1], alpha);
     if (alpha >= 1) {
-      if (ending || index === slides.length - 1) { finish(ending || 'complete'); return; }
+      if (ending || index === slides.length - 1) { if (fade < 600) { raf = requestAnimationFrame(loop); return; } finish(ending || 'complete'); return; }
       const previous = slides[index++];
       if (previous.image) previous.image.onload = previous.image.onerror = null;
       previous.image = previous.bg = null; previous.lines.length = 0; enter();
@@ -588,15 +602,9 @@ window.IntroStory = (() => {
   }
   function play(onFinish) {
     if (active) { callback = null; finish('close'); }
+    window.IntroAudio?.init(); window.IntroAudio?.playMusic(INTRO_MUSIC_FILE_PRESENT ? INTRO_MUSIC_SRC : null);
     callback = typeof onFinish === 'function' ? onFinish : null; returnFocus = document.activeElement;
-    for (const page of PAGES) {
-      for (const panel of page.panels) {
-        const text = page.steps.filter(s => s.panelId === panel.id && s.text).map(s => s.text).join(' ');
-        slides.push({src: panel.src, text, duration: panel.duration ?? page.duration, lines: []});
-      }
-      if (page.isFinalCard) slides.push({src: 'intro/intro-07.webp', text: 'Seu objetivo. ' +
-        getObjectiveRegions().map(r => r.regionName).join('. ') + '. Ache as 4 chaves → abra os 4 cadeados → salve o gato!', duration: page.duration, lines: []});
-    }
+    for (const scene of SCENES) slides.push({src: scene.src, text: scene.text, duration: scene.duration, lines: []});
     // Duração proporcional ao texto, limitada para permitir leitura sem alongar demais cada cena.
     for (const slide of slides) slide.duration ??= Math.max(INTRO_MIN_MS, Math.min(INTRO_MAX_MS, slide.text.length * INTRO_MS_PER_CHAR));
     root = document.createElement('section'); root.id = 'intro-story-screen'; root.setAttribute('role', 'dialog');
