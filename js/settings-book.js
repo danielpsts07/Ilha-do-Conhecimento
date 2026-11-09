@@ -9,7 +9,7 @@ window.SettingsBook = (() => {
   const settings = window.GameSettings;
   const book = $('#book-dialog'), view = $('#settings-view');
   const stage = $('.mural-stage'), main = $('.mural-main'), sheetContainer = $('.mural-sheet-container');
-  const order = ['index', 'audio', 'controls', 'language', 'access', 'howto', 'about', 'credits'];
+  const order = ['index', 'audio', 'controls', 'language', 'access', 'howto', 'about'];
   const spreads = Array.from(document.querySelectorAll('[data-settings-section]'));
   const goButtons = Array.from(document.querySelectorAll('[data-settings-go]'));
   const toggles = Array.from(document.querySelectorAll('[data-setting]'));
@@ -23,8 +23,7 @@ window.SettingsBook = (() => {
     language: { title: 'Qual é a sua língua?', icon: 'assets/configuracoes/mural/ui/icone-idioma.webp' },
     access: { title: 'Jogar com conforto', icon: 'assets/configuracoes/mural/ui/icone-acessibilidade.webp' },
     howto: { title: 'Sua missão', icon: 'assets/configuracoes/mural/ui/icone-como-jogar.webp' },
-    about: { title: 'Ilha do Conhecimento', icon: 'assets/configuracoes/mural/ui/icone-sobre-nos.webp' },
-    credits: { title: 'Quem fez a ilha', icon: 'assets/configuracoes/mural/ui/icone-creditos.webp' }
+    about: { title: 'Ilha do Conhecimento', icon: 'assets/configuracoes/mural/ui/icone-sobre-nos.webp' }
   };
 
   const sheetHeaderIcon = $('#sheet-header-icon');
@@ -106,6 +105,10 @@ window.SettingsBook = (() => {
       nextEl.style.transition = 'opacity 75ms ease-out';
       nextEl.style.opacity = '1';
       currentSubPage = targetPage;
+      if (current === 'about') {
+        if (sheetHeaderIcon) sheetHeaderIcon.src = targetPage === 2 ? 'assets/configuracoes/mural/ui/icone-creditos.webp' : 'assets/configuracoes/mural/ui/icone-sobre-nos.webp';
+        if (sheetMainTitle) sheetMainTitle.textContent = targetPage === 2 ? 'Quem fez a ilha' : 'Ilha do Conhecimento';
+      }
       updatePaginationUI();
       setTimeout(() => {
         busy = false;
@@ -277,9 +280,111 @@ window.SettingsBook = (() => {
   goButtons.forEach(button => button.addEventListener('click', () => go(button.dataset.settingsGo, 'heading')));
   if (backButton) backButton.addEventListener('click', () => closeSubmenu('menu'));
 
+  /* ---------- Voltar ao menu principal (Ajuste 1) ---------- */
+  const cardQuit = $('#settings-card-quit');
+  const confirmDialog = $('#settings-confirm-dialog');
+  const confirmYes = $('#settings-confirm-yes');
+  const confirmNo = $('#settings-confirm-no');
+  const confirmPuzzleWarning = $('#settings-confirm-puzzle-warning');
+
+  function isAtMainMenu() {
+    const homeScreen = $('#home-screen');
+    const isPlaying = document.body.classList.contains('is-playing');
+    return (!isPlaying && !window.GameIsland?.active && !window.PuzzleGame?.active && !window.DevPuzzleScreen?.active && !window.ActivePuzzle?.active) || (homeScreen && !homeScreen.hidden);
+  }
+
+  function isInPuzzle() {
+    return Boolean(
+      window.ActivePuzzle?.active ||
+      window.DevPuzzleScreen?.active ||
+      window.PuzzleGame?.active ||
+      window.GeometriaPuzzle?.active ||
+      window.OperacoesPuzzle?.active ||
+      window.AlgebraPuzzle?.active ||
+      window.LabirintoPuzzle?.active ||
+      document.querySelector('[role="dialog"][aria-label*="Balança"]') ||
+      document.querySelector('[role="dialog"][aria-label*="Ponte"]') ||
+      document.querySelector('[role="dialog"][aria-label*="Moinho"]') ||
+      document.querySelector('[role="dialog"][aria-label*="Labirinto"]')
+    );
+  }
+
+  function updateQuitCardState() {
+    if (!cardQuit) return;
+    const atHome = isAtMainMenu();
+    if (atHome) {
+      cardQuit.disabled = true;
+      cardQuit.setAttribute('aria-disabled', 'true');
+      cardQuit.title = 'Você já está no menu principal';
+      cardQuit.classList.add('is-disabled');
+    } else {
+      cardQuit.disabled = false;
+      cardQuit.removeAttribute('aria-disabled');
+      cardQuit.title = 'Voltar ao menu principal';
+      cardQuit.classList.remove('is-disabled');
+    }
+  }
+
+  function openConfirmQuit() {
+    if (isAtMainMenu()) return;
+    if (confirmPuzzleWarning) {
+      confirmPuzzleWarning.hidden = !isInPuzzle();
+    }
+    if (confirmDialog) {
+      confirmDialog.hidden = false;
+      confirmNo?.focus();
+    }
+  }
+
+  function closeConfirmQuit() {
+    if (confirmDialog) confirmDialog.hidden = true;
+    cardQuit?.focus();
+  }
+
+  function performReturnToMenu() {
+    if (confirmDialog) confirmDialog.hidden = true;
+    book.close();
+    if (window.ActivePuzzle?.close) {
+      try { window.ActivePuzzle.close(); } catch (e) { console.warn('Erro ao fechar puzzle ativo:', e); }
+    }
+    if (window.GameIsland?.stop) {
+      window.GameIsland.stop();
+    } else {
+      const screen = $('#island-screen');
+      if (screen) screen.hidden = true;
+      const home = $('#home-screen');
+      if (home) home.hidden = false;
+      document.body.classList.remove('is-playing');
+      window.Music?.definirLugar?.('menu');
+      $('[data-open="start"]')?.focus();
+    }
+  }
+
+  if (cardQuit) cardQuit.addEventListener('click', () => { GameAudio.click(); openConfirmQuit(); });
+  if (confirmNo) confirmNo.addEventListener('click', () => { GameAudio.click(); closeConfirmQuit(); });
+  if (confirmYes) confirmYes.addEventListener('click', () => { GameAudio.click(); performReturnToMenu(); });
+
   // Escape: no submenu volta ao mural; no menu principal fecha o diálogo
   document.addEventListener('keydown', event => {
     if (!book.open || view.hidden) return;
+    if (confirmDialog && !confirmDialog.hidden) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        closeConfirmQuit();
+        return;
+      }
+      if (event.key === 'Tab') {
+        const btns = [confirmYes, confirmNo].filter(b => b && !b.disabled);
+        const idx = btns.indexOf(document.activeElement);
+        if (event.shiftKey) {
+          if (idx <= 0) { event.preventDefault(); btns[btns.length - 1]?.focus(); }
+        } else {
+          if (idx >= btns.length - 1 || idx === -1) { event.preventDefault(); btns[0]?.focus(); }
+        }
+        return;
+      }
+    }
     if (event.key === 'Escape' && current !== 'index') {
       event.preventDefault();
       event.stopPropagation();
@@ -465,6 +570,8 @@ window.SettingsBook = (() => {
   return {
     open(section = 'index') {
       busy = false; queued = null;
+      updateQuitCardState();
+      if (confirmDialog) confirmDialog.hidden = true;
       const note = $('#settings-reset-note');
       if (note) note.textContent = '';
       const langNote = $('#language-note');

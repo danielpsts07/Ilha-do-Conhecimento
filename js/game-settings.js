@@ -2,8 +2,15 @@
    a aventura em si não é salva. */
 window.GameSettings = (() => {
   'use strict';
+  const isTouchDevice = () => {
+    if (typeof window === 'undefined') return false;
+    const hasCoarse = Boolean(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    const hasTouch = Boolean((typeof navigator !== 'undefined') && (navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0));
+    return hasCoarse || hasTouch;
+  };
+  const defaultTouch = isTouchDevice() ? 'joystick' : 'arrows';
   // "touch" escolhe o controle na tela para tablet e celular: setas, joystick ou nenhum.
-  const defaults = {sound:70, music:35, mute:false, speed:'normal', touch:'arrows', largeText:false, calm:false};
+  const defaults = {sound:70, music:35, mute:false, speed:'normal', touch:defaultTouch, largeText:false, calm:false};
   // Devagar = antigo Normal (16 ticks por passo), Normal = antigo Rápido (12), Rápido = Normal × 1,5 (8).
   const speeds = {slow:{factor:1,label:'Devagar'}, normal:{factor:1.3,label:'Normal'}, fast:{factor:1.95,label:'Rápido'}};
   const touchModes = {arrows:{label:'Setas'}, joystick:{label:'Joystick'}, off:{label:'Nenhum'}};
@@ -49,10 +56,13 @@ window.GameSettings = (() => {
     store(key);apply();
     for (const listener of listeners) listener(key,values[key]);
   }
-  function reset() { for (const key of Object.keys(defaults)) set(key,defaults[key]); }
+  function reset() {
+    defaults.touch = isTouchDevice() ? 'joystick' : 'arrows';
+    for (const key of Object.keys(defaults)) set(key,defaults[key]);
+  }
   apply();
   return {
-    get:key=>values[key], set, reset, defaults:{...defaults}, speeds, touchModes,
+    get:key=>values[key], set, reset, defaults:{...defaults}, speeds, touchModes, isTouchDevice,
     onChange(listener) { listeners.push(listener); },
     get walkSpeed() { return speeds[values.speed].factor; },
     get calm() { return values.calm; },

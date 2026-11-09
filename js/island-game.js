@@ -603,6 +603,7 @@ window.GameIsland = (() => {
       const ann = $('#island-announcement');
       if (ann) ann.textContent = initialRegion.name;
     }
+    window.Music?.definirLugar?.('exploracao');
   }
   function stop() {
     dev?.close();
@@ -618,6 +619,7 @@ window.GameIsland = (() => {
     window.PuzzleGame?.stop(); window.GameRescue?.stop();
     for (const dialog of [info, pause, map]) if (dialog.open) dialog.close();
     screen.hidden = true; $('#home-screen').hidden = false; document.body.classList.remove('is-playing');
+    window.Music?.definirLugar?.('menu');
     document.querySelector('[data-open="start"]').focus();
   }
   function showDialog(dialog, trigger) {
@@ -813,5 +815,5 @@ window.GameIsland = (() => {
     if (renderer.failed.length) $('#island-loading').textContent = 'Algumas imagens não abriram. Confira se a pasta assets está junto do index.html.';
   });
   function teleport(imgX, imgY) { player.x = imgX * WORLD_SCALE; player.y = imgY * WORLD_SCALE; player.moving = false; player.inStep = false; player.prog = 0; updateCamera(true); updateLocation(16); }
-  return { start, stop, teleport, get active() { return active; }, get player() { return player; }, get renderer() { return renderer; } };
+  return { start, stop, teleport, getCurrentRegion: () => currentRegion, get active() { return active; }, get player() { return player; }, get renderer() { return renderer; } };
 })();
