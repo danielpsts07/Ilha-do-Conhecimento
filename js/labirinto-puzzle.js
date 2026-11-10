@@ -192,16 +192,20 @@ window.LabirintoPuzzle = (() => {
     status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite'); status.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);';
     frame.appendChild(canvas); frame.appendChild(status); host.appendChild(frame); document.body.appendChild(host);
 
-    const controls = [], labels = ['X', '↻', 'Já memorizei', 'E — Pegar a chave', ''];
-    for (let i = 0; i < 5; i++) {
+    const controls = [], labels = ['X', '↻', 'Já memorizei', 'E — Pegar a chave', '', ''];
+    for (let i = 0; i < 6; i++) {
       const b = document.createElement('button'); b.type = 'button'; b.textContent = labels[i];
-      b.setAttribute('aria-label', i === 0 ? 'Sair do labirinto' : i === 1 ? 'Reiniciar com nova sequência' : i === 4 ? 'Ajuda: como jogar' : labels[i]);
+      b.setAttribute('aria-label', i === 0 ? 'Sair do labirinto' : i === 1 ? 'Reiniciar com nova sequência' : i === 4 ? 'Ajuda: como jogar' : i === 5 ? 'Configurações' : labels[i]);
       if (i === 4) {
         b.className = 'puzzle-hud-help-btn';
         b.style.cssText = 'position:absolute;width:44px;height:44px;border:none;background:url("assets/tutorial/botao-ajuda-normal.webp") center/contain no-repeat transparent;cursor:pointer;padding:0;z-index:10;user-select:none;image-rendering:pixelated;';
         b.addEventListener('pointerdown', () => { if (!b.disabled) b.style.backgroundImage = 'url("assets/tutorial/botao-ajuda-pressionado.webp")'; });
         const restoreHelpBtn = () => { b.style.backgroundImage = 'url("assets/tutorial/botao-ajuda-normal.webp")'; };
         b.addEventListener('pointerup', restoreHelpBtn); b.addEventListener('pointerleave', restoreHelpBtn); b.addEventListener('pointercancel', restoreHelpBtn);
+      } else if (i === 5) {
+        b.className = 'puzzle-hud-gear-btn';
+        b.style.cssText = 'position:absolute;width:44px;height:44px;border:none;background:url("assets/hud/configuracoes.png") center/contain no-repeat transparent;cursor:pointer;padding:0;z-index:10;user-select:none;image-rendering:pixelated;';
+        b.setAttribute('title', 'Configurações');
       } else {
         b.style.cssText = 'position:absolute;min-height:44px;min-width:44px;border:2px solid #b9dc9a;border-radius:10px;background:#183a30ed;color:#fff5d7;font:inherit;font-size:16px;cursor:pointer;padding:6px 14px;z-index:10;user-select:none;';
       }
@@ -216,7 +220,7 @@ window.LabirintoPuzzle = (() => {
     const held = new Uint8Array(8), particles = new Float32Array(24 * 5), empty = [];
     const skipMem = Boolean(options.skipMemorize || (typeof location !== 'undefined' && location.search.includes('pular_memoria')));
 
-    let s = 1, offsetX = 0, offsetY = 0, state = '', elapsed = 0, time = 0, last = 0, raf = 0, closed = false, debug = false;
+    let s = 1, offsetX = 0, offsetY = 0, state = '', elapsed = 0, time = 0, last = 0, raf = 0, closed = false, debug = false, paused = false;
     let attempt, seq = [], ped = [], order = [], sequenceNames = '', debugLine = '', route = empty, waypoint = 0, chosen = -1, completed = 0;
     let phase = 0, f = surfaces[0], claimed = false, sparkColor = '#4ade80';
     let routeTime = 0, routeX = 0, routeY = 0, targetX = 0, targetY = 0, routeRetried = false;
@@ -225,6 +229,18 @@ window.LabirintoPuzzle = (() => {
     const surfaceIndex = () => phase === N ? 3 : crossings[phase].cenario - 1;
     const isDebug = () => options.debug ? options.debug() : debug;
     const dirs = { arrowleft: 0, a: 1, arrowright: 2, d: 3, arrowup: 4, w: 5, arrowdown: 6, s: 7 };
+
+    function openSettings() {
+      if (paused) return;
+      paused = true;
+      held.fill(0); route = empty;
+      if (window.openSettings) {
+        window.openSettings(controls[5], () => { paused = false; controls[5].focus(); });
+      } else if (window.SettingsBook) {
+        window.SettingsBook.open('index');
+        document.getElementById('book-dialog')?.showModal();
+      }
+    }
 
     function say(message) { status.textContent = message; canvas.setAttribute('aria-label', `${message} WASD/setas ou toque para andar. Escape sai. F3 depura; N avança com F3.`); }
     function canTake() {
@@ -284,10 +300,11 @@ window.LabirintoPuzzle = (() => {
       offsetX = (canvas.width - W * s) / 2;
       offsetY = (canvas.height - H * s) / 2;
 
-      // Botões superiores (?, ↻ e X) ancorados no topo direito seguro
+      // Botões superiores (X, ↻, ? e ⚙) ancorados no topo direito seguro
       controls[0].style.top = '14px'; controls[0].style.right = '14px';
       controls[1].style.top = '14px'; controls[1].style.right = '70px';
       controls[4].style.top = '14px'; controls[4].style.right = '126px';
+      controls[5].style.top = '14px'; controls[5].style.right = '182px';
 
       // Botão "Já memorizei" centralizado
       controls[2].style.left = '50%';
@@ -355,7 +372,7 @@ window.LabirintoPuzzle = (() => {
     }
 
     function down(event) {
-      if (window.TutorialCard?.isAberto?.()) return;
+      if (paused || window.TutorialCard?.isAberto?.()) return;
       event.preventDefault();
       if (state !== 'ANDAR' && state !== 'CAMARA_ANDAR') return;
       const { x, y } = screenToGame(event.clientX, event.clientY);
@@ -374,6 +391,8 @@ window.LabirintoPuzzle = (() => {
       if (window.TutorialCard?.isAberto?.()) return;
       if (event.ctrlKey || event.altKey || event.metaKey) return;
       const k = event.key.toLowerCase(); event.stopImmediatePropagation();
+      if (k === 'escape') { event.preventDefault(); openSettings(); return; }
+      if (paused) return;
       if (k === 'tab') {
         event.preventDefault(); let i = controls.indexOf(document.activeElement);
         const step = event.shiftKey ? -1 : 1;
@@ -390,8 +409,7 @@ window.LabirintoPuzzle = (() => {
         return;
       }
       if (event.repeat) return;
-      if (k === 'escape') close(false);
-      else if (k === 'f3') {
+      if (k === 'f3') {
         if (options.toggleDebug) options.toggleDebug(); else debug = !debug;
         if (isDebug()) randomTest(ids, crossings);
       }
@@ -415,6 +433,7 @@ window.LabirintoPuzzle = (() => {
     function close(won = false) {
       if (closed) return;
       closed = true; held.fill(0); route = empty;
+      if (window.ActivePuzzle?.type === 'labirinto') window.ActivePuzzle = null;
       if (window.TutorialCard?.isAberto?.()) window.TutorialCard.fechar();
       window.Music?.sairDaCena?.('labirinto');
       cancelAnimationFrame(raf);
@@ -464,7 +483,7 @@ window.LabirintoPuzzle = (() => {
     }
 
     function update(dt) {
-      if (window.TutorialCard?.isAberto?.()) {
+      if (paused || window.TutorialCard?.isAberto?.()) {
         if (state === 'MEMORIZAR') controls[2].hidden = true;
         return;
       }
@@ -792,6 +811,7 @@ window.LabirintoPuzzle = (() => {
 
     function loop(stamp) {
       if (closed) return;
+      if (paused) { last = stamp; raf = requestAnimationFrame(loop); return; }
       const dt = last ? Math.min(.05, (stamp - last) / 1000) : 0;
       last = stamp;
       update(dt);
@@ -811,6 +831,7 @@ window.LabirintoPuzzle = (() => {
         onFechar: () => { canvas.focus(); }
       });
     };
+    controls[5].onclick = () => openSettings();
 
     canvas.addEventListener('pointerdown', down);
     document.addEventListener('keydown', key, true);
@@ -821,6 +842,7 @@ window.LabirintoPuzzle = (() => {
     window.addEventListener('blur', blur);
 
     current = close;
+    window.ActivePuzzle = { type: 'labirinto', close: () => close(false), pause: () => { paused = true; }, resume: () => { paused = false; }, get active() { return Boolean(current); } };
     restart();
     if (isDebug()) randomTest(ids, crossings);
     resize();
@@ -835,5 +857,5 @@ window.LabirintoPuzzle = (() => {
     raf = requestAnimationFrame(loop);
   }
 
-  return { prepare, open, get active() { return Boolean(current); } };
+  return { prepare, open, close: () => close(false), pause: () => { paused = true; }, resume: () => { paused = false; }, get active() { return Boolean(current); } };
 })();

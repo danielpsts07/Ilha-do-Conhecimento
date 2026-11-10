@@ -69,6 +69,18 @@
     if(book.open)$(focusTarget)?.focus();
     else book.showModal();
   }
+  window.openBook = openBook;
+  window.openSettings = function(triggerEl, onClose) {
+    if (triggerEl) trigger = triggerEl;
+    if (typeof onClose === 'function') {
+      const handleClose = () => {
+        book.removeEventListener('close', handleClose);
+        onClose();
+      };
+      book.addEventListener('close', handleClose);
+    }
+    openBook('settings');
+  };
   function openMessage() {
     confirmQuitTab=false;
     if(book.open)book.close();
@@ -212,5 +224,71 @@
         }, 100);
       });
     }
+  }
+
+  // Botão de tela cheia na tela inicial (Ajuste 2: apenas celular/tablet com suporte à API)
+  const homeFsBtn = $('#home-fullscreen-btn');
+  const isTouchDevice = () => {
+    if (typeof window === 'undefined') return false;
+    const hasCoarse = Boolean(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    const hasTouch = Boolean((typeof navigator !== 'undefined') && (navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0));
+    return hasCoarse || hasTouch;
+  };
+  const canFullscreen = Boolean(
+    document.fullscreenEnabled ||
+    document.webkitFullscreenEnabled ||
+    document.documentElement.requestFullscreen ||
+    document.documentElement.webkitRequestFullscreen
+  );
+
+  function updateHomeFullscreen() {
+    if (!homeFsBtn) return;
+    if (!isTouchDevice() || !canFullscreen) {
+      homeFsBtn.hidden = true;
+      return;
+    }
+    homeFsBtn.hidden = false;
+    const isFs = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+    homeFsBtn.setAttribute('aria-pressed', String(isFs));
+    homeFsBtn.setAttribute('aria-label', isFs ? 'Sair da tela cheia' : 'Ativar tela cheia');
+    homeFsBtn.title = isFs ? 'Sair da tela cheia' : 'Ativar tela cheia';
+    homeFsBtn.classList.toggle('is-active', isFs);
+  }
+
+  if (homeFsBtn) {
+    if (isTouchDevice() && canFullscreen) {
+      homeFsBtn.hidden = false;
+      homeFsBtn.addEventListener('click', async () => {
+        GameAudio.click();
+        const fsRoot = document.documentElement;
+        const isFs = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+        try {
+          if (isFs) {
+            if (document.exitFullscreen) await document.exitFullscreen();
+            else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+          } else {
+            if (fsRoot.requestFullscreen) await fsRoot.requestFullscreen();
+            else if (fsRoot.webkitRequestFullscreen) await fsRoot.webkitRequestFullscreen();
+            try {
+              if (screen.orientation && typeof screen.orientation.lock === 'function') {
+                await screen.orientation.lock('landscape');
+              }
+            } catch {}
+          }
+        } catch (e) {
+          console.warn('Tela cheia indisponível', e);
+        }
+        updateHomeFullscreen();
+      });
+      document.addEventListener('fullscreenchange', updateHomeFullscreen);
+      document.addEventListener('webkitfullscreenchange', updateHomeFullscreen);
+      updateHomeFullscreen();
+    } else {
+      homeFsBtn.hidden = true;
+    }
+  }
+
+  if (typeof window !== 'undefined' && (!window.location?.search || !new URLSearchParams(window.location.search).has('iniciar'))) {
+    window.Music?.definirLugar?.('menu');
   }
 })();

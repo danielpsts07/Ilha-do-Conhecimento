@@ -51,7 +51,7 @@ window.AlgebraPuzzle = (() => {
       const ok=Math.abs(b.px-511.55)<2&&Math.abs(b.py-114.5)<2&&Math.abs(b.hookX(10,0)-360.3)<2&&Math.abs(b.hookY(10,0)-87.8)<2&&Math.abs(b.hookX(10,1)-662.8)<2&&Math.abs(b.hookY(10,1)-141.2)<2&&Math.abs(b.panX(10,0)-258.7)<2&&Math.abs(b.panY(10,0)-164.1)<2;
       console.info(`[Álgebra] Autoteste pivô, ganchos +10° e prato esquerdo: ${ok?'OK':'DIVERGE'}`);
       await Promise.all(names.map(name=>new Promise(resolve=>{const src=name==='chave'?'assets/hud/chave_algebra.png':`assets/puzzles/algebra/${name}.png`,img=new Image();img.onload=()=>{art[name]=img;resolve();};img.onerror=()=>{console.warn(`[Álgebra] Ausente: ${src}; usando placeholder.`);resolve();};img.src=src;})));
-      await Promise.all([['btn_ajuda_normal','assets/tutorial/botao-ajuda-normal.webp'],['btn_ajuda_pressionado','assets/tutorial/botao-ajuda-pressionado.webp']].map(([k,src])=>new Promise(resolve=>{const img=new Image();img.onload=()=>{art[k]=img;resolve();};img.onerror=()=>resolve();img.src=src;})));
+      await Promise.all([['btn_ajuda_normal','assets/tutorial/botao-ajuda-normal.webp'],['btn_ajuda_pressionado','assets/tutorial/botao-ajuda-pressionado.webp'],['btn_engrenagem','assets/hud/configuracoes.png']].map(([k,src])=>new Promise(resolve=>{const img=new Image();img.onload=()=>{art[k]=img;resolve();};img.onerror=()=>resolve();img.src=src;})));
       glow=document.createElement('canvas');glow.width=glow.height=96;const c=glow.getContext('2d'),g=c.createRadialGradient(48,48,0,48,48,48);g.addColorStop(0,'#70d9ffbb');g.addColorStop(1,'#70d9ff00');c.fillStyle=g;c.fillRect(0,0,96,96);
     })();
   }
@@ -63,19 +63,20 @@ window.AlgebraPuzzle = (() => {
     canvas.setAttribute('aria-label','Arraste pedras aos pratos. Teclado: setas escolhem o prato, 1 a 5 adicionam pedras, Backspace retira. Arraste para fora ou use Backspace para devolver. Tab acessa os botões. Escape sai.');
     status.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
     frame.appendChild(canvas);host.appendChild(frame);host.appendChild(status);document.body.appendChild(host);
-    const rects=[[920,12,44,40],[866,12,44,40],[476,248,72,84],[812,12,44,40]],labels=['Sair da balança','Reiniciar fase','Pegar Chave de Álgebra','Ajuda: como jogar'],buttons=[];
-    let helpPressed=false;
-    for(let i=0;i<4;i++){const el=document.createElement('button');el.setAttribute('aria-label',labels[i]);el.style.cssText='position:absolute;border:0;background:transparent;color:transparent;cursor:pointer;border-radius:8px;';el.onfocus=()=>{el.style.outline='3px solid #ffe591';};el.onblur=()=>{el.style.outline='';};buttons.push(el);frame.appendChild(el);}
+    const rects=[[920,12,44,40],[866,12,44,40],[476,248,72,84],[812,12,44,40],[758,12,44,40]],labels=['Sair da balança','Reiniciar fase','Pegar Chave de Álgebra','Ajuda: como jogar','Configurações'],buttons=[];
+    let helpPressed=false,paused=false;
+    for(let i=0;i<5;i++){const el=document.createElement('button');el.setAttribute('aria-label',labels[i]);el.title=labels[i];el.style.cssText='position:absolute;border:0;background:transparent;color:transparent;cursor:pointer;border-radius:8px;';el.onfocus=()=>{el.style.outline='3px solid #ffe591';};el.onblur=()=>{el.style.outline='';};buttons.push(el);frame.appendChild(el);}
     const remaining=new Int16Array(5);
     const items=Array.from({length:17},()=>({side:-1,slot:0,type:'rubi',fixed:false,pop:0})),particles=new Float32Array(24*7),pointer={x:0,y:0};
     const calm=window.matchMedia('(prefers-reduced-motion: reduce)').matches||Boolean(window.GameSettings?.calm),scale=layout.escala_jogo,font=window.getComputedStyle?window.getComputedStyle(canvas).fontFamily:'sans-serif';
     let phase=0,f=data.fases[0],state='JOGANDO',elapsed=0,last=0,time=0,raf=0,closed=false,s=1,offset=0,angle=0,velocity=0,left=0,right=0,message=0,drag=-1,pid=-1,origin=-1,originSlot=0,target=-1,keyboardSide=1,completed=0,keyX=b.px,keyY=b.py,claimed=false,finite=false,settled=0,placed=0,surplus=false,notified=false,debug=false,stockLabel='livre';
     const isDebug=()=>options.debug?options.debug():debug;
+    function openSettings(){if(paused)return;paused=true;cancel();if(window.openSettings)window.openSettings(buttons[4],()=>{paused=false;buttons[4].focus();});else if(window.SettingsBook){window.SettingsBook.open('index');document.getElementById('book-dialog')?.showModal();}}
     function change(next){
-      state=next;elapsed=0;buttons[0].disabled=claimed;buttons[1].disabled=next!=='JOGANDO';buttons[2].hidden=next!=='CHAVE';buttons[3].disabled=next!=='JOGANDO';
+      state=next;elapsed=0;buttons[0].disabled=claimed;buttons[1].disabled=next!=='JOGANDO';buttons[2].hidden=next!=='CHAVE';buttons[3].disabled=next!=='JOGANDO';buttons[4].disabled=claimed;
       if(next==='CHAVE'){status.textContent='Pegue a Chave de Álgebra! Clique, toque ou aperte Enter ou E.';buttons[2].focus();}
     }
-    function resize(){const w=Math.min(window.innerWidth,window.innerHeight*1024/572),dpr=Math.min(2,window.devicePixelRatio||1);frame.style.width=`${w}px`;canvas.width=Math.round(w*dpr);canvas.height=Math.round(window.innerHeight*dpr);s=canvas.width/1024;offset=(canvas.height-572*s)/2;for(let i=0;i<4;i++){const r=rects[i],el=buttons[i];el.style.left=`${r[0]*w/1024}px`;el.style.top=`${(r[1]+offset/s)*w/1024}px`;el.style.width=`${r[2]*w/1024}px`;el.style.height=`${r[3]*w/1024}px`;}}
+    function resize(){const w=Math.min(window.innerWidth,window.innerHeight*1024/572),dpr=Math.min(2,window.devicePixelRatio||1);frame.style.width=`${w}px`;canvas.width=Math.round(w*dpr);canvas.height=Math.round(window.innerHeight*dpr);s=canvas.width/1024;offset=(canvas.height-572*s)/2;for(let i=0;i<5;i++){const r=rects[i],el=buttons[i];el.style.left=`${r[0]*w/1024}px`;el.style.top=`${(r[1]+offset/s)*w/1024}px`;el.style.width=`${r[2]*w/1024}px`;el.style.height=`${r[3]*w/1024}px`;}}
     function setup(){cancel();f=data.fases[phase];for(let i=0;i<17;i++){items[i].side=-1;items[i].fixed=false;items[i].pop=0;}let n=0;for(let side=0;side<2;side++){const list=side?f.dir:f.esq;for(let slot=0;slot<list.length;slot++)Object.assign(items[n++],{side,slot,type:list[slot],fixed:true});}const stock=ALGEBRA.FASES[phase].estoque;finite=stock!==null;
       for(let i=0;i<5;i++)remaining[i]=finite?(stock[types[i]]||0):-1;
       angle=velocity=message=settled=0;surplus=notified=false;completed=phase;particles.fill(0);change('JOGANDO');status.textContent=f.missao;weights();canvas.focus();}
@@ -91,7 +92,7 @@ window.AlgebraPuzzle = (() => {
     function spare(){for(let i=0;i<17;i++)if(items[i].side===-1)return i;return -1;}
     function burst(x,y,gold){for(let i=0;i<24;i++){const j=i*7;particles[j]=x;particles[j+1]=y;particles[j+2]=(Math.random()-.5)*(gold?180:65);particles[j+3]=-20-Math.random()*(gold?120:35);particles[j+4]=particles[j+5]=gold?.8:.35;particles[j+6]=gold?1:0;}}
     function down(event){
-      if(window.TutorialCard?.isAberto?.())return;
+      if(paused||window.TutorialCard?.isAberto?.())return;
       if(event.button>0)return;
       if(state==='CHAVE'){project(event);const r=rects[2];if(b.inside(pointer.x,pointer.y,r[0],r[1],r[2],r[3])){event.preventDefault();collect();}return;}
       if(state!=='JOGANDO'||pid!==-1)return;event.preventDefault();project(event);canvas.focus();origin=-1;
@@ -119,14 +120,20 @@ window.AlgebraPuzzle = (() => {
       }
       weights();success();
     }
-    function key(event){if(window.TutorialCard?.isAberto?.())return;if(event.ctrlKey||event.altKey||event.metaKey)return;const k=event.key.toLowerCase();event.stopImmediatePropagation();
-      if(k==='tab'){event.preventDefault();let i=buttons.indexOf(document.activeElement);for(let tries=0;tries<4;tries++){i=(i+4+(event.shiftKey?-1:1))%4;if(!buttons[i].hidden&&!buttons[i].disabled){buttons[i].focus();return;}}canvas.focus();return;}
+    function key(event){
+      if(window.TutorialCard?.isAberto?.())return;
+      if(event.ctrlKey||event.altKey||event.metaKey)return;
+      const k=event.key.toLowerCase();event.stopImmediatePropagation();
+      if(k==='escape'){event.preventDefault();openSettings();return;}
+      if(paused)return;
+      if(k==='tab'){event.preventDefault();let i=buttons.indexOf(document.activeElement);for(let tries=0;tries<buttons.length;tries++){i=(i+buttons.length+(event.shiftKey?-1:1))%buttons.length;if(!buttons[i].hidden&&!buttons[i].disabled){buttons[i].focus();return;}}canvas.focus();return;}
       if(k==='e'&&state==='CHAVE'){event.preventDefault();if(!event.repeat)collect();return;}
       if(k==='enter'||k===' '){event.preventDefault();if(!event.repeat){const i=buttons.indexOf(document.activeElement);if(i>=0&&!buttons[i].disabled&&!buttons[i].hidden)buttons[i].onclick();else if(k==='enter'&&state==='CHAVE')collect();}return;}
-      event.preventDefault();if(event.repeat)return;if(k==='escape'){if(!claimed)close(false);}else if(k==='f3'){if(options.toggleDebug)options.toggleDebug();else debug=!debug;if(isDebug())stockTest();}else if(k==='n'&&isDebug())solve();
+      event.preventDefault();if(event.repeat)return;
+      if(k==='f3'){if(options.toggleDebug)options.toggleDebug();else debug=!debug;if(isDebug())stockTest();}else if(k==='n'&&isDebug())solve();
       else if(state==='JOGANDO'&&drag<0){if(k==='arrowleft')keyboardSide=0;else if(k==='arrowright')keyboardSide=1;else if(k==='backspace'){for(let i=16;i>=0;i--)if(items[i].side===keyboardSide&&!items[i].fixed){returnStock(items[i]);items[i].side=-1;break;}weights();}else{const type=types[Number(k)-1],i=spare(),slot=b.free(items,keyboardSide);if(type&&canTake(type)&&i>=0&&slot>=0){Object.assign(items[i],{type,side:keyboardSide,slot,fixed:false,pop:.2});if(finite)remaining[types.indexOf(type)]--;weights();}}}}
-    function close(won=false){if(closed)return;closed=true;if(window.TutorialCard?.isAberto?.())window.TutorialCard.fechar();cancel();cancelAnimationFrame(raf);canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',cancel);canvas.removeEventListener('lostpointercapture',cancel);document.removeEventListener('keydown',key,true);window.removeEventListener('resize',resize);host.remove();current=null;options.onExit(won);}
-    function update(dt){if(window.TutorialCard?.isAberto?.())return;time+=dt;elapsed+=dt;message=Math.max(0,message-dt);const goal=b.angle(left,right);if(calm){angle=goal;velocity=0;}else{let remaining=dt;while(remaining>0){const step=Math.min(remaining,1/120);velocity+=((goal-angle)*90-velocity*12)*step;angle+=velocity*step;
+    function close(won=false){if(closed)return;closed=true;if(window.ActivePuzzle?.type==='algebra')window.ActivePuzzle=null;if(window.TutorialCard?.isAberto?.())window.TutorialCard.fechar();cancel();cancelAnimationFrame(raf);canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',cancel);canvas.removeEventListener('lostpointercapture',cancel);document.removeEventListener('keydown',key,true);window.removeEventListener('resize',resize);host.remove();current=null;options.onExit(won);}
+    function update(dt){if(paused||window.TutorialCard?.isAberto?.())return;time+=dt;elapsed+=dt;message=Math.max(0,message-dt);const goal=b.angle(left,right);if(calm){angle=goal;velocity=0;}else{let remaining=dt;while(remaining>0){const step=Math.min(remaining,1/120);velocity+=((goal-angle)*90-velocity*12)*step;angle+=velocity*step;
         // Mantém os ganchos no intervalo dos 31 quadros, inclusive durante o balanço de erro.
         if(angle>15){angle=15;velocity=Math.min(0,velocity);}else if(angle< -15){angle=-15;velocity=Math.max(0,velocity);}remaining-=step;}}
       for(let i=0;i<17;i++)items[i].pop=Math.max(0,items[i].pop-dt);
@@ -184,16 +191,24 @@ window.AlgebraPuzzle = (() => {
       if(state==='CHAVE'){ctx.fillStyle='#152638e8';ctx.fillRect(305,346,414,46);text('Pegue a Chave de Álgebra!',512,375,23);}
       if(state==='ESCURECER'||state==='TITULO'||state==='SAIR'){ctx.globalAlpha=state==='TITULO'?1:Math.min(1,elapsed/.4);ctx.fillStyle='#101820';ctx.fillRect(0,0,1024,572);ctx.globalAlpha=1;if(state==='TITULO')text(`Fase ${phase+2} de ${data.fases.length}`,512,286,32);}
       ctx.fillStyle='#152638dc';ctx.fillRect(920,12,44,40);text('×',942,41,30);if(state==='JOGANDO'){ctx.fillStyle='#152638dc';ctx.fillRect(866,12,44,40);ctx.strokeStyle='#fff';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(888,32,11,.3,Math.PI*1.9);ctx.stroke();ctx.beginPath();ctx.moveTo(893,18);ctx.lineTo(899,29);ctx.lineTo(886,27);ctx.stroke();const helpImg=art[helpPressed?'btn_ajuda_pressionado':'btn_ajuda_normal'];if(helpImg)ctx.drawImage(helpImg,814,12,40,40);else{ctx.fillStyle='#152638dc';ctx.fillRect(812,12,44,40);text('?',834,39,24);}}
+      ctx.fillStyle='#152638dc';ctx.fillRect(758,12,44,40);
+      const gearImg=art.btn_engrenagem;
+      if(gearImg)ctx.drawImage(gearImg,766,18,28,28);
+      else text('⚙',780,39,24);
+      if(document.activeElement===buttons[4]){ctx.strokeStyle='#ffe591';ctx.lineWidth=2.5;ctx.strokeRect(758,12,44,40);}
       if(drag>=0){ctx.fillStyle='#10182055';ctx.beginPath();ctx.ellipse(pointer.x,pointer.y+25,22,6,0,0,Math.PI*2);ctx.fill();stone(items[drag].type,pointer.x,pointer.y,46*1.15);}
     }
-    function loop(stamp){if(closed)return;const dt=last?Math.min(.05,(stamp-last)/1000):0;last=stamp;update(dt);if(closed)return;draw();raf=requestAnimationFrame(loop);}
+    function loop(stamp){if(closed)return;if(paused){last=stamp;raf=requestAnimationFrame(loop);return;}const dt=last?Math.min(.05,(stamp-last)/1000):0;last=stamp;update(dt);if(closed)return;draw();raf=requestAnimationFrame(loop);}
     buttons[0].onclick=()=>{if(!claimed)close(false);};buttons[1].onclick=()=>{if(state==='JOGANDO')setup();};buttons[2].onclick=collect;
     buttons[3].onpointerdown=()=>{helpPressed=true;};buttons[3].onpointerup=()=>{helpPressed=false;};buttons[3].onpointerleave=()=>{helpPressed=false;};
     buttons[3].onclick=()=>{if(state==='JOGANDO'){cancel();window.TutorialCard?.abrir?.('algebra',{onFechar:()=>canvas.focus()});}};
-    canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',cancel);canvas.addEventListener('lostpointercapture',cancel);document.addEventListener('keydown',key,true);window.addEventListener('resize',resize);current=close;setup();if(isDebug())stockTest();resize();
+    buttons[4].onclick=()=>openSettings();
+    canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',cancel);canvas.addEventListener('lostpointercapture',cancel);document.addEventListener('keydown',key,true);window.addEventListener('resize',resize);current=close;
+    window.ActivePuzzle = { type: 'algebra', close: () => close(false), pause: () => { paused = true; }, resume: () => { paused = false; }, get active() { return Boolean(current); } };
+    setup();if(isDebug())stockTest();resize();
     const tutorialAbriu=window.TutorialCard?.verificarEabrir?.('algebra',{onFechar:()=>canvas.focus()});
     if(!tutorialAbriu)canvas.focus();
     raf=requestAnimationFrame(loop);
   }
-  return {prepare,open};
+  return {prepare,open,close:()=>close(false),pause:()=>{paused=true;},resume:()=>{paused=false;},get active(){return Boolean(current);}};
 })();

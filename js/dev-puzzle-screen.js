@@ -45,7 +45,7 @@ window.DevPuzzleScreen = (() => {
           scene.open({...options,onExit:(won,...args)=>{
             if(closing)return;closing=true;
             if(key.id==='geometria')window.GameAudio?.stopGeometryMusic?.();
-            window.Music?.sairDaCena?.(key.id);
+            window.Music?.definirLugar?.('exploracao');
             // close() já removeu a cena: conserva seu último quadro durante o fade, sem reabri-la.
             host.inert=true;document.body.appendChild(host);
             transition(()=>null,()=>{host.remove();if(won&&key.id!=='montanha')award(key);options.onExit?.(won,...args);},()=>canvas)
@@ -53,10 +53,11 @@ window.DevPuzzleScreen = (() => {
           }});
           host=document.body.lastElementChild;
           if(key.id==='geometria')window.GameAudio?.playGeometryMusic?.();
-          window.Music?.entrarNaCena?.(key.id);
+          window.Music?.definirLugar?.(key.id);
         },()=>host?.querySelector('canvas')||canvas);
       } catch(error) {
-        if(key.id==='geometria')window.GameAudio?.stopGeometryMusic?.(); window.Music?.sairDaCena?.(key.id);
+        if(key.id==='geometria')window.GameAudio?.stopGeometryMusic?.();
+        window.Music?.definirLugar?.('exploracao');
         sceneActive=false;host?.remove();const message='Não foi possível abrir o puzzle. Tente de novo.';
         announce(message);document.querySelector('#island-announcement').textContent=message;console.error(`[Puzzle ${key.id}]`,error);
       }
@@ -74,7 +75,7 @@ window.DevPuzzleScreen = (() => {
     function close(complete=false) {
       if(!current)return;
       if(current.id==='geometria')window.GameAudio?.stopGeometryMusic?.();
-      window.Music?.sairDaCena?.(current.id);
+      window.Music?.definirLugar?.('exploracao');
       if(complete)award(current);
       current=null;pending=null;buttons=[];hover=-1;canvas.style.cursor='';clearInput();canvas.focus();
       canvas.setAttribute('aria-label','Ilha do Conhecimento. WASD ou setas para explorar, E para interagir.');
@@ -84,6 +85,8 @@ window.DevPuzzleScreen = (() => {
     canvas.addEventListener('click',event=>{if(current){const index=hit(event);if(index>=0)close(index===1);}});
     function open(key) {
       current=key;opened=performance.now();pending=null;selected=0;hover=-1;buttons=[];clearInput();canvas.focus();
+      if(key.id==='geometria')window.GameAudio?.playGeometryMusic?.();
+      window.Music?.definirLugar?.(key.id);
       canvas.setAttribute('aria-label',key.id==='montanha'?'Abrindo o topo da montanha. Escape: voltar.':`Puzzle de ${key.label}. Tela de desenvolvimento. Escape: voltar. Enter: simular conclusão.`);
     }
     function input(event) {

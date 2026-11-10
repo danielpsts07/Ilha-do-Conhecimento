@@ -15,7 +15,7 @@ _lixeira/                    arquivos antigos, tools, ambiente Python e caches
 AGENTS.md  README.md  .gitignore  .gitattributes
 ```
 
-Controles: WASD/setas no teclado físico (E interage, M abre o mapa, Escape pausa e F3 mostra coordenadas e região). Na tela da ilha, os controles táteis em pixel art (`assets/hud/controles/`) incluem direcional em cruz com setas individuais (`seta-*.webp`), joystick analógico (`joystick-base.webp`, `joystick-manche.webp`) e botão de ação com o "E" desenhado (`botao-interagir.webp`). Estados visuais gerenciados por CSS: pulso suave de escala ao aproximar-se de placas/chaves, escurecimento e rebaixamento ao pressionar (`:active` e `.is-pressed`), opacidade atenuada em repouso e fallback sólido (fundo `#f7e3bf` e borda `#8c6f48`). Regra de exibição: a escolha do jogador em Configurações prevalece sobre qualquer detecção de dispositivo (sem ocultação por pointer, hover ou largura de tela), gerenciada pelo atributo `data-touch-mode` em `#island-screen` (`arrows`, `joystick` ou `off`), com atualização imediata sem recarregar a página. Na tela de Controles das Configurações, as opções "Setas" e "Joystick" trazem as novas miniaturas em pixel art (`setas-completo.webp`).
+Controles: WASD/setas no teclado físico (E interage, M abre o mapa, Escape pausa e F3 mostra coordenadas e região). Na tela da ilha, os controles táteis em pixel art (`assets/hud/controles/`) incluem direcional em cruz com setas individuais (`seta-*.webp`), joystick analógico (`joystick-base.webp`, `joystick-manche.webp`) e botão de ação com o "E" desenhado (`botao-interagir.webp`). Padrão inicial: para novos jogadores em celular/tablet (`isTouchDevice`), o padrão é `joystick`; em computadores com mouse, o padrão é `arrows`. A preferência salva em `localStorage` (`ilha.touch`) é sempre preservada. Estados visuais gerenciados por CSS: pulso suave de escala ao aproximar-se de placas/chaves, escurecimento e rebaixamento ao pressionar (`:active` e `.is-pressed`), opacidade atenuada em repouso e fallback sólido (fundo `#f7e3bf` e borda `#8c6f48`). Regra de exibição: a escolha do jogador em Configurações prevalece sobre qualquer detecção de dispositivo (sem ocultação por pointer, hover ou largura de tela), gerenciada pelo atributo `data-touch-mode` em `#island-screen` (`arrows`, `joystick` ou `off`), com atualização imediata sem recarregar a página. Na tela de Controles das Configurações, as opções "Setas" e "Joystick" trazem as novas miniaturas em pixel art (`setas-completo.webp`).
 Fundo intacto: `assets/ilha/ilha.jpeg`, escala 0,6 e personagem de 40 px. Colisão usa água automática e `assets/ilha/island_mask.png`; os pontos antigos aguardam reposicionamento.
 Regiões da ilha: o mapa é dividido em 6 ambientes com zonas em coordenadas da imagem (2752 × 1536) definidas em `js/config.js` (`ISLAND_REGIONS`):
 - `Praça do Portal` (centro, spawn): `[1080, 760, 500, 776]`
@@ -48,50 +48,37 @@ Pontos antigos (mundo): guia (2424,2088), portal (2136,2088), floresta (1032,112
 
 ## Tela cheia e Configurações
 
-- Tela cheia: `html`, `body`, `.game-shell` e `.island-screen` usam `100dvh` (fallback `100vh`) e `overflow: hidden`; o viewport tem `viewport-fit=cover` e HUD, cantos e fechar respeitam `env(safe-area-inset-*)`. O canvas da ilha reajusta em `resize`, `orientationchange` e `visualViewport` (câmera, escala 0,6 e personagem de 40 px intactos).
-- Configurações (`#book-dialog`): reformulado com o tema Mural de Cortiça. O palco tem proporção 1024 × 572 em cover, corte vertical ancorado em 30% topo / 70% base, zona segura protegida (x 18% a 84%, y 6% a 86%) e sobras preenchidas com o fundo borrado e escurecido. A cortiça (55,3% × 60,3%) usa `container-type: size` e medidas relativas (`cqw`/`cqh`), eliminando barras de rolagem. A tela inicial do mural conta com placa de título suspensa, grade 4×2 de cartões temáticos com leve rotação (-1,5° a +1,5°) e barra de ações (Continuar e Restaurar padrões). Os submenus abrem sobre a folha pautada (`folha-caderno-com-gato.webp`) via transição FLIP (450 ms; 150 ms em modo calmo), com layout em fluxo (flex/grid): cabeçalho estruturado (`#settings-back` em pílula contrastante de toque ≥ 48 px e texto ≥ 18 px, título ≥ 20 px), introdução com respiro reservado e conteúdo adaptativo à esquerda respeitando a margem vermelha e a reserva do gato (`x >= 72%` e `y >= 60%`). Tipografia fluida com `clamp()` e mínimos legíveis (corpo ≥ 14 px, títulos ≥ 20 px), sem barras de rolagem em todas as resoluções (667×375 até 1920×1080 com e sem "Letras maiores"). Botão fechar (56 px) fixo no canto superior direito respeitando safe areas. Inclui modo de diagnóstico visual `?calibrar`. Histórico do livro preservado em `_lixeira/historico/menu-livro/`. Imagens do fundo e peças de interface foram geradas por IA.
+- Tela cheia: `html`, `body`, `.game-shell` e `.island-screen` usam `100dvh` (fallback `100vh`) e `overflow: hidden`; o viewport tem `viewport-fit=cover` e HUD, cantos e fechar respeitam `env(safe-area-inset-*)`. O canvas da ilha reajusta em `resize`, `orientationchange` e `visualViewport` (câmera, escala 0,6 e personagem de 40 px intactos). Botão de tela cheia na tela inicial (`#home-fullscreen-btn`) visível apenas em dispositivos móveis/tablets (`pointer: coarse` ou `maxTouchPoints > 0`) com suporte à Fullscreen API; tenta travar em orientação paisagem (`screen.orientation?.lock?.('landscape')`).
+- Configurações (`#book-dialog`): reformulado com o tema Mural de Cortiça. O palco tem proporção 1024 × 572 em cover, corte vertical ancorado em 30% topo / 70% base, zona segura protegida (x 18% a 84%, y 6% a 86%) e sobras preenchidas com o fundo borrado e escurecido. A cortiça (55,3% × 60,3%) usa `container-type: size` e medidas relativas (`cqw`/`cqh`), eliminando barras de rolagem. A tela inicial do mural conta com placa de título suspensa, grade 4×2 de cartões temáticos com leve rotação (-1,5° a +1,5°) e barra de ações (Continuar e Restaurar padrões). "Créditos" foi incorporado como segunda página de "Sobre nós" na folha pautada, preservando todos os créditos e o desenho da lousa. O cartão vago no mural passou a ser "Voltar ao menu principal" (`#settings-card-quit`), com diálogo modal de confirmação (`#settings-confirm-dialog`) prevenindo saídas acidentais e alertando sobre o reinício do puzzle quando aberto dentro de um desafio. Os submenus abrem sobre a folha pautada (`folha-caderno-com-gato.webp`) via transição FLIP (450 ms; 150 ms em modo calmo), com layout em fluxo (flex/grid): cabeçalho estruturado (`#settings-back` em pílula contrastante de toque ≥ 48 px e texto ≥ 18 px, título ≥ 20 px), introdução com respiro reservado e conteúdo adaptativo à esquerda respeitando a margem vermelha e a reserva do gato (`x >= 72%` e `y >= 60%`). Tipografia fluida com `clamp()` e mínimos legíveis (corpo ≥ 14 px, títulos ≥ 20 px), sem barras de rolagem em todas as resoluções (667×375 até 1920×1080 com e sem "Letras maiores"). Botão fechar (56 px) fixo no canto superior direito respeitando safe areas. Inclui modo de diagnóstico visual `?calibrar`. Histórico do livro preservado em `_lixeira/historico/menu-livro/`. Imagens do fundo e peças de interface foram geradas por IA.
+- Botão de Configurações nos Puzzles e Pausa: todos os 4 puzzles (`geometria`, `operacoes`, `algebra`, `labirinto`) possuem botão de engrenagem (`assets/hud/configuracoes.png`) no topo direito e suporte a abrir Configurações via tecla `Esc`. Ao abrir as Configurações durante um desafio, o jogo pausa completamente (temporizadores, movimentação do herói, rotas e animações congelam sem avanço de tempo). Ao fechar o menu, o puzzle é despausado suavemente e o foco retorna ao botão de engrenagem. Singleton `window.ActivePuzzle` gerencia a interface unificada de pausa/retomada e saída para o menu.
 - Tutorial (`#tutorial-view`): reformulado para viver dentro do tema Mural de Cortiça, compartilhando a folha pautada (`folha-caderno-com-gato.webp`) e container queries. Bloco de conteúdo centralizado vertical e horizontalmente entre o cabeçalho e a barra inferior, com altura comum reservada de 48cqh nas duas colunas (sem saltos de layout ao trocar de etapa). Em paisagem, usa layout em duas colunas com gap de 3.5–4cqw: esquerda com cabeçalho seguro abaixo do alfinete e da fita ('COMO JOGAR 01 / 03'), título com clamp(24px, 3.2cqw, 32px), texto de corpo com max-width de 34ch, guia de teclas WASD em cruz com teclas mecânicas estilizadas (`kbd`) e legenda legível logo abaixo, e dica em caixa destacada (`#tutorial-tip`); direita com moldura de prática contida na folha para movimento (área de 16:10 ocupando ~42–45% da altura útil, com grama, árvore, personagem e botões de seta em teclas estilo WASD em cruz), interação (caixa em 16:10, personagem e chave ampliados, pedestal, botão 'Interagir E' com largura fit-content centralizado e mensagem de resultado) e regiões (grade 2×2 com botões ampliados, descrição dinâmica e gato de resgate). Barra inferior com Voltar ('Voltar ao menu' na etapa inicial e 'Voltar' nas demais; altura ≥ 48 px, texto ≥ 18 px), pontinhos de etapa com alvo de toque de 28 px e botão verde Próxima ('Próxima' / 'Entendi!'; altura ≥ 48 px, texto ≥ 18 px). Proteção estrita da reserva do gato (`x >= 72%` e `y >= 60%`) e suporte a retrato (empilhamento em uma coluna), sem rolagem em todas as resoluções testadas (667×375 até 1920×1080 com e sem "Letras maiores").
 - Movimento em 8 direções e redução de passo com troca imediata: a ilha utiliza a folha unificada `assets/personagem/personagem_spritesheet_8_direcoes_v2.png` (192×448 px, 4 colunas × 8 linhas de 48×56 px, pés em 24, 52) com ciclo de 4 quadros (0 parado, 1 passo A, 2 parado, 3 passo B) a 7,5 quadros/s (8 ticks por quadro) por tempo contínuo (`animTime += dt`). Ao parar, fixa a coluna 0 preservando a direção olhada. O passo foi reduzido a 1/4 do valor anterior: `STEP_TILE = 32 * (0.5 - 0.17) / 4` (≈ 2,64 px de mundo, 4,4 px de imagem) com 4 ticks por passo na reta e 6 ticks na diagonal normalizada, mantendo a velocidade média estritamente inalterada (39,6 px/s na reta e 37,3 px/s na diagonal). A troca de direção é imediata no mesmo tick da nova tecla/comando, recalculando o vetor de destino a partir da posição atual sem terminar o passo antigo (latência ≤ 1 tick / 16,7 ms). Entrada por teclado: WASD suporta diagonais em ordem de pressão; setas direcionais são restritas a 4 direções ortogonais (a última pressionada prevalece, nunca diagonal). Tolerância de 50 ms ao soltar diagonais do WASD. Joystick analógico com zona morta histerética (0,25/0,20) e histerese angular de 6°. Colisão resolve eixos X e Y separadamente com deslizamento em paredes e bloqueio de quinas. O painel F3 exibe linha, coluna, velocidade real (px/s), distância percorrida desde o comando, estado andando, setor e `animTime`. Testes automatizados em `walk-animation.test.js`, `scratch/test-step-reduction.cjs` e `scratch/test-browser-acceptance.cjs`.
 
 ## Áudio e Gerenciador de Música
 
 - **Gerenciador central (`js/music.js`)**: singleton `window.Music` responsável pela reprodução de trilhas musicais no jogo, desacoplado da lógica interna dos puzzles e 100% compatível com execução local via `file://` (sem `fetch`, sem bibliotecas externas e sem dependências de compilação).
-  - **API Pública**:
-    - `Music.entrarNaCena(nome)`: inicia a trilha mapeada para a cena com fade-in suave (800 ms). Se a cena atual já estiver com a mesma faixa tocando (ex.: avanço de fase ou transição para a câmara da chave), a música continua sem interrupção nem reinício.
-    - `Music.sairDaCena(nome)`: realiza fade-out suave (600 ms), pausa a reprodução e redefine `currentTime = 0`.
+  - **Música por Situação (`Music.definirLugar(id)`)**:
+    - **Menu Principal (`menu`)**: `assets/audio/musica-menu.ogg` e `musica-menu.mp3`. Toca ao abrir o jogo e durante toda a história de introdução até a entrada na ilha.
+    - **Exploração da Ilha (`exploracao`)**: `assets/audio/musica-exploracao.ogg` e `musica-exploracao.mp3`. Toca na **ILHA INTEIRA**, o tempo todo em que o herói estiver explorando o mapa (Pico do Miau, caminhos e todas as regiões: Aldeia do Saber, Campos Contados, Ruínas das Formas, Floresta dos Padrões e Praça do Portal). Andar de uma região para outra ou aproximar-se de um local de puzzle **NÃO muda a música**.
+    - **Puzzles (apenas dentro da atividade / gameplay para conquistar a chave)**:
+      - **Puzzle de Álgebra (`algebra`)**: `assets/audio/musica-vila.ogg` e `musica-vila.mp3`. Toca exclusivamente dentro do puzzle das joias e balança na Aldeia do Saber.
+      - **Puzzle de Operações (`operacoes`)**: `assets/audio/musica-fazenda.ogg` e `musica-fazenda.mp3`. Toca exclusivamente dentro do puzzle do moinho e sacos nos Campos Contados.
+      - **Puzzle de Geometria (`geometria`)**: `assets/audio/musica-geometria.ogg` e `musica-geometria.mp3`. Toca exclusivamente dentro do puzzle de encaixes nas ruínas.
+      - **Puzzle do Labirinto (`labirinto`)**: `assets/audio/musica-labirinto.ogg` e `musica-labirinto.mp3`. Toca exclusivamente dentro dos 3 cruzamentos do labirinto e na câmara da chave.
+  - **API Pública e Transições**:
+    - `Music.definirLugar(lugarId)`: define a situação atual e realiza crossfade suave de cerca de 1,2 s (`CROSSFADE_MS = 1200`) ao transicionar entre faixas diferentes (ex.: entrar num puzzle ou voltar para a ilha). Se a nova faixa solicitada for igual à que já está tocando (ex.: andar pela ilha ou abrir telas sem troca de faixa), a reprodução segue contínua sem reiniciar, cortar ou sofrer fade.
+    - `Music.entrarNaCena(nome)` / `Music.sairDaCena(nome)`: compatibilidade com chamadas de ciclo de cenas.
     - `Music.atualizarVolume()`: recalcula o volume em tempo real baseado nas preferências ativas de `#music-volume` e `#toggle-mute`.
-    - `Music.precarregarFaixa(faixaId)` / `Music.precarregarCena(nome)`: pré-carrega os arquivos com `audio.load()`.
+    - `Music.precarregarFaixa(faixaId)` / `Music.precarregarCena(nome)`: pré-carrega os arquivos de áudio.
     - `Music.isTocando()`: informa se há música sendo reproduzida no momento.
-  - **Como adicionar novas trilhas**:
-    1. Registre os arquivos e o ganho em `FAIXAS`:
-       ```javascript
-       FAIXAS.minha_faixa = {
-         arquivos: ['assets/audio/minha-faixa.ogg', 'assets/audio/minha-faixa.mp3'],
-         ganho: 1.0 // ajuste de ganho se a gravação for mais alta ou mais baixa
-       };
-       ```
-    2. Mapeie as cenas correspondentes em `CENAS`:
-       ```javascript
-       CENAS.operacoes = 'minha_faixa';
-       ```
-    3. Chame `window.Music.entrarNaCena('operacoes')` e `window.Music.sairDaCena('operacoes')` na abertura e encerramento do puzzle.
-- **Trilha exclusiva do Labirinto (Floresta)**:
-  - Arquivo primário: `assets/audio/musica-labirinto.ogg` (Opus, 48 kHz, estéreo, exatamente 90,000 s).
-  - Arquivo reserva: `assets/audio/musica-labirinto.mp3` (fallback transparente via detecção `canPlayType`).
-  - Métrica musical: 96 BPM em 4/4 (90 s correspondem com exatidão a 36 compassos de 4 tempos, garantindo emenda sem perda de pulso).
-  - Modo de loop: `LOOP_MODO = 'nativo'` (`audio.loop = true`). A emenda de 90 s repete de forma contínua e sem engasgos perceptíveis.
-- **Ciclo de vida e navegação**:
-  - Entrada: fade-in suave de 0 até o volume final ao longo de 800 ms.
-  - Persistência: a música permanece contínua sem reiniciar ao avançar entre os cruzamentos (fases 1 → 2 → 3), ao reiniciar o desafio no botão (↻), ao abrir o menu de Configurações sobre a cena ou durante pausas.
-  - Câmara da chave: ao concluir o 3º cruzamento e entrar na câmara ("Pegue a chave!"), a cena transiciona para `camara` mapeada para `FAIXA_CENA_CHAVE = 'labirinto'`, mantendo a música contínua.
-  - Saída: fade-out suave de 600 ms até 0, pausando e zerando `currentTime = 0` ao clicar em X, pressionar Escape, cruzar o portal de saída concluído ou qualquer saída programática.
-  - Proteção contra saída/entrada rápida: tokens sequenciais (`fadeToken`) invalidam imediatamente fades anteriores, impedindo sobreposição ou encerramentos tardios indevidos.
-- **Configurações e Volume**:
-  - Fórmula: `volumeFinal = (musicVolume / 100) * (muted ? 0 : 1) * MUSIC_GANHO_MESTRE * ganhoFaixa`, com `MUSIC_GANHO_MESTRE = 0.8` e ganho da faixa 1.0 (resultando em 0.28 no padrão de 35%).
-  - O slider "Som" (#sound-volume) afeta unicamente efeitos sonoros, sem interferir na música.
-  - Ajustes em tempo real: movimentar o controle deslizante de Música ou alternar Silenciar com o labirinto aberto atualiza o volume instantaneamente.
-  - Acessibilidade e Resiliência: modo "Menos animações" (`calm`) aplica volumes de forma imediata (sem rampa de fade); bloqueios de autoplay pelo navegador são capturados sem erro e retomados no primeiro clique/toque/tecla do usuário; abas em segundo plano pausam o áudio e o retomam com fade suave ao retornar; o botão "Ouvir música de teste" de `js/audio.js` é bloqueado enquanto o labirinto estiver ativo para evitar sobreposição.
-- **Testes automatizados**: suíte completa em `scratch/test-music-manager.cjs` com 10 testes cobrindo todo o ciclo de vida, idempotência, fades, configurações, resiliência e bloqueio de teste.
+  - **Regra estrita do Menu de Configurações**:
+    - Abrir ou fechar o menu de configurações (mural de cortiça) **nunca altera nem reinicia a música**. A trilha sonora em reprodução continua a do momento (seja no menu, na exploração da ilha ou dentro de um puzzle) e responde instantaneamente aos sliders de `#music-volume` e `#toggle-mute`.
+  - **Loop e Resiliência**:
+    - Cada faixa toca em loop contínuo infinito (`audio.loop = true`).
+    - Falhas ou ausência de arquivos são tratadas com captura graciosa (`play().catch()`), sem nunca travar o jogo.
+    - Recuperação de autoplay no primeiro gesto do usuário (`pointerdown`, `keydown`, `touchstart`).
+    - Pausa automática ao ocultar a aba (`visibilitychange`) e retomada suave com fade de 400 ms.
+  - **Testes automatizados**: suítes em `scratch/test-music-places.cjs`, `scratch/test-music-manager.cjs` e `scratch/test-geometria-audio.cjs`.
 
 ## Áudio e Música de Geometria
 
@@ -162,3 +149,46 @@ Pontos antigos (mundo): guia (2424,2088), portal (2136,2088), floresta (1032,112
   - Mini-quadrinhos em `intro/`: `hq-livro-sorriso.webp`, `hq-rosto-menina.webp`, `hq-gato-susto.webp`, `hq-pulo.webp`, `hq-gato-preso.webp`, `hq-menina-determinada.webp` e `hq-quatro-chaves.webp` (com `onerror` que remove o elemento sem quebrar se faltar).
   - Efeitos sonoros em `assets/audio/sfx-intro/` (`.ogg` com fallback `.mp3`): `sfx-painel`, `sfx-balao`, `sfx-pagina`, `sfx-livro-acorda`, `sfx-risada-livro`, `sfx-miau`, `sfx-portal`, `sfx-pulo`, `sfx-queda`, `sfx-puf`, `sfx-cadeado`, `sfx-chave` e `sfx-botao` (respeitando `#toggle-mute` e `#sound-volume` com teto de `<= 60%`).
 - **Testes automatizados**: `node scratch/test-intro-story.cjs`.
+
+## Controle remoto (celular)
+
+O jogo continua abrindo normalmente por `index.html` em `file://` sem servidor. Para usar o **celular como controle remoto sem fio** na mesma rede Wi-Fi (Partes 1 e 2: servidor, QR Code, menu inicial, configurações, intro HQ, exploração da ilha, puzzles espelhados e labirinto), siga os passos abaixo:
+
+### 1. Instalar e iniciar o servidor no computador
+No terminal, na pasta raiz do projeto:
+
+```bash
+npm install
+  
+```
+
+O servidor iniciará na porta `3000` (ou na próxima porta livre se a `3000` estiver ocupada) e mostrará no terminal dois endereços em português:
+- **Computador (PC)**: `http://localhost:3000`
+- **Controle no celular**: `http://SEU_IP_LOCAL:3000/controle?t=TOKEN`
+
+### 2. Conectar o celular pelo QR Code
+1. No computador, abra **`http://localhost:3000`** no navegador.
+2. Vá em **Configurações → Controles** e selecione **Controle remoto**.
+3. Ao lado do botão **Controle remoto**, o quadrado branco exibirá automaticamente o **QR Code** (gerado offline pelo servidor em `/qr.svg`) e o endereço da rede local.
+4. Conecte o celular na **mesma rede Wi-Fi** do computador e escaneie o QR Code com a câmera do celular (ou digite o endereço mostrado abaixo do QR Code).
+5. Segure o celular **deitado (modo paisagem)**. O status no computador mudará de `"Aguardando celular"` para `"Celular conectado"`.
+
+### 3. Como funciona no celular
+- **Menu Principal**: espelha os botões da tela inicial (`Jogar`, `Tutorial`, `Sair`, engrenagem de `Configurações` no canto superior direito e botão de `Tela cheia` no canto inferior direito; quando o jogo começa, `Tela cheia` vai para o canto superior esquerdo).
+- **Configurações**: tocar na engrenagem abre/fecha as Configurações tanto no celular quanto no computador. Todas as abas cabem na tela em paisagem sem rolagem. Na aba **Controles** do celular, você pode escolher entre **Setas** (cruz com suporte a 2 setas simultâneas na diagonal) e **Joystick** (analógico com retorno automático ao centro).
+- **História de Introdução (HQ)**: enquanto a HQ passa no computador, o celular exibe os botões **Avançar** (ou **Vamos lá!** no cartão final), **Anterior** e **Pular** (seguindo a mesma regra de visibilidade do PC).
+- **Exploração da Ilha**: exibe apenas o controle escolhido (**Setas** ou **Joystick**) à esquerda e o botão redondo **Interagir** à direita (com suporte a multitoque para andar e interagir ao mesmo tempo). As artes do controle mudam automaticamente conforme a região da ilha (`exploracao`, `labirinto`, `vila`, `geometria`, `fazenda`).
+- **Puzzles espelhados (Geometria, Operações e Álgebra/Joias)**: ao entrar num puzzle no PC, o celular carrega o mesmo puzzle adaptado à tela touch com os botões de engrenagem de Configurações e Tela Cheia preservados nos cantos. As ações são espelhadas nos dois sentidos:
+  - Arrastar peças, sacos de grãos ou joias no celular reflete instantaneamente no computador (e vice-versa), com coordenadas normalizadas independentes da resolução do aparelho.
+  - Tocar nas peças de Geometria na barra para girá-las ou tocar numa peça encaixada para devolvê-la à barra funciona normalmente pelo celular.
+  - Botões do HUD (↻ Reiniciar, ? Ajuda e X Fechar) e o Cartão de Tutorial com demonstração animada sincronizam seus passos entre o computador e o celular.
+  - O computador permanece a fonte única da verdade para validação de rodadas e conquista das chaves. Se a conexão com o celular for interrompida durante um arrasto, qualquer peça ou saco é solto com segurança imediatamente (`cancelActiveGrab`).
+- **Controle exclusivo do Labirinto (Raciocínio Lógico / Floresta)**: na Floresta dos Padrões, a tela do labirinto **não** é duplicada no celular para preservar a diversão do jogo na tela grande do PC. Em vez disso, o celular se transforma no gamepad do labirinto com a arte temática de pedras e runas da floresta (`labirinto`), no modo de Setas ou Joystick escolhido, com o botão de Interagir oculto. Seus comandos movimentam a heroína na velocidade exata do PC (`220 px/s`) com watchdog de `300 ms` e cancelamento de teclas soltas.
+- **Segurança e reconexão**: apenas **1 celular por vez** pode controlar o jogo (um 2º aparelho verá `"Já existe um celular conectado"` sem derrubar o 1º). Se a conexão cair ou a aba do celular for minimizada, todos os botões são soltos automaticamente no computador em até `300 ms` e a vaga fica reservada por `10 s` para o mesmo celular reconectar.
+
+### 4. Solução de problemas comuns
+- **Firewall do Windows bloqueando a conexão**: na primeira vez que rodar `npm start`, permita o acesso do **Node.js** em redes privadas/domésticas na janela do Firewall do Windows (ou libere a porta TCP `3000` no Firewall do Windows Defender).
+- **Celular e PC em redes diferentes**: verifique se o celular não está nos dados móveis (4G/5G) ou em uma rede Wi-Fi de visitantes ("Guest") com isolamento de clientes ativado no roteador.
+- **IP incorreto (adaptador virtual WSL / Docker / VPN)**: o servidor prioriza automaticamente endereços `192.168.x.x` de placas físicas, mas se você estiver com uma VPN ativa ou múltiplos adaptadores, confira o IP da sua placa Wi-Fi/Ethernet com `ipconfig` no terminal e use `http://SEU_IP_WIFI:3000/controle?t=TOKEN` com o token impresso no console.
+- **Porta 3000 em uso**: se a porta `3000` estiver ocupada, o servidor avisa em português no terminal e tenta automaticamente a porta seguinte (`3001`, `3002`, etc.), ou você pode escolher outra porta com `PORT=4000 npm start`.
+- **Testes automatizados**: `node scratch/test-remote-control.cjs`.

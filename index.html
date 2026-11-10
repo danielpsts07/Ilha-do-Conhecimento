@@ -29,6 +29,9 @@
         </nav>
       </div>
       <span class="sleep-mark" aria-hidden="true">z<span>z</span></span>
+      <button id="home-fullscreen-btn" class="home-fullscreen-btn" type="button" aria-label="Ativar tela cheia" aria-pressed="false" title="Tela cheia" hidden>
+        <img src="assets/configuracoes/mural/ui/icone-tela-cheia.webp" alt="">
+      </button>
     </section>
   </main>
 
@@ -186,10 +189,10 @@
                 <img src="assets/configuracoes/mural/ui/icone-sobre-nos.webp" alt="" class="card-icon">
                 <span class="card-label">Sobre nós</span>
               </button>
-              <button class="mural-card card-credits" data-settings-go="credits" data-tone="credits" aria-label="Créditos">
+              <button class="mural-card card-quit" id="settings-card-quit" data-settings-quit type="button" aria-label="Voltar ao menu principal">
                 <img src="assets/configuracoes/mural/ui/cartao-azul.webp" alt="" class="card-bg">
-                <img src="assets/configuracoes/mural/ui/icone-creditos.webp" alt="" class="card-icon">
-                <span class="card-label">Créditos</span>
+                <img src="assets/configuracoes/mural/ui/icone-voltar.webp" alt="" class="card-icon">
+                <span class="card-label">Voltar ao menu</span>
               </button>
               <button class="mural-card card-fullscreen" id="settings-fullscreen" type="button" aria-pressed="false" aria-label="Ativar tela cheia">
                 <img src="assets/configuracoes/mural/ui/cartao-rosa.webp" alt="" class="card-bg">
@@ -467,7 +470,7 @@
               </div>
 
               <!-- ==========================================
-                   TELA 6: SOBRE NÓS (1 PÁGINA)
+                   TELA 6: SOBRE NÓS (2 PÁGINAS COM CRÉDITOS)
                    ========================================== -->
               <div class="settings-spread sheet-spread" data-settings-section="about" hidden>
                 <h2 id="settings-about-title" class="visually-hidden" tabindex="-1">Ilha do Conhecimento</h2>
@@ -500,14 +503,8 @@
 
                   <div class="mural-heart-decor" aria-hidden="true">♥</div>
                 </div>
-              </div>
 
-              <!-- ==========================================
-                   TELA 7: CRÉDITOS (1 PÁGINA)
-                   ========================================== -->
-              <div class="settings-spread sheet-spread" data-settings-section="credits" hidden>
-                <h2 id="settings-credits-title" class="visually-hidden" tabindex="-1">Quem fez a ilha</h2>
-                <div class="sheet-page" data-page-section="credits" data-page="1">
+                <div class="sheet-page" data-page-section="about" data-page="2" hidden style="opacity:0;">
                   <div class="mural-blackboard" aria-hidden="true">créditos</div>
 
                   <div class="mural-credits-list">
@@ -534,6 +531,9 @@
                   </div>
                 </div>
               </div>
+
+              <!-- Alias vazio de créditos para compatibilidade -->
+              <div class="settings-spread sheet-spread" data-settings-section="credits" hidden></div>
 
               <!-- Rodapé de paginação (exibido apenas em Controles) -->
               <footer id="sheet-pagination" class="sheet-pagination" hidden>
@@ -576,6 +576,23 @@
       </div>
     </div>
   
+    <!-- Confirmação de Voltar ao menu principal -->
+    <div id="settings-confirm-dialog" class="mural-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="settings-confirm-title" aria-describedby="settings-confirm-desc" hidden>
+      <div class="mural-confirm-card">
+        <h2 id="settings-confirm-title" class="mural-confirm-title">Voltar ao menu principal?</h2>
+        <p id="settings-confirm-desc" class="mural-confirm-desc">Quer sair do jogo e voltar ao menu principal?</p>
+        <p id="settings-confirm-puzzle-warning" class="mural-confirm-warning" hidden>O desafio atual será reiniciado.</p>
+        <div class="mural-confirm-actions">
+          <button id="settings-confirm-yes" class="mural-confirm-btn btn-yes" type="button" aria-label="Voltar ao menu">
+            <span>Voltar ao menu</span>
+          </button>
+          <button id="settings-confirm-no" class="mural-confirm-btn btn-no" type="button" aria-label="Continuar jogando">
+            <span>Continuar jogando</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- C1, C2: Botão fechar na raiz da sobreposição, irmão do palco -->
     <button class="mural-close" data-close aria-label="Fechar configurações"><img src="assets/configuracoes/mural/ui/fechar-normal.webp" alt=""></button>
   </dialog>
