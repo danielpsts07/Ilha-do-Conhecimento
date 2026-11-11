@@ -46,6 +46,8 @@ window.GameRescue = (() => {
     if (!active) return;
     const callback = menu ? callbacks.onMenu : callbacks.onExit;
     stop();
+    if (menu) window.Music?.definirLugar?.('menu');
+    else window.Music?.definirLugar?.('exploracao');
     if (callback) callback();
   }
   for (const region of AdventureProgress.regions) {
@@ -56,7 +58,10 @@ window.GameRescue = (() => {
       render();
       $('#rescue-feedback').textContent = finished ? 'Os quatro cadeados abriram! Você libertou seu gato!' : `Você usou a chave ${names[region][0]}. Mais um cadeado aberto!`;
       if (callbacks.onProgress) callbacks.onProgress();
-      if (finished) $('#rescue-title').focus();
+      if (finished) {
+        window.Music?.definirLugar?.('final');
+        $('#rescue-title').focus();
+      }
       else {
         const next = AdventureProgress.regions.find(id => AdventureProgress.hasKey(id) && !AdventureProgress.isUnlocked(id));
         (next ? $(`#rescue-lock-${next}`) : $('#rescue-return')).focus();

@@ -19,6 +19,8 @@ function createMockEnv(initialSettings = {}) {
     }
   }
 
+  const audioInstances = [];
+
   class MockAudio {
     constructor() {
       this.src = '';
@@ -31,6 +33,7 @@ function createMockEnv(initialSettings = {}) {
       this.pauseCount = 0;
       this.listeners = {};
       this.shouldRejectPlay = false;
+      audioInstances.push(this);
     }
 
     canPlayType(type) {
@@ -169,13 +172,14 @@ function createMockEnv(initialSettings = {}) {
       for (const fn of fns) fn();
     },
     settings: mockGameSettings,
+    audioInstances,
     sandbox
   };
 }
 
 let passed = 0;
 
-// Teste 1: Registro das 6 faixas e mapeamento exato das 3 situações (menu, ilha e puzzles)
+// Teste 1: Registro das 7 faixas e mapeamento exato das situações (menu, ilha, puzzles e final)
 {
   const env = createMockEnv();
   const M = env.Music;
@@ -185,6 +189,7 @@ let passed = 0;
   assert(M.FAIXAS.exploracao, 'Faixa exploracao deve existir');
   assert(M.FAIXAS.geometria, 'Faixa geometria deve existir');
   assert(M.FAIXAS.labirinto, 'Faixa labirinto deve existir');
+  assert(M.FAIXAS.final, 'Faixa final deve existir');
 
   // 1. Menu inicial e introdução
   assert.strictEqual(M.mapearLugarParaFaixa('menu'), 'menu');
@@ -214,8 +219,12 @@ let passed = 0;
   assert.strictEqual(M.mapearLugarParaFaixa('camara'), 'labirinto');
   assert.strictEqual(M.mapearLugarParaFaixa('montanha'), 'exploracao');
 
+  // 4. Final do jogo
+  assert.strictEqual(M.mapearLugarParaFaixa('final'), 'final');
+  assert.strictEqual(M.mapearLugarParaFaixa('encerramento'), 'final');
+
   passed++;
-  console.log('✓ Teste 1: As 6 faixas registradas e a regra das 3 situações validada com sucesso');
+  console.log('✓ Teste 1: As 7 faixas registradas e todas as situações validadas com sucesso');
 }
 
 // Teste 2: Início no Menu Principal com música do menu
@@ -414,14 +423,89 @@ let passed = 0;
     'musica-fazenda.ogg', 'musica-fazenda.mp3',
     'musica-exploracao.ogg', 'musica-exploracao.mp3',
     'musica-geometria.ogg',
-    'musica-labirinto.ogg'
+    'musica-labirinto.ogg',
+    'musica-final.ogg', 'musica-final.mp3'
   ];
   for (const arq of audiosEsperados) {
     const p = path.join(__dirname, '..', 'assets', 'audio', arq);
     assert(fs.existsSync(p), `Arquivo de áudio ${arq} deve existir em assets/audio/`);
   }
   passed++;
-  console.log('✓ Teste 10: Todos os 8 arquivos novos (.ogg e .mp3) e os existentes confirmados no disco');
+  console.log('✓ Teste 10: Todos os 10 arquivos (.ogg e .mp3) e os existentes confirmados no disco');
+}
+
+// Teste 11: Cena do final do jogo (resgate do gato e encerramento)
+{
+  const env = createMockEnv({ music: 35 });
+  const M = env.Music;
+
+  // 1. Vindo da exploração (jogador abre o último cadeado na montanha)
+  M.definirLugar('exploracao');
+  env.advanceTime(1200);
+  assert.strictEqual(M.getFaixaAtual(), 'exploracao');
+
+  // Abre o 4º cadeado -> inicia cena final
+  M.definirLugar('final');
+  assert.strictEqual(M.getLugarAtual(), 'final');
+  assert.strictEqual(M.getFaixaAtual(), 'final');
+
+  // Durante o crossfade (600ms de 1200ms)
+  env.advanceTime(600);
+  assert(M.isTocando());
+
+  // Conclui crossfade
+  env.advanceTime(600);
+  assert.strictEqual(M.getFaixaAtual(), 'final');
+  assert(M.isTocando());
+
+  // Slides e telas subsequentes (story, home) chamando 'final' repetidamente não reiniciam
+  const audiosTocando = env.audioInstances.filter(a => !a.paused);
+  M.definirLugar('final');
+  M.definirLugar('encerramento');
+  assert.strictEqual(M.getFaixaAtual(), 'final');
+  // Nenhuma instância nova foi criada desnecessariamente
+  assert(env.audioInstances.filter(a => !a.paused).length <= 2);
+
+  // Abrir e fechar configurações durante o final não altera nem reinicia
+  M.atualizarVolume();
+  env.settings.set('music', 50);
+  assert.strictEqual(M.getFaixaAtual(), 'final');
+  assert(M.isTocando());
+
+  passed++;
+  console.log('✓ Teste 11: Cena final toca musica-final com crossfade de 1,2s e sem reinício em chamadas repetidas');
+}
+
+// Teste 12: Saída da cena final (não vaza para o menu nem para a ilha)
+{
+  const env = createMockEnv({ music: 35 });
+  const M = env.Music;
+
+  // Está no final tocando musica-final
+  M.definirLugar('final');
+  env.advanceTime(1200);
+  assert.strictEqual(M.getFaixaAtual(), 'final');
+
+  // Caso A: Jogador clica em "Sair do topo e voltar à ilha" -> volta à exploração
+  M.definirLugar('exploracao');
+  assert.strictEqual(M.getLugarAtual(), 'exploracao');
+  assert.strictEqual(M.getFaixaAtual(), 'exploracao');
+  env.advanceTime(1200);
+  assert.strictEqual(M.getFaixaAtual(), 'exploracao');
+
+  // Caso B: Volta ao final e depois clica em "Jogar de novo" ou "Voltar ao menu principal"
+  M.definirLugar('final');
+  env.advanceTime(1200);
+  assert.strictEqual(M.getFaixaAtual(), 'final');
+
+  M.definirLugar('menu');
+  assert.strictEqual(M.getLugarAtual(), 'menu');
+  assert.strictEqual(M.getFaixaAtual(), 'menu');
+  env.advanceTime(1200);
+  assert.strictEqual(M.getFaixaAtual(), 'menu');
+
+  passed++;
+  console.log('✓ Teste 12: Saída do final restaura musica-exploracao ou musica-menu sem vazamentos');
 }
 
 console.log(`\nTODOS OS ${passed} TESTES DE MÚSICA POR LUGAR PASSARAM COM SUCESSO!`);

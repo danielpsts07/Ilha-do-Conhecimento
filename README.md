@@ -65,14 +65,15 @@ Pontos antigos (mundo): guia (2424,2088), portal (2136,2088), floresta (1032,112
       - **Puzzle de Operações (`operacoes`)**: `assets/audio/musica-fazenda.ogg` e `musica-fazenda.mp3`. Toca exclusivamente dentro do puzzle do moinho e sacos nos Campos Contados.
       - **Puzzle de Geometria (`geometria`)**: `assets/audio/musica-geometria.ogg` e `musica-geometria.mp3`. Toca exclusivamente dentro do puzzle de encaixes nas ruínas.
       - **Puzzle do Labirinto (`labirinto`)**: `assets/audio/musica-labirinto.ogg` e `musica-labirinto.mp3`. Toca exclusivamente dentro dos 3 cruzamentos do labirinto e na câmara da chave.
+    - **Final do Jogo (`final` / `encerramento`)**: `assets/audio/musica-final.ogg` e `musica-final.mp3`. Toca no momento exato em que o jogador abre o 4º cadeado e o gato é libertado no Pico do Miau, permanecendo em loop por toda a história final, tela de encerramento e créditos. Ao sair do final (seja reiniciando para o menu principal ou retornando à ilha), faz crossfade para a faixa do respectivo local (`musica-menu` ou `musica-exploracao`), sem nunca vazar para a ilha ou menu.
   - **API Pública e Transições**:
-    - `Music.definirLugar(lugarId)`: define a situação atual e realiza crossfade suave de cerca de 1,2 s (`CROSSFADE_MS = 1200`) ao transicionar entre faixas diferentes (ex.: entrar num puzzle ou voltar para a ilha). Se a nova faixa solicitada for igual à que já está tocando (ex.: andar pela ilha ou abrir telas sem troca de faixa), a reprodução segue contínua sem reiniciar, cortar ou sofrer fade.
+    - `Music.definirLugar(lugarId)`: define a situação atual e realiza crossfade suave de cerca de 1,2 s (`CROSSFADE_MS = 1200`) ao transicionar entre faixas diferentes (ex.: entrar num puzzle, ir para o final ou voltar para a ilha). Se a nova faixa solicitada for igual à que já está tocando (ex.: andar pela ilha, avançar slides do final ou abrir telas sem troca de faixa), a reprodução segue contínua sem reiniciar, cortar ou sofrer fade.
     - `Music.entrarNaCena(nome)` / `Music.sairDaCena(nome)`: compatibilidade com chamadas de ciclo de cenas.
     - `Music.atualizarVolume()`: recalcula o volume em tempo real baseado nas preferências ativas de `#music-volume` e `#toggle-mute`.
     - `Music.precarregarFaixa(faixaId)` / `Music.precarregarCena(nome)`: pré-carrega os arquivos de áudio.
     - `Music.isTocando()`: informa se há música sendo reproduzida no momento.
   - **Regra estrita do Menu de Configurações**:
-    - Abrir ou fechar o menu de configurações (mural de cortiça) **nunca altera nem reinicia a música**. A trilha sonora em reprodução continua a do momento (seja no menu, na exploração da ilha ou dentro de um puzzle) e responde instantaneamente aos sliders de `#music-volume` e `#toggle-mute`.
+    - Abrir ou fechar o menu de configurações (mural de cortiça) **nunca altera nem reinicia a música**. A trilha sonora em reprodução continua a do momento (seja no menu, na exploração da ilha, dentro de um puzzle ou no final) e responde instantaneamente aos sliders de `#music-volume` e `#toggle-mute`.
   - **Loop e Resiliência**:
     - Cada faixa toca em loop contínuo infinito (`audio.loop = true`).
     - Falhas ou ausência de arquivos são tratadas com captura graciosa (`play().catch()`), sem nunca travar o jogo.

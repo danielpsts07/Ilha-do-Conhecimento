@@ -66,6 +66,13 @@ window.FinalPuzzle = (() => {
     if(current)current();
     const d=data,g=geometry,L=FinalLogic,state=options.state,sceneScale=d.jaula.largura*TOPO_CAGE_SCALE/190;state.cadeados ||= {};
     const heroStop=[TOPO_HERO_X,TOPO_HERO_Y];
+    window.ActivePuzzle = {
+      type: 'final',
+      close: () => close(),
+      pause: () => {},
+      resume: () => {},
+      get active() { return !closed; }
+    };
     const returnFocus=document.activeElement,host=document.createElement('div'),frame=document.createElement('div'),canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
     const mission=document.createElement('p'),status=document.createElement('p'),style=document.createElement('style'),finalCopy=document.createElement('div'),homeCopy=document.createElement('p');
     host.className='finale';host.style.cssText='position:fixed;inset:0;z-index:1000;background:#101527;display:flex;justify-content:center;';frame.style.cssText='position:relative;height:100%;';
@@ -108,7 +115,7 @@ window.FinalPuzzle = (() => {
     }
     for(const slide of slides)preload(slide,slide.img);preload(room,ending.img,true);
     function fullScreen(){return phase==='STORY'||phase==='HOME'||phase==='RESTART';}
-    function beginMusic(){if(musicStarted)return;musicStarted=true;window.IntroAudio?.init();window.IntroAudio?.playMusic('final');}
+    function beginMusic(){if(musicStarted)return;musicStarted=true;window.Music?.definirLugar?.('final');}
     function story(){phase='STORY';elapsed=0;slideIndex=0;mission.hidden=exit.hidden=next.hidden=replay.hidden=finalCopy.hidden=homeCopy.hidden=true;skip.hidden=false;
       beginMusic();resize();say(slides[0].text);skip.focus();syncButtons();}
     function home(){if(phase==='HOME'||phase==='RESTART')return;homeFrom=elapsed*1000;phase='HOME';elapsed=0;state.jogoConcluido=true;particles.fill(0);
@@ -155,7 +162,7 @@ window.FinalPuzzle = (() => {
       if(p==='BRANCO'){heroScale=catScale=0;whiteDrawn=false;}
       if(end){state.jogoConcluido=true;particles.fill(0);replay.focus();}syncButtons();
     }
-    function restart(){if((phase!=='HOME'&&phase!=='FINAL')||replay.hidden||restarting)return;restarting=true;replay.disabled=true;phase='RESTART';elapsed=0;window.IntroAudio?.stopMusic(600);
+    function restart(){if((phase!=='HOME'&&phase!=='FINAL')||replay.hidden||restarting)return;restarting=true;replay.disabled=true;phase='RESTART';elapsed=0;window.Music?.definirLugar?.('menu');
       // Todo o progresso da aventura vive em memória; recarregar também zera os estados privados dos puzzles e a posição.
       // localStorage contém apenas preferências: não há progresso salvo para apagar.
       // A recarga ocorre no loop, depois dos 600 ms do fade de áudio.
@@ -192,7 +199,6 @@ window.FinalPuzzle = (() => {
       for(let i=0;i<4;i++)if(L.hit(targets[i],dx,dy)){unlock(i);break;}
     }
     function key(event){if(event.ctrlKey||event.altKey||event.metaKey)return;const k=event.key.toLowerCase();event.stopImmediatePropagation();
-      if(musicStarted)window.IntroAudio?.init(); // Recupera autoplay também com gesto de teclado capturado pela cena.
       if(fullScreen()&&(k==='escape'||k===' '||k==='enter')){event.preventDefault();if(!event.repeat){if(phase==='STORY')home();else if(k==='enter')restart();}return;}
       if(k==='tab'){event.preventDefault();let i=controls.indexOf(document.activeElement),step=event.shiftKey?-1:1;for(let n=0;n<controls.length;n++){i=(i+step+controls.length)%controls.length;if(!controls[i].hidden&&!controls[i].disabled){controls[i].focus();break;}}return;}
       if((k==='enter'||k===' ')&&controls.includes(event.target))return;
@@ -201,16 +207,15 @@ window.FinalPuzzle = (() => {
       else if((k==='g'||k==='j')&&isDebug()){for(const p of d.cadeados){state.keys[p.id]=true;state.cadeados[p.id]=true;}flying=-1;if(k==='g')story();else home();}
       else if(k==='n'&&isDebug()){
         if(phase==='ENTRAR'){hero.x=heroStop[0];hero.y=heroStop[1];hero.walk=0;hero.dir=2;change('CADEADOS');}
-        else if(phase==='CADEADOS'&&flying<0){const i=d.cadeados.findIndex(p=>!state.cadeados[p.id]);if(i<0){phase='WAIT_LOCKS';elapsed=0;}else unlock(i);}
+        else if(phase==='CADEADOS'&&flying<0){const i=d.cadeados.findIndex(p=>!state.cadeados[p.id]);if(i<0){phase='WAIT_LOCKS';elapsed=0;beginMusic();}else unlock(i);}
         else if(phase==='LIBERTAR'){elapsed=2.5;}else if(phase==='PORTAL')change('BRANCO');else if(phase==='BRANCO')change('FINAL');
       }
     }
     function keyup(event){event.stopImmediatePropagation();}
-    function close(message=''){if(closed)return;closed=true;cancelAnimationFrame(raf);canvas.removeEventListener('pointerdown',down);document.removeEventListener('keydown',key,true);document.removeEventListener('keyup',keyup,true);document.removeEventListener('visibilitychange',blur);window.removeEventListener('resize',resize);window.removeEventListener('blur',blur);for(const b of controls)b.onclick=null;
-      for(const slide of [...slides,room]){if(slide.image)slide.image.onload=slide.image.onerror=null;slide.image=null;}slides.length=0;if(musicStarted)window.IntroAudio?.dispose();host.remove();current=null;returnFocus?.focus();options.onExit?.(false,message);}
+    function close(message=''){if(closed)return;closed=true;if(window.ActivePuzzle?.type==='final')window.ActivePuzzle=null;cancelAnimationFrame(raf);canvas.removeEventListener('pointerdown',down);document.removeEventListener('keydown',key,true);document.removeEventListener('keyup',keyup,true);document.removeEventListener('visibilitychange',blur);window.removeEventListener('resize',resize);window.removeEventListener('blur',blur);for(const b of controls)b.onclick=null;
+      for(const slide of [...slides,room]){if(slide.image)slide.image.onload=slide.image.onerror=null;slide.image=null;}slides.length=0;window.Music?.definirLugar?.('exploracao');host.remove();current=null;returnFocus?.focus();options.onExit?.(false,message);}
     function blur(){last=0;}
     function update(dt){time+=dt;elapsed+=dt;noticeTime=Math.max(0,noticeTime-dt);for(let i=0;i<4;i++)shake[i]=Math.max(0,shake[i]-dt);
-      if(musicStarted)window.IntroAudio?.update(dt);
       if(phase==='WAIT_LOCKS'&&elapsed*1000>=FINAL_AFTER_LOCKS_MS){phase='DARK';elapsed=0;mission.hidden=exit.hidden=true;}
       if(phase==='DARK'&&elapsed*1000>=FINAL_FADE_MS)story();
       if(phase==='STORY'&&elapsed*1000>=slides[slideIndex].duration+(slideIndex===slides.length-1?0:FINAL_FADE_MS)){
@@ -223,7 +228,7 @@ window.FinalPuzzle = (() => {
         if(len<=step+.01){hero.walk=0;hero.dir=2;change('CADEADOS');}
       }else hero.idle+=dt*60;
       if(flying>=0){flyTime+=dt;const p=d.cadeados[flying];
-        if(flyTime>=.5&&!state.cadeados[p.id]){state.cadeados[p.id]=true;burst(g.locks[flying].x,g.locks[flying].y);say(`Cadeado de ${p.regiao} aberto!`);syncButtons();if(allOpen()){phase='WAIT_LOCKS';elapsed=0;}}
+        if(flyTime>=.5&&!state.cadeados[p.id]){state.cadeados[p.id]=true;burst(g.locks[flying].x,g.locks[flying].y);say(`Cadeado de ${p.regiao} aberto!`);syncButtons();if(allOpen()){phase='WAIT_LOCKS';elapsed=0;beginMusic();}}
         if(flyTime>=.9){flying=-1;syncButtons();}
       }
       // LEGADO: remover na limpeza final. LIBERTAR/PORTAL/BRANCO não recebem mais o fluxo normal.

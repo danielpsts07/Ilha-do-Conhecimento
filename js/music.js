@@ -35,13 +35,18 @@ window.Music = (() => {
     labirinto: {
       arquivos: ['assets/audio/musica-labirinto.ogg', 'assets/audio/musica-labirinto.mp3'],
       ganho: 1.0
+    },
+    final: {
+      arquivos: ['assets/audio/musica-final.ogg', 'assets/audio/musica-final.mp3'],
+      ganho: 1.0
     }
   };
 
-  // Mapeamento das 3 situações do jogo para a faixa correspondente:
+  // Mapeamento das situações do jogo para a faixa correspondente:
   // 1. Menu principal / introdução
   // 2. Mapa da ilha (exploração contínua em qualquer região)
   // 3. Puzzles (durante a gameplay de cada desafio)
+  // 4. Final do jogo (resgate do gato, história final e encerramento)
   const CENAS = {
     // 1. Menu inicial e introdução
     menu: 'menu',
@@ -61,7 +66,11 @@ window.Music = (() => {
     labirinto: 'labirinto',
     logica: 'labirinto',
     camara: FAIXA_CENA_CHAVE,
-    montanha: 'exploracao'
+    montanha: 'exploracao',
+
+    // 4. Final do jogo (resgate do gato, história final e encerramento)
+    final: 'final',
+    encerramento: 'final'
   };
 
   const audios = {}; // faixaId -> HTMLAudioElement (instância única reutilizada)
