@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+<iframe id="frame" src="/index.html" style="width:844px;height:390px;border:none;"></iframe>
+<script>
+const frame = document.getElementById('frame');
+frame.onload = async () => {
+  const doc = frame.contentDocument;
+  const gear = doc.getElementById('settings-button');
+  if (gear) gear.click();
+  await new Promise(res => setTimeout(res, 500));
+  const contCard = doc.querySelector('[data-settings-target="controls"]');
+  if (contCard) contCard.click();
+  await new Promise(res => setTimeout(res, 500));
+  const nextP = doc.getElementById('controls-next-page');
+  if (nextP) nextP.click();
+};
+</script>
+</body>
+</html>

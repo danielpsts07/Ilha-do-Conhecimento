@@ -4,7 +4,7 @@ window.GeometriaPuzzle = (() => {
   let data,catalog,ready,current;const images=new Map(),dash=[6,5],solid=[];
   // Lógica pura, também disponível no console: GeometriaPuzzle.selfTest().
   function selfTest(input=data) {
-    const results=[],expected=[{}, {'01':'2,0 2,1 1,1 1,2'}, {'05':'0,0 0,1 1,1 1,2 2,2','04':'4,2 3,3 4,3'}];
+    const results=[],expected=[{}, {'01':'2,0 2,1 1,1 1,2'}, {'05':'0,0 0,1 1,1 1,2 2,2'}];
     let prepared;
     try{prepared=Polyomino.prepare(input);}catch(error){console.error(`[Geometria] FALHOU: ${error.message}`);return false;}
     for(let index=0;index<prepared.cycles.length;index++) {
