@@ -13,8 +13,32 @@
   <link rel="stylesheet" href="css/settings.css">
   <link rel="stylesheet" href="css/tutorial-card.css">
   <link rel="stylesheet" href="css/intro.css">
+  <link rel="stylesheet" href="css/loading.css">
 </head>
 <body>
+  <div id="loading-screen" class="loading-screen" aria-label="Carregamento do jogo">
+    <div class="loading-brand">
+      <img id="loading-logo-img" class="loading-logo is-hidden" src="assets/tela-inicial/logo-ilha-do-conhecimento.png" alt="Ilha do Conhecimento" fetchpriority="high">
+      <p id="loading-logo-fallback" class="loading-logo-fallback">Ilha do Conhecimento</p>
+    </div>
+    <div class="loading-status-wrap">
+      <p id="loading-label" class="loading-label">Carregando…</p>
+      <p id="loading-percent" class="loading-percent" aria-hidden="true">0%</p>
+    </div>
+    <p id="loading-announce" class="visually-hidden" role="status" aria-live="polite">Carregando</p>
+    <button id="loading-skip-btn" class="loading-skip-btn" type="button" hidden>Entrar mesmo assim</button>
+  </div>
+  <script>
+    /* Reserva de segurança: libera o jogo se os scripts de carregamento falharem. */
+    setTimeout(function () {
+      if (!window.__loadingScreenDone) {
+        var el = document.getElementById('loading-screen');
+        if (el) el.hidden = true;
+      }
+    }, 32000);
+  </script>
+  <script src="js/asset-manifest.js"></script>
+  <script src="js/loading-screen.js"></script>
   <main id="home-screen" class="game-shell">
     <section class="home" aria-label="Tela inicial de Ilha do Conhecimento">
       <img class="room" src="assets/tela-inicial/quarto-sem-interface.png" alt="Uma criança estuda em seu quarto enquanto o gato dorme na cama.">
