@@ -49,8 +49,6 @@ Estados visuais: repouso (brilho suave na cor da runa), ativação/memorização
 Validação do CP2: autoteste de 300 sorteios sem distratores duplicados; verificação automatizada por BFS (`node _lixeira/tools/gerar-grades-labirinto.cjs`) confirmando 100% de alcance a partir do spawn para todos os pedestais e arcos nas fases 1 a 3, e para o disco da chave e portal na câmara. Cobertura de caminho caminhável: 14,41% na fase 1 (64.053 px), 15,70% na fase 2 (69.752 px) e 21,26% na fase 3 (94.472 px). Testes de colisão com sebes e árvores comprovam bloqueio lateral e contenção nos limites da tela. Validação visual e de gameplay no Chrome Headless cobrindo 20:9, 16:9, 16:10 (com blur) e 4:3 (com blur) e caminhada real até os arcos. Sintaxe validada via `node --check`.
 Pontos antigos (mundo): guia (2424,2088), portal (2136,2088), floresta (1032,1128), vila (1272,2616), ruínas (3720,1176), fazenda (3768,2616), montanha (2328,552).
 
-- **Tela de carregamento inicial (`css/loading.css`, `js/asset-manifest.js`, `js/loading-screen.js`)**: exibida ao abrir `index.html` antes do menu principal, com logo (e reserva em HTML), texto "Carregando…" / "Loading…" e porcentagem numérica monotônica animada suavemente (sem barra nem decoração extra). Carrega por ordem de prioridade (logo/fontes, menu, músicas do menu e exploração com timeout curto de 2 s, intro em quadrinhos, ilha/herói/controles, configurações/tutorial e puzzles/final), liberando o menu ao atingir ≥ 80% após 600 ms mínimos e continuando os ~20% finais em segundo plano. Conta com botão "Entrar mesmo assim" após 15 s, failsafe contra travamento (30 s / 32 s), suporte a `large-text`, `calm-motion`/`prefers-reduced-motion`, safe areas e leitor de tela (`role="status"` anunciando apenas "Carregando" e "Pronto"). Testes automatizados em `tests/test-loading-screen.cjs`.
-
 ## Tela cheia e Configurações
 
 - Tela cheia: `html`, `body`, `.game-shell` e `.island-screen` usam `100dvh` (fallback `100vh`) e `overflow: hidden`; o viewport tem `viewport-fit=cover` e HUD, cantos e fechar respeitam `env(safe-area-inset-*)`. O canvas da ilha reajusta em `resize`, `orientationchange` e `visualViewport` (câmera, escala 0,6 e personagem de 40 px intactos). Botão de tela cheia na tela inicial (`#home-fullscreen-btn`) visível apenas em dispositivos móveis/tablets (`pointer: coarse` ou `maxTouchPoints > 0`) com suporte à Fullscreen API; tenta travar em orientação paisagem (`screen.orientation?.lock?.('landscape')`).
@@ -198,3 +196,13 @@ O servidor iniciará na porta `3000` (ou na próxima porta livre se a `3000` est
 - **IP incorreto (adaptador virtual WSL / Docker / VPN)**: o servidor prioriza automaticamente endereços `192.168.x.x` de placas físicas, mas se você estiver com uma VPN ativa ou múltiplos adaptadores, confira o IP da sua placa Wi-Fi/Ethernet com `ipconfig` no terminal e use `http://SEU_IP_WIFI:3000/controle?t=TOKEN` com o token impresso no console.
 - **Porta 3000 em uso**: se a porta `3000` estiver ocupada, o servidor avisa em português no terminal e tenta automaticamente a porta seguinte (`3001`, `3002`, etc.), ou você pode escolher outra porta com `PORT=4000 npm start`.
 - **Testes automatizados**: `test-remote-control.cjs` (quando disponível no branch do servidor remoto).
+
+## Como editar Sobre nós e créditos
+
+Todo o texto de **Sobre nós** e **Créditos** fica em um único bloco no arquivo `index.html`, entre as linhas **475 e 541** (marcado pelos comentários `<!-- EDITE AQUI: Sobre nós e créditos -->` e `<!-- FIM EDITE AQUI -->`):
+
+- **Página 1** (`data-page="1"`): **Sobre o jogo** e **A ideia do projeto**.
+- **Página 2** (`data-page="2"`): **Equipe**, **Professor(a) orientador(a)** e **Instituição**.
+- **Página 3** (`data-page="3"`): **Créditos** (História e roteiro; Programação e design de jogo; Arte, música e efeitos sonoros).
+
+Para alterar qualquer informação, basta editar o texto dentro das tags `<p>`, `<strong>` ou `<span class="credits-desc">` nesse bloco e salvar o `index.html`. Não é necessário mexer em nenhum arquivo JavaScript.

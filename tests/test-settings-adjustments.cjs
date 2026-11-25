@@ -35,8 +35,9 @@ assert(indexHtml.includes('data-page-section="about" data-page="1"'), 'Sobre nó
 assert(indexHtml.includes('data-page-section="about" data-page="2"'), 'Sobre nós deve ter a página 2 com créditos');
 assert(indexHtml.includes('Quem fez a ilha') || indexHtml.includes('créditos'), 'Página 2 de Sobre nós deve conter os créditos');
 assert(indexHtml.includes('Equipe Ilha do Conhecimento'), 'Texto dos créditos deve ser preservado integralmente');
-assert(indexHtml.includes('Você, explorador!'), 'Agradecimento especial preservado');
-console.log('✓ Teste 1.2: Sobre nós e Créditos unificados em 2 páginas sem perda de texto');
+assert(indexHtml.includes('data-page-section="about" data-page="3"'), 'Sobre nós deve ter a página 3 com créditos');
+assert(indexHtml.includes('Gabriel Jacob do Nascimento') && indexHtml.includes('Universidade do Estado da Bahia'), 'Créditos oficiais presentes');
+console.log('✓ Teste 1.2: Sobre nós e Créditos unificados em 3 páginas sem perda de texto');
 
 // 1.3 Diálogo de confirmação de saída
 assert(indexHtml.includes('id="settings-confirm-dialog"'), 'Deve existir o diálogo #settings-confirm-dialog');
