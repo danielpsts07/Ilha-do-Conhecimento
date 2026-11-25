@@ -135,24 +135,20 @@ async function runGeometriaIntegrationTest() {
   const geoCode = fs.readFileSync(path.join(__dirname, '..', 'js', 'geometria-puzzle.js'), 'utf8');
   vm.runInContext(geoCode, sandbox);
 
-  // TESTE 1: Estrutura de dados de Geometria em TutorialData
+  // TESTE 1: Estrutura de dados de Geometria em TutorialData (2 passos sem rotação)
   const geoData = sandbox.window.TutorialData.geometria;
   assert(geoData, 'TutorialData.geometria deve existir');
-  assert.strictEqual(geoData.passos.length, 3, 'Geometria deve ter exatamente 3 passos');
+  assert.strictEqual(geoData.passos.length, 2, 'Geometria deve ter exatamente 2 passos');
   assert.strictEqual(geoData.passos[0].titulo, 'Arraste a peça');
   assert.strictEqual(geoData.passos[0].texto, 'Puxe a peça até o lugar de encaixe.');
   assert.strictEqual(geoData.passos[0].demo, 'geometria-arrastar');
 
-  assert.strictEqual(geoData.passos[1].titulo, 'Gire a peça');
-  assert.strictEqual(geoData.passos[1].texto, 'Toque na peça da barra para ela girar.');
-  assert.strictEqual(geoData.passos[1].demo, 'geometria-girar');
+  assert.strictEqual(geoData.passos[1].titulo, 'Tire a peça');
+  assert.strictEqual(geoData.passos[1].texto, 'Toque numa peça já encaixada e ela volta para a barra.');
+  assert.strictEqual(geoData.passos[1].demo, 'geometria-tirar');
+  console.log('✓ Teste 1: TutorialData possui os 2 passos de Geometria com títulos e textos exatos');
 
-  assert.strictEqual(geoData.passos[2].titulo, 'Tire a peça');
-  assert.strictEqual(geoData.passos[2].texto, 'Toque numa peça já encaixada e ela volta para a barra.');
-  assert.strictEqual(geoData.passos[2].demo, 'geometria-tirar');
-  console.log('✓ Teste 1: TutorialData possui os 3 passos de Geometria com títulos e textos exatos');
-
-  // TESTE 2: Navegação entre os 3 passos com botões "Próximo", "Próximo" e "OK"
+  // TESTE 2: Navegação entre os 2 passos com botões "Próximo" e "OK"
   sandbox.window.TutorialCard.abrir('geometria');
   assert(sandbox.window.TutorialCard.isAberto(), 'TutorialCard deve estar aberto');
   assert.strictEqual(sandbox.window.TutorialCard.getPassoAtual(), 0, 'Passo inicial deve ser 0');
@@ -166,34 +162,23 @@ async function runGeometriaIntegrationTest() {
   assert.strictEqual(btnPrincipal.textContent, 'Próximo', 'Passo 1 deve ter botão "Próximo"');
   assert.strictEqual(btnVoltar.hidden, true, 'Botão voltar deve estar oculto no passo 1');
 
-  // Avança para Passo 1 (Passo 2): "Próximo", voltar visível
+  // Avança para Passo 1 (Passo 2, último): "OK", voltar visível
   btnPrincipal.onclick();
   assert.strictEqual(sandbox.window.TutorialCard.getPassoAtual(), 1, 'Passo atual deve ser 1');
-  assert.strictEqual(btnPrincipal.textContent, 'Próximo', 'Passo 2 deve ter botão "Próximo"');
+  assert.strictEqual(btnPrincipal.textContent, 'OK', 'Passo 2 (último) deve ter botão "OK"');
   assert.strictEqual(btnVoltar.hidden, false, 'Botão voltar deve estar visível no passo 2');
-
-  // Avança para Passo 2 (Passo 3): "OK", voltar visível
-  btnPrincipal.onclick();
-  assert.strictEqual(sandbox.window.TutorialCard.getPassoAtual(), 2, 'Passo atual deve ser 2');
-  assert.strictEqual(btnPrincipal.textContent, 'OK', 'Passo 3 (último) deve ter botão "OK"');
-  assert.strictEqual(btnVoltar.hidden, false, 'Botão voltar deve estar visível no passo 3');
-
-  // Volta para Passo 1
-  btnVoltar.onclick();
-  assert.strictEqual(sandbox.window.TutorialCard.getPassoAtual(), 1, 'Voltar deve retornar ao passo 1');
-  assert.strictEqual(btnPrincipal.textContent, 'Próximo', 'Voltar ao passo 2 restaura botão "Próximo"');
 
   // Volta para Passo 0
   btnVoltar.onclick();
   assert.strictEqual(sandbox.window.TutorialCard.getPassoAtual(), 0, 'Voltar deve retornar ao passo 0');
+  assert.strictEqual(btnPrincipal.textContent, 'Próximo', 'Voltar ao passo 1 restaura botão "Próximo"');
   assert.strictEqual(btnVoltar.hidden, true, 'Passo 0 oculta botão voltar novamente');
 
   // Avança até o fim e clica em OK
   btnPrincipal.onclick(); // vai para 1
-  btnPrincipal.onclick(); // vai para 2
-  btnPrincipal.onclick(); // clica em OK no passo 2
+  btnPrincipal.onclick(); // clica em OK no passo 1
   assert(!sandbox.window.TutorialCard.isAberto(), 'Clicar em OK no último passo fecha o tutorial');
-  console.log('✓ Teste 2: Navegação com rótulos "Próximo", "Próximo" e "OK", avançar e voltar validada');
+  console.log('✓ Teste 2: Navegação com rótulos "Próximo" e "OK", avançar e voltar validada');
 
   // TESTE 3: Integração com GeometriaPuzzle (abertura automática e HUD "?")
   sandbox.window.TutorialCard.limparVistos();
@@ -250,8 +235,8 @@ async function runGeometriaIntegrationTest() {
   sandbox.window.TutorialCard.fechar();
   console.log('✓ Teste 5: Clicar em "?" reabre o tutorial de Geometria');
 
-  // TESTE 6: Demos de Geometria registradas e executáveis em TutorialDemos
-  const demos = ['geometria-arrastar', 'geometria-girar', 'geometria-tirar'];
+  // TESTE 6: Demos de Geometria registradas e executáveis em TutorialDemos (sem geometria-girar)
+  const demos = ['geometria-arrastar', 'geometria-tirar'];
   const testCanvas = new MockElement('CANVAS');
   testCanvas.width = 815;
   testCanvas.height = 526;
@@ -261,7 +246,7 @@ async function runGeometriaIntegrationTest() {
     assert(runner, `Demonstração ${demoId} deve iniciar`);
     sandbox.window.TutorialDemos.parar();
   }
-  console.log('✓ Teste 6: As 3 demonstrações de Geometria estão registradas e funcionam no TutorialDemos');
+  console.log('✓ Teste 6: As 2 demonstrações de Geometria estão registradas e funcionam no TutorialDemos');
 
   console.log('\nTODOS OS 6 TESTES DE INTEGRAÇÃO DE GEOMETRIA PASSARAM COM SUCESSO!');
 }

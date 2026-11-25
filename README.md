@@ -206,3 +206,8 @@ Todo o texto de **Sobre nós** e **Créditos** fica em um único bloco no arquiv
 - **Página 3** (`data-page="3"`): **Créditos** (História e roteiro; Programação e design de jogo; Arte, música e efeitos sonoros).
 
 Para alterar qualquer informação, basta editar o texto dentro das tags `<p>`, `<strong>` ou `<span class="credits-desc">` nesse bloco e salvar o `index.html`. Não é necessário mexer em nenhum arquivo JavaScript.
+
+### Ajustes nos puzzles (Álgebra, Geometria e Operações)
+- **Balança (Álgebra)**: legenda sempre visível com os valores das gemas (`rubi = 1`, `safira = 2`, `esmeralda = 3`, `topazio = 5`) e peso total ao vivo acima de cada prato com destaque ao equilibrar.
+- **Geometria**: peças estáticas já exibidas na orientação da solução (sem girar; toque numa peça encaixada continua devolvendo à barra) e tutorial atualizado para 2 passos (`Arraste a peça` e `Tire a peça`).
+- **Operações**: plaquinha com a operação e números reais da rodada (`DOBRO de 2`, `METADE de 14 e mais 1`, `Reparta 12 sacos em 3 carroças`) e selo destacado `Começou com N` acima de cada contador.
