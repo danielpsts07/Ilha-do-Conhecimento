@@ -198,3 +198,7 @@ O servidor iniciará na porta `3000` (ou na próxima porta livre se a `3000` est
 - **IP incorreto (adaptador virtual WSL / Docker / VPN)**: o servidor prioriza automaticamente endereços `192.168.x.x` de placas físicas, mas se você estiver com uma VPN ativa ou múltiplos adaptadores, confira o IP da sua placa Wi-Fi/Ethernet com `ipconfig` no terminal e use `http://SEU_IP_WIFI:3000/controle?t=TOKEN` com o token impresso no console.
 - **Porta 3000 em uso**: se a porta `3000` estiver ocupada, o servidor avisa em português no terminal e tenta automaticamente a porta seguinte (`3001`, `3002`, etc.), ou você pode escolher outra porta com `PORT=4000 npm start`.
 - **Testes automatizados**: `test-remote-control.cjs` (quando disponível no branch do servidor remoto).
+
+## Como editar Sobre nós e créditos
+
+Todos os textos das seções **Sobre o jogo**, **A ideia do projeto**, **Equipe**, **Professor(a) orientador(a)**, **Instituição** e **Créditos** ficam em um único bloco no arquivo `index.html`, entre os comentários `<!-- EDITE AQUI: Sobre nós e créditos -->` e `<!-- FIM: EDITE AQUI -->` (linhas **475 a 544**, dentro de `data-settings-section="about"`), divididos em 3 subpáginas (`data-page="1"`, `data-page="2"` e `data-page="3"`). Basta alterar o texto dentro das tags `<p>` e `<span class="credits-desc">` e salvar o arquivo.
